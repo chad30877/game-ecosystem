@@ -1,0 +1,7 @@
+{
+  "halfExtent": 5.0,
+  "speed": 2.5,
+  "stepSeconds": 0.02,
+  "observationRadius": 2.0,
+  "episodeSteps": 256
+}
