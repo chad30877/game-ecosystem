@@ -31,3 +31,5 @@
 
 - 2026-10-20：使用者回報 Windows PowerShell 執行 `bridge -Visible` 出現解析錯誤。已於 PowerShell 5.1 重現：無 BOM 的 UTF-8 腳本被 CP950 誤讀，產生 12 個解析錯誤；同內容明確以 UTF-8 解析為 0 個。為腳本加入 UTF-8 BOM，並以 `.editorconfig` 設定 PowerShell 檔案編碼。
 - 修正後 PowerShell 5.1／7 語法解析皆為 0 個錯誤；透過 `powershell.exe -NoProfile -NonInteractive -File ./scripts/world.ps1 -Mode bridge -Visible` 實際完成 512 步、24 個不同 agent-id、18 個 terminal-id，輸出為 `C:/Toolchains/game-ecosystem/runs/bridge-20261020-144931-f67a1200`。人工可直接重跑使用者原本指令；本次未新增測試檔。
+- 2026-10-20：使用者續報 `No Python at ...`，同帳號的一般 PowerShell 對原基底執行檔的 `Test-Path` 為 False；Windows 實際檔案路徑證實 Codex 的 AppData 已重新導向至應用程式 LocalCache。已將基底複製至共用 `C:/Toolchains` 並更新既有虛擬環境，安裝文件改為指定基底安裝目錄與完整路徑。診斷及環境修復詳見 [工具鏈驗證紀錄](../../../docs/toolchain.md)。
+- 修復後 Windows PowerShell 5.1 的可見 bridge 再次完成 512 步；使用者在原出錯視窗重跑原指令，確認可正常執行。

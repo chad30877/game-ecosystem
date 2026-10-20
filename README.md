@@ -48,9 +48,11 @@
 需要已啟用授權的 Unity 6000.0.85f1（Windows Mono 建置）及 Python 3.10.12。Unity 套件由 `unity/Packages/manifest.json` 指定，Python 相依鎖定於 `training/requirements-lock.txt`。
 
 ```powershell
-uv python install 3.10.12
-uv venv --python 3.10.12 C:/Toolchains/game-ecosystem/python
+uv python install --install-dir C:/Toolchains/game-ecosystem 3.10.12
+uv venv --python C:/Toolchains/game-ecosystem/cpython-3.10.12-windows-x86_64-none/python.exe C:/Toolchains/game-ecosystem/python
 uv pip install --python C:/Toolchains/game-ecosystem/python/Scripts/python.exe -r training/requirements-lock.txt
 ```
+
+基底 Python 與虛擬環境均放在 `C:/Toolchains`，避免 Codex 的 AppData 路徑重新導向使一般 PowerShell 找不到基底執行檔。
 
 目前沒有專案既有測試套件，本次未新增測試檔；以 Unity 建置、Python 語法／型別檢查及實際世界入口驗證。

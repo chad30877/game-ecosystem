@@ -26,7 +26,7 @@ Editor 安裝檔由 Unity 官方 release API 取得，Authenticode 簽章為 Val
 | 唯一活躍來源與 Unity Library 快取 | `D:/Projects/game-ecosystem`、`unity/Library` |
 | Editor | `C:/Toolchains/Unity/6000.0.85f1/Editor/Unity.exe` |
 | Python 執行環境 | `C:/Toolchains/game-ecosystem/python` |
-| Python 基底 | `C:/Users/User/AppData/Roaming/uv/python/cpython-3.10.12-windows-x86_64-none` |
+| Python 基底 | `C:/Toolchains/game-ecosystem/cpython-3.10.12-windows-x86_64-none` |
 | 活躍輸出 | `C:/Toolchains/game-ecosystem/runs` |
 | 安裝下載與 uv 套件下載快取 | `D:/Toolchains/downloads` |
 | 歷史輸出 | `D:/TrainingHistory/game-ecosystem/toolchain-20261020`（已封存兩次 bridge 與一次 PPO 訓練） |
@@ -66,3 +66,13 @@ Python 訓練使用 `torch-device=cpu`，PyTorch 為 `2.5.1+cpu`、CUDA false；
 - `train-20261020-101139-7ab522ae`：世界紀錄；同名子目錄內含 TensorBoard、`run_logs/timers.json`、checkpoint 與 ONNX。`_update_policy.count=6`、`TorchPPOOptimizer.update.count=90`，並非僅以模型檔存在推定成功。
 
 2026-10-19 的首次建置曾因無授權失敗，Hub 自動安裝曾被拒絕；2026-10-20 使用者安裝 Hub 後授權阻擋解除。重現步驟見 [README](../README.md)。
+
+## 一般 PowerShell 的 Python 路徑修復
+
+2026-10-20 使用者回報虛擬環境出現 `No Python at ...`。原 `pyvenv.cfg` 的 home 指向 `C:/Users/User/AppData/Roaming/uv/python/cpython-3.10.12-windows-x86_64-none`；Codex 執行環境能讀取，但一般 PowerShell 的 `Test-Path` 為 False。
+
+透過 Windows `GetFinalPathNameByHandleW` 確認，該檔案實際位於 `C:/Users/User/AppData/Local/Packages/OpenAI.Codex_2p2nqsd0c76g0/LocalCache/Roaming/uv/python/cpython-3.10.12-windows-x86_64-none/python.exe`。問題是應用程式的 AppData 重新導向，與帳號名稱或 Python 套件缺失無關。
+
+已將完整基底複製到上表的共用 `C:/Toolchains` 路徑，更新既有虛擬環境的 home，保留套件；原設定備份為 `C:/Toolchains/game-ecosystem/runs/pyvenv-before-shared-runtime.cfg`。複製前 C 槽剩餘約 70.3 GiB，基底大小約 111.1 MiB。新執行檔的 Windows 實際路徑確認仍為 `C:/Toolchains`，Python 3.10.12、PyTorch 2.5.1+cpu 匯入及 42 個套件的相依檢查通過。README 的新環境安裝命令已改為指定共用安裝目錄及基底完整路徑。
+
+修復後透過 Windows PowerShell 5.1 完成可見 bridge 512 步，輸出為 `C:/Toolchains/game-ecosystem/runs/bridge-20261020-145451-63788c10`；使用者亦在原本出錯的 PowerShell 視窗重跑 `./scripts/world.ps1 -Mode bridge -Visible`，確認可以正常執行。
