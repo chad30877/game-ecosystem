@@ -168,7 +168,8 @@ namespace Ecosystem
                     : new WorldAction(control == "idle" ? Vector2.zero : pair.Value.Action,
                         control == "manual" && Input.GetKey(KeyCode.Space), pair.Value.Action,
                         control == "manual" && Input.GetKey(KeyCode.A),
-                        control == "manual" && Input.GetKey(KeyCode.S) ? WorldSkill.Charge : WorldSkill.None)));
+                        control == "manual" && Input.GetKey(KeyCode.D) ? WorldSkill.Shield
+                        : control == "manual" && Input.GetKey(KeyCode.S) ? (pair.Value.Individual.species == "Moss" ? WorldSkill.Cultivate : WorldSkill.Charge) : WorldSkill.None)));
             else
                 world.Step(agents.ToDictionary(pair => pair.Key, pair => pair.Value.Action));
             totalSteps++;
@@ -273,20 +274,30 @@ namespace Ecosystem
             GUI.skin.font = font;
             GUI.skin.label.fontSize = 16;
             GUI.Box(new Rect(8, 8, 590, 282), "");
-            GUI.Label(new Rect(18, 12, 570, 30), control == "rules" ? "規則控制・尚非學習結果" : control == "idle" ? "靜止控制・飢餓核對" : control == "scripted" ? "指定動作・尚非學習結果" : "手動・方向鍵／空白採食／A 攻擊／S 技能");
+            GUI.Label(new Rect(18, 12, 570, 30), control == "rules" ? "規則控制・尚非學習結果" : control == "idle" ? "靜止控制・飢餓核對" : control == "scripted" ? "指定動作・尚非學習結果" : "手動・方向鍵／空白採食／A 攻擊／S 技能／D 護盾");
             GUI.Label(new Rect(18, 42, 350, 28), $"{world.State.time:F1} 秒　炎角 {world.State.individuals.Count(v => v.species == "Flame")}　霜羽 {world.State.individuals.Count(v => v.species == "Frost")}　苔靈 {world.State.individuals.Count(v => v.species == "Moss")}");
             var individual = world.State.individuals.FirstOrDefault(value => value.individual == selected);
             GUI.Label(new Rect(18, 72, 520, 28), individual == null ? "點選個體" : $"#{individual.individual} {individual.species}　健康 {individual.health:F1}　能量 {individual.energy:F1}");
             if (individual != null)
             {
                 GUI.Label(new Rect(18, 100, 570, 28), $"年齡 {individual.age:F1}　{(individual.age < world.Config.maturityAge ? "成長期" : "成年")}　繁殖 {individual.reproductionCooldown:F1}");
-                GUI.Label(new Rect(18, 128, 570, 28), $"攻擊 {individual.attackCooldown:F1}　技能 {individual.skillCooldown:F1}　前搖 {individual.windupRemaining:F1}　減速 {individual.slowRemaining:F1}　{(individual.chargeRemaining > 0 ? "衝鋒" : "")}");
+                GUI.Label(new Rect(18, 128, 570, 28), $"攻擊 {individual.attackCooldown:F1}　技能 {individual.skillCooldown:F1}　{ActiveStatus(individual)}");
             }
             int row = 0;
             foreach (var statistics in world.State.statistics)
                 GUI.Label(new Rect(18, 156 + row++ * 24, 570, 26), $"{statistics.species}　出生 {statistics.births}　戰死 {statistics.combat}　飢餓 {statistics.starved}　老死 {statistics.oldAge}　存活 {statistics.incompleteLives}");
             GUI.Label(new Rect(18, 246, 350, 28), world.State.endReason == "all_dead" ? "本輪結束・全體死亡" : world.State.endReason == "time_limit" ? "本輪結束・時間上限" : $"第 {world.State.episode} 輪　上限觸發 {world.State.statistics.Sum(v => v.populationLimitHits)}");
             if (world.State.endReason != "" && GUI.Button(new Rect(458, 244, 120, 32), "重建世界")) ResetWorld();
+        }
+
+        private static string ActiveStatus(IndividualState individual)
+        {
+            if (individual.shieldRemaining > 0) return $"護盾 {individual.shieldRemaining:F1}";
+            if (individual.cultivateRemaining > 0) return $"培育 {individual.cultivateRemaining:F1}";
+            if (individual.windupRemaining > 0) return $"前搖 {individual.windupRemaining:F1}";
+            if (individual.chargeRemaining > 0) return "衝鋒";
+            if (individual.slowRemaining > 0) return $"減速 {individual.slowRemaining:F1}";
+            return "";
         }
 
         private void Record(string kind, IndividualState individual = null, int unityObject = 0) => output.WriteLine(JsonUtility.ToJson(new StepRecord
@@ -303,7 +314,7 @@ namespace Ecosystem
             public string unity;
             public string device;
             public string control;
-            public string rules = "frost-v1";
+            public string rules = "combat-v1";
             public WorldConfig config;
             public WorldScenario scenario;
         }

@@ -92,6 +92,11 @@ namespace Ecosystem
         public bool windupActiveThisStep;
         public float slowUntil;
         public float slowRemaining;
+        public float shieldUntil;
+        public float shieldRemaining;
+        public float cultivateUntil;
+        public float cultivateRemaining;
+        public int cultivatingFood;
     }
 
     [Serializable]

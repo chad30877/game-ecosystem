@@ -12,6 +12,7 @@ namespace Ecosystem
         public Vector2 Action { get; private set; }
         private TrailRenderer trail;
         private LineRenderer aimView;
+        private LineRenderer aura;
 
         public override void CollectObservations(VectorSensor sensor) => sensor.AddObservation(World.Observe(Individual));
 
@@ -55,8 +56,28 @@ namespace Ecosystem
             aimView.enabled = Individual.windupRemaining > 0;
             aimView.SetPosition(0, transform.position);
             aimView.SetPosition(1, transform.position + new Vector3(Individual.aimX, Individual.aimY, 0) * 1.3f);
+            if (aura == null)
+            {
+                aura = new GameObject("Aura").AddComponent<LineRenderer>();
+                aura.transform.SetParent(transform);
+                aura.sharedMaterial = new Material(Resources.Load<Material>("WorldMaterial"));
+                aura.startWidth = aura.endWidth = 0.08f;
+                aura.positionCount = 33;
+            }
+            aura.enabled = Individual.shieldRemaining > 0 || Individual.cultivateRemaining > 0;
+            aura.sharedMaterial.color = Individual.shieldRemaining > 0 ? Color.cyan : Color.yellow;
+            float radius = Individual.shieldRemaining > 0 ? 0.65f : 0.9f;
+            for (int i = 0; i <= 32; i++)
+            {
+                float angle = i * Mathf.PI / 16;
+                aura.SetPosition(i, transform.position + new Vector3(Mathf.Cos(angle) * radius, Mathf.Sin(angle) * radius, -0.1f));
+            }
         }
 
-        private void OnDestroy() => Destroy(GetComponent<Renderer>().sharedMaterial);
+        private void OnDestroy()
+        {
+            Destroy(GetComponent<Renderer>().sharedMaterial);
+            if (aura != null) Destroy(aura.sharedMaterial);
+        }
     }
 }

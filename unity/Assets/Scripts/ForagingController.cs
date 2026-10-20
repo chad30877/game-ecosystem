@@ -6,6 +6,15 @@ namespace Ecosystem
     {
         public static WorldAction Decide(World world, IndividualState individual)
         {
+            var baseAction = Forage(world, individual);
+            if (individual.species == "Moss")
+            {
+                bool threatened = false;
+                foreach (var other in world.State.individuals)
+                    if (other.species != "Moss" && Vector2.Distance(CombatRules.Position(individual), CombatRules.Position(other)) <= Mathf.Min(3f, world.Config.observationRadius))
+                        threatened = true;
+                return new WorldAction(baseAction.movement, true, skill: threatened ? WorldSkill.Shield : WorldSkill.Cultivate);
+            }
             if (individual.species == "Flame" || individual.species == "Frost")
             {
                 IndividualState enemy = null;
@@ -26,6 +35,11 @@ namespace Ecosystem
                         true, direction, true, range > 1.5f && range <= world.Config.combat.chargeDistance ? WorldSkill.Charge : WorldSkill.None);
                 }
             }
+            return baseAction;
+        }
+
+        private static WorldAction Forage(World world, IndividualState individual)
+        {
             var position = new Vector2(individual.x, individual.y);
             FoodState target = null;
             float nearest = world.Config.observationRadius;

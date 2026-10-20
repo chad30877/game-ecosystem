@@ -9,6 +9,9 @@ namespace Ecosystem
     [Serializable]
     public sealed class CombatConfig
     {
+        public float flameSpeed = 2.5f;
+        public float frostSpeed = 3.2f;
+        public float mossSpeed = 2.7f;
         public float meleeRange = 1.1f;
         public float meleeDamage = 12f;
         public float meleeEnergy = 2f;
@@ -30,18 +33,30 @@ namespace Ecosystem
         public float iceCooldown = 2.5f;
         public float slowDuration = 1f;
         public float slowMultiplier = 0.55f;
+        public float cultivateRange = 1.5f;
+        public float cultivateEnergy = 8f;
+        public float cultivateCooldown = 6f;
+        public float cultivateDuration = 3f;
+        public float cultivateRate = 4f;
+        public float shieldEnergy = 10f;
+        public float shieldCooldown = 8f;
+        public float shieldDuration = 2f;
+        public float shieldMultiplier = 0.35f;
 
         public void Validate()
         {
-            foreach (float value in new[] { meleeRange, meleeDamage, meleeEnergy, meleeCooldown,
+            foreach (float value in new[] { flameSpeed, frostSpeed, mossSpeed, meleeRange, meleeDamage, meleeEnergy, meleeCooldown,
                 chargeDistance, chargeSpeed, chargeDamage, chargeEnergy, chargeCooldown,
                 hitRadius, recoveryEnergy, recoveryDelay, recoveryRate, iceRange, iceSpeed, iceDamage,
-                iceEnergy, iceWindup, iceCooldown, slowDuration, slowMultiplier })
+                iceEnergy, iceWindup, iceCooldown, slowDuration, slowMultiplier, cultivateRange, cultivateEnergy,
+                cultivateCooldown, cultivateDuration, cultivateRate, shieldEnergy, shieldCooldown, shieldDuration, shieldMultiplier })
                 if (!float.IsFinite(value) || value <= 0) throw new ArgumentException("戰鬥參數須為有限正數。");
-            if (meleeEnergy > 100 || chargeEnergy > 100 || recoveryEnergy > 100 || iceEnergy > 100)
+            if (meleeEnergy > 100 || chargeEnergy > 100 || recoveryEnergy > 100 || iceEnergy > 100 || cultivateEnergy > 100 || shieldEnergy > 100)
                 throw new ArgumentException("戰鬥能量門檻不得大於 100。");
             if (slowDuration >= iceCooldown || slowMultiplier >= 1 || iceWindup >= iceCooldown)
                 throw new ArgumentException("減速時間及前搖須短於冰箭冷卻，減速倍率須介於 0 與 1。");
+            if (shieldMultiplier >= 1 || shieldDuration >= shieldCooldown || cultivateDuration >= cultivateCooldown)
+                throw new ArgumentException("技能持續時間須短於冷卻，護盾倍率須介於 0 與 1。");
         }
     }
 
@@ -58,6 +73,37 @@ namespace Ecosystem
                 individual.windupActiveThisStep = individual.windupUntil > 0;
                 var action = actions[individual.individual];
                 if (individual.health <= 0) continue;
+                if (individual.species == "Moss" && state.time >= individual.skillReadyAt)
+                {
+                    if (action.skill == WorldSkill.Shield && individual.energy >= config.combat.shieldEnergy)
+                    {
+                        individual.energy -= config.combat.shieldEnergy;
+                        individual.shieldUntil = state.time + config.combat.shieldDuration;
+                        individual.skillReadyAt = state.time + config.combat.shieldCooldown;
+                        state.events.Add(new WorldEvent { kind = "shield", individual = individual.individual, amount = config.combat.shieldEnergy });
+                    }
+                    else if (action.skill == WorldSkill.Cultivate && individual.energy >= config.combat.cultivateEnergy)
+                    {
+                        FoodState target = null;
+                        float nearest = config.combat.cultivateRange;
+                        foreach (var food in state.foods)
+                        {
+                            float distance = Vector2.Distance(Position(individual), new Vector2(food.x, food.y));
+                            if (distance > nearest || food.amount >= food.capacity) continue;
+                            target = food;
+                            nearest = distance;
+                        }
+                        if (target != null)
+                        {
+                            individual.energy -= config.combat.cultivateEnergy;
+                            individual.cultivatingFood = target.food;
+                            individual.cultivateUntil = state.time + config.combat.cultivateDuration;
+                            individual.skillReadyAt = state.time + config.combat.cultivateCooldown;
+                            state.events.Add(new WorldEvent { kind = "cultivate", individual = individual.individual,
+                                food = target.food, amount = config.combat.cultivateEnergy });
+                        }
+                    }
+                }
                 if (individual.windupUntil > 0 && state.time >= individual.windupUntil)
                 {
                     state.projectiles.Add(new ProjectileState { projectile = ++state.nextProjectile, owner = individual.individual,
@@ -95,7 +141,7 @@ namespace Ecosystem
 
         public static Vector2 Move(WorldConfig config, WorldState state, IndividualState individual, WorldAction action)
         {
-            float speed = individual.species == "Frost" ? 3.2f : individual.species == "Moss" ? 2.7f : 2.5f;
+            float speed = individual.species == "Frost" ? config.combat.frostSpeed : individual.species == "Moss" ? config.combat.mossSpeed : config.combat.flameSpeed;
             bool charging = individual.chargeRemaining > 0;
             if (!charging && state.time < individual.slowUntil) speed *= config.combat.slowMultiplier;
             Vector2 delta = charging ? new Vector2(individual.aimX, individual.aimY) *
@@ -111,7 +157,7 @@ namespace Ecosystem
                 if (target != null)
                 {
                     end = Vector2.Lerp(start, end, fraction);
-                    Damage(state, individual, target, config.combat.chargeDamage, "charge_hit", state.time + config.stepSeconds);
+                    Damage(config, state, individual, target, config.combat.chargeDamage, "charge_hit", state.time + config.stepSeconds);
                     individual.chargeRemaining = 0;
                 }
                 else individual.chargeRemaining = individual.boundary ? 0 : Mathf.Max(0, individual.chargeRemaining - delta.magnitude);
@@ -132,7 +178,7 @@ namespace Ecosystem
                 state.events.Add(new WorldEvent { kind = "melee", individual = individual.individual, amount = config.combat.meleeEnergy });
                 var target = FirstHit(state, individual.species, Position(individual),
                     Position(individual) + action.aim.normalized * config.combat.meleeRange, config.combat.hitRadius, out _);
-                if (target != null) Damage(state, individual, target, config.combat.meleeDamage, "melee_hit", state.time + config.stepSeconds);
+                if (target != null) Damage(config, state, individual, target, config.combat.meleeDamage, "melee_hit", state.time + config.stepSeconds);
             }
             foreach (var projectile in state.projectiles)
             {
@@ -145,7 +191,7 @@ namespace Ecosystem
                     // 射手死亡不抹去已發射的冰箭，事件仍保留原始個體識別。
                     var source = state.individuals.Find(value => value.individual == projectile.owner)
                         ?? new IndividualState { individual = projectile.owner, species = projectile.species };
-                    Damage(state, source, target, config.combat.iceDamage, "ice_hit", state.time + config.stepSeconds);
+                    Damage(config, state, source, target, config.combat.iceDamage, "ice_hit", state.time + config.stepSeconds);
                     if (!target.chargeActiveThisStep && target.health > 0)
                     {
                         target.slowUntil = state.time + config.stepSeconds + config.combat.slowDuration;
@@ -164,6 +210,17 @@ namespace Ecosystem
                 }
             }
             state.projectiles.RemoveAll(value => value.remaining <= 0);
+            foreach (var individual in state.individuals)
+            {
+                if (individual.health <= 0 || state.time >= individual.cultivateUntil) continue;
+                var food = state.foods.Find(value => value.food == individual.cultivatingFood);
+                if (food == null || Vector2.Distance(Position(individual), new Vector2(food.x, food.y)) > config.combat.cultivateRange) continue;
+                float grown = Mathf.Min(food.capacity - food.amount, config.combat.cultivateRate *
+                    Mathf.Min(config.stepSeconds, individual.cultivateUntil - state.time));
+                if (grown <= 0) continue;
+                food.amount += grown;
+                state.events.Add(new WorldEvent { kind = "cultivated", individual = individual.individual, food = food.food, amount = grown });
+            }
         }
 
         // 線段掃掠回傳第一個異種碰撞，避免快速衝鋒穿透；同種不受傷也不攔截。
@@ -194,10 +251,14 @@ namespace Ecosystem
             return result;
         }
 
-        public static void Damage(WorldState state, IndividualState source, IndividualState target, float damage, string kind, float time)
+        public static void Damage(WorldConfig config, WorldState state, IndividualState source, IndividualState target, float damage, string kind, float time)
         {
             if (source.species == target.species || target.health <= 0) return;
-            float actual = Mathf.Min(target.health, damage);
+            float effective = time < target.shieldUntil ? damage * config.combat.shieldMultiplier : damage;
+            if (effective < damage)
+                state.events.Add(new WorldEvent { kind = "shield_blocked", individual = source.individual, target = target.individual,
+                    amount = damage - effective, rawAmount = damage, x = target.x, y = target.y });
+            float actual = Mathf.Min(target.health, effective);
             target.health -= actual;
             source.lastCombatAt = target.lastCombatAt = time;
             target.lastDamageCause = "combat";
@@ -212,6 +273,8 @@ namespace Ecosystem
             individual.skillCooldown = Mathf.Max(0, individual.skillReadyAt - time);
             individual.windupRemaining = Mathf.Max(0, individual.windupUntil - time);
             individual.slowRemaining = Mathf.Max(0, individual.slowUntil - time);
+            individual.shieldRemaining = Mathf.Max(0, individual.shieldUntil - time);
+            individual.cultivateRemaining = Mathf.Max(0, individual.cultivateUntil - time);
             if (individual.health <= 0 || individual.energy < config.combat.recoveryEnergy ||
                 time - individual.lastCombatAt < config.combat.recoveryDelay) return;
             float recovered = Mathf.Min(config.combat.recoveryRate * config.stepSeconds, MaxHealth(individual.species) - individual.health);

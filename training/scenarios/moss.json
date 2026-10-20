@@ -1,0 +1,12 @@
+{
+  "placements": [
+    { "slot": 1, "x": -9.8, "y": -9 },
+    { "slot": 2, "x": 8, "y": 8 },
+    { "slot": 3, "x": -9, "y": -9 }
+  ],
+  "commands": [
+    { "slot": 3, "fromStep": 1, "toStep": 80, "forage": true, "skill": "Cultivate" },
+    { "slot": 3, "fromStep": 301, "toStep": 500, "skill": "Shield" },
+    { "slot": 1, "fromStep": 301, "toStep": 500, "aimX": 1, "attack": true }
+  ]
+}

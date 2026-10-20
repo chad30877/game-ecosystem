@@ -1,6 +1,6 @@
 # 生態世界
 
-目前完成 [04：繁殖、衰老與世界結束](.scratch/first-world/issues/04-life-cycle.md)。炎角獸（橘方塊）、霜羽獸（藍球）、苔靈（綠圓柱）以規則控制器覓食、繁殖並衰老，尚非學習結果；既有三物種共享策略驗證仍可執行。
+目前完成任務 [05](.scratch/first-world/issues/05-flame-charge.md)、[06](.scratch/first-world/issues/06-frost-combat.md)、[07](.scratch/first-world/issues/07-moss-defense.md)。炎角獸（橘方塊）近戰與衝鋒、霜羽獸（藍球）停步發射冰箭、苔靈（綠圓柱）培育與護盾，並沿用覓食、繁殖及衰老。現在使用規則控制器，尚非學習結果；既有三物種共享策略驗證仍可執行。
 
 ## 執行
 
@@ -25,7 +25,18 @@
 ./scripts/world.ps1 -Mode forage -ReloadRun './artifacts/runs/<輸出>/world.jsonl'
 ```
 
-`-Controller idle` 停止移動與採食，方便核對飢餓；`forage -Controller manual -Visible` 可用方向鍵移動、空白鍵採食。`-ReloadRun` 從 `life-cycle-v1` 首筆紀錄重載完整配置、種子與控制模式，重現起始世界；規則及靜止模式亦可重現執行序列，手動模式需再次輸入動作。此參數不能與 `-Seed`、`-Controller` 或 `-WorldConfig` 混用。舊 `foraging-v1` 紀錄因生命規則不同而拒絕重載。這不是歷史回放，也不承諾跨裝置逐影格一致。
+`-Controller idle` 停止移動、採食及技能，方便核對飢餓；`forage -Controller manual -Visible` 可用方向鍵移動並瞄準、空白鍵採食、A 攻擊（近戰／冰箭）、S 衝鋒／培育、D 護盾，所有個體接收同一輸入，各物種只執行適用的技能。`-ReloadRun` 從 `combat-v1` 首筆紀錄重載完整配置、種子、控制模式及指定動作；規則、靜止及指定動作模式可重現執行序列，手動模式需再次輸入動作。此參數不能與 `-Seed`、`-Controller`、`-WorldConfig` 或 `-Scenario` 混用。舊版規則紀錄會拒絕重載。這不是歷史回放，也不承諾跨裝置逐影格一致。
+
+固定場景可直接觀看接敵與技能：
+
+```powershell
+./scripts/world.ps1 -Mode forage -WorldConfig training/scenarios/world.json -Scenario training/scenarios/flame.json -Visible
+./scripts/world.ps1 -Mode forage -WorldConfig training/scenarios/world.json -Scenario training/scenarios/frost.json -Visible
+./scripts/world.ps1 -Mode forage -WorldConfig training/scenarios/world.json -Scenario training/scenarios/frost-escape.json -Visible
+./scripts/world.ps1 -Mode forage -WorldConfig training/scenarios/world.json -Scenario training/scenarios/moss.json -Visible
+```
+
+受擊閃白、衝鋒有拖尾、冰箭前搖有瞄準線，飛行冰箭為青色短條；減速期間變藍。苔靈培育顯示黃圈，護盾顯示青圈。點選查看攻擊／技能冷卻與作用狀態。固定場景每種一隻、20 秒一輪，關閉視窗結束；使用零基礎／移動耗能隔離技能成本，正式世界仍依原生存耗能執行。場景格式、參數及證據見 [三物種技能驗證](docs/combat.md)。
 
 `manual` 使用方向鍵控制所有個體；`bridge` 讓 Python 分別送出動作，同種個體也可移往不同方向。`-Visible` 顯示場景，省略時無畫面執行。
 
@@ -41,7 +52,9 @@
 
 起始個體年齡 30 秒，後代從 0 秒開始；成年門檻 30、壽命 240 模擬秒。能量達 80 且繁殖冷卻歸零時自動出生同種後代，親代扣 40 能量並冷卻 30 秒；後代能量初值 60。全世界上限 120，滿額時不扣能量或啟動冷卻。每步先結算飢餓及老死，再依個體順序繁殖；同時符合兩種死因時記為飢餓。單物種滅絕繼續運行，全體死亡（`all_dead`）或 600 秒（`time_limit`）結束。
 
-`state.deaths` 保留本輪死亡個體、物種、死因、年齡及時間；`state.statistics` 分物種累計出生、飢餓、老死、完成生命年齡總和、人口上限觸發與 `incompleteLives`。後者為當前存活樣本數，其年齡在 `individuals` 中；結束時仍存活者不混入死亡壽命樣本。人口上限每隻符合繁殖條件但遭阻擋的個體、每步計一次。起始成年個體已有 30 秒年齡，分析壽命時須區分起始個體與本輪出生個體。`episode_end` 保存完整輪次結果，重建後另起統計且個體編號不重用。
+`state.deaths` 保留本輪死亡個體、物種、死因、年齡及時間；`state.statistics` 分物種累計出生、戰死、飢餓、老死、完成生命年齡總和、人口上限觸發與 `incompleteLives`。後者為當前存活樣本數，其年齡在 `individuals` 中；結束時仍存活者不混入死亡壽命樣本。人口上限每隻符合繁殖條件但遭阻擋的個體、每步計一次。起始成年個體已有 30 秒年齡，分析壽命時須區分起始個體與本輪出生個體。`episode_end` 保存完整輪次結果，重建後另起統計且個體編號不重用。
+
+`WorldAction` 分開提供移動、瞄準、採食、攻擊及技能選擇。戰鬥參數由 `config.combat` 設定並完整寫入 run 紀錄；`state.projectiles` 提供在途冰箭，`individuals` 提供前搖、衝鋒、減速、護盾及培育狀態。`rules` 只讀感知半徑內敵人：炎角靠近並攻擊、霜羽在近距離後退並射擊、苔靈受威脅時選護盾，否則在食物旁培育。這些是展示規則，學習策略尚未接入。
 
 `training/world.json` 設定邊界、速度、步長、局部觀察半徑、輪次長度及增減事件。預設每物種兩隻，第 64 步各移除一隻、第 96 步各加入一隻，每 256 步重建世界。可複製配置後修改，透過 `-WorldConfig <路徑>` 載入；須滿足每物種至少兩隻及 `0 < removeStep < addStep < episodeSteps`。這些是訓練介面驗證事件，正式生命循環只在 `foraging` 配置啟用。
 
