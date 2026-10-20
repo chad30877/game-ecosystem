@@ -1,6 +1,6 @@
 # 生態世界
 
-目前完成 [02：三物種共享策略與動態個體驗證](.scratch/first-world/issues/02-shared-policies.md)。最小場景包含炎角獸（橘）、霜羽獸（藍）、苔靈（綠），各自使用獨立共享策略；尚未包含完整生態。
+目前完成 [03：可觀看的覓食與飢餓循環](.scratch/first-world/issues/03-foraging.md)。炎角獸（橘方塊）、霜羽獸（藍球）、苔靈（綠圓柱）以規則控制器覓食，尚非學習結果；既有三物種共享策略驗證仍可執行。
 
 ## 執行
 
@@ -8,12 +8,24 @@
 
 ```powershell
 ./scripts/world.ps1 -Mode build
+./scripts/world.ps1 -Mode forage -Visible
+./scripts/world.ps1 -Mode forage
 ./scripts/world.ps1 -Mode manual
 ./scripts/world.ps1 -Mode bridge -Visible
 ./scripts/world.ps1 -Mode bridge
 ./scripts/world.ps1 -Mode train
 ./scripts/world.ps1 -Mode train -TrainSteps 4096 -ResumeFrom './artifacts/runs/<首次輸出>/<trainerRunId>'
 ```
+
+`forage -Visible` 持續觀看；點選個體查看健康與能量，關閉視窗結束。四個大型黃色區域是產地，小型黃色區域是零散食物，亮度與大小反映存量。無畫面 `forage` 預設推進 12,000 步，可用 `-Steps` 指定步數；兩種模式共用規則與固定步長。
+
+```powershell
+./scripts/world.ps1 -Mode forage -Visible -Seed 7
+./scripts/world.ps1 -Mode forage -Controller idle -Steps 8000
+./scripts/world.ps1 -Mode forage -ReloadRun './artifacts/runs/<輸出>/world.jsonl'
+```
+
+`-Controller idle` 停止移動與採食，方便核對飢餓；`manual -Visible` 可用方向鍵移動、空白鍵採食。`-ReloadRun` 從首筆紀錄重載完整配置、種子與控制模式，重現起始世界及規則執行序列，不能與 `-Seed`、`-Controller` 或 `-WorldConfig` 混用。這不是歷史回放，也不承諾跨裝置逐影格一致。
 
 `manual` 使用方向鍵控制所有個體；`bridge` 讓 Python 分別送出動作，同種個體也可移往不同方向。`-Visible` 顯示場景，省略時無畫面執行。
 
@@ -23,7 +35,9 @@
 
 ## 世界入口
 
-`unity/Assets/Scripts/World.cs` 提供 `Reset`、`Step(actions)`、`AddIndividual`、`RemoveIndividual`、`Observe(individual)` 與 `State`。一個世界步同時推進所有個體；`WorldRunner` 負責畫面、ML-Agents 生命週期與 JSONL，`WorldAgent` 只提供個體觀察與動作。
+`unity/Assets/Scripts/World.cs` 提供 `Reset`、`Step(actions)`（移動與採食選擇）、`AddIndividual`、`RemoveIndividual`、`Observe(individual)` 與 `State`。一個世界步同時推進所有個體；`WorldRunner` 負責畫面、ML-Agents 生命週期與 JSONL，`WorldAgent` 只提供個體觀察與動作。
+
+`training/foraging.json` 為 40 × 40 地圖、每物種 10 隻、4 處產地與 12 處零散食物。採食距離 0.7、速率每秒 12 能量；產地容量 30、初值 20、每秒再生 0.4，零散食物為其四分之一。能量上限 100、初值 60；每秒基礎消耗 0.5，每移動單位另耗 1.2，耗盡後每秒損失 6 健康。這些是未經平衡的初始參數。`ForagingController` 只在感知半徑 6 內尋食，找不到時巡遊。`rules`、`idle` 與 `manual` 可執行覓食世界；此階段拒絕將舊 Python 模型接入覓食，以免誤用尚未擴充的觀察／動作介面。
 
 `training/world.json` 設定邊界、速度、步長、局部觀察半徑、輪次長度及增減事件。預設每物種兩隻，第 64 步各移除一隻、第 96 步各加入一隻，每 256 步重建世界。可複製配置後修改，透過 `-WorldConfig <路徑>` 載入；須滿足每物種至少兩隻及 `0 < removeStep < addStep < episodeSteps`。這些是訓練介面驗證事件，正式出生死亡規則另由後續任務實作。
 
@@ -35,13 +49,14 @@
 
 ## 人工核對
 
-1. 建置後開啟 `manual`，確認三色個體可依方向鍵移動，族群依序由六隻變三隻、再恢復六隻。
-2. 執行 `bridge -Visible`，觀察同種個體可往不同方向移動、移除及新增；對照 `connection.jsonl` 的 terminal 與新識別。
-3. 以相同 `-Seed` 執行無畫面 `bridge`，核對 `bridge.json`，比對兩次 `world.jsonl` 的狀態及事件（排除 run-id、裝置與 Unity 物件識別）。
-4. 執行 `train`，確認三個 behavior 分別有更新步數、TensorBoard Policy／Value Loss 與 checkpoint；`training.json` 提供 `trainerRunId`。
-5. 程序結束後依上述 `ResumeFrom` 範例續訓。確認 `trainer.log` 對三物種各輸出 `Resuming training from step ...`，且最終 checkpoint 步數高於原始值。
+1. 建置後開啟 `forage -Visible`，確認三色個體接近黃色食物；點選個體觀察能量補充及飢餓時健康下降。執行 `forage -Controller idle -Steps 8000`，核對死亡事件與再生不超出容量。用 `-ReloadRun` 重載同一紀錄，比較狀態與事件。
+2. 開啟 `manual`，確認三色個體可依方向鍵移動，族群依序由六隻變三隻、再恢復六隻。
+3. 執行 `bridge -Visible`，觀察同種個體可往不同方向移動、移除及新增；對照 `connection.jsonl` 的 terminal 與新識別。
+4. 以相同 `-Seed` 執行無畫面 `bridge`，核對 `bridge.json`，比對兩次 `world.jsonl` 的狀態及事件（排除 run-id、裝置與 Unity 物件識別）。
+5. 執行 `train`，確認三個 behavior 分別有更新步數、TensorBoard Policy／Value Loss 與 checkpoint；`training.json` 提供 `trainerRunId`。
+6. 程序結束後依上述 `ResumeFrom` 範例續訓。確認 `trainer.log` 對三物種各輸出 `Resuming training from step ...`，且最終 checkpoint 步數高於原始值。
 
-只使用微小存活／碰壁獎勵驗證更新機制，未驗證學習品質。實測證據與限制見 [共享策略驗證紀錄](docs/shared-policies.md)；環境安裝見 [工具鏈驗證紀錄](docs/toolchain.md)。
+只使用微小存活／碰壁獎勵驗證更新機制，未驗證學習品質。覓食驗證見 [覓食驗證紀錄](docs/foraging.md)；共享策略實測證據與限制見 [共享策略驗證紀錄](docs/shared-policies.md)；環境安裝見 [工具鏈驗證紀錄](docs/toolchain.md)。
 
 ## 環境
 

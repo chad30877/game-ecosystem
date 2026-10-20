@@ -1,5 +1,5 @@
 ﻿param(
-    [ValidateSet('build', 'manual', 'bridge', 'train')][string]$Mode = 'manual',
+    [ValidateSet('build', 'manual', 'bridge', 'train', 'forage')][string]$Mode = 'manual',
     [string]$Editor = '',
     [string]$Python = '',
     [string]$OutputRoot = '',
@@ -8,7 +8,9 @@
     [ValidateRange(1, 2147483647)][int]$TrainSteps = 2048,
     [string]$ResumeFrom = '',
     [string]$WorldConfig = '',
-    [switch]$Visible
+    [string]$ReloadRun = '',
+    [switch]$Visible,
+    [ValidateSet('rules', 'idle', 'manual')][string]$Controller = 'rules'
 )
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
@@ -19,11 +21,13 @@ $OutputRoot = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromP
 $project = Join-Path $root 'unity'
 $player = Join-Path $project 'Builds/World.exe'
 $config = Join-Path $root 'training/world.json'
+if ($Mode -eq 'forage') { $config = Join-Path $root 'training/foraging.json' }
 if ($WorldConfig) { $config = (Resolve-Path -LiteralPath $WorldConfig).Path }
 if ($ResumeFrom -and $Mode -ne 'train') { throw 'ResumeFrom 僅適用於 train。' }
 $runId = '{0}-{1}-{2}' -f $Mode, (Get-Date -Format 'yyyyMMdd-HHmmss'), ([guid]::NewGuid().ToString('N').Substring(0, 8))
 $output = Join-Path $OutputRoot $runId
 New-Item -ItemType Directory -Force $OutputRoot | Out-Null
+if ($ReloadRun -and $Mode -ne 'forage') { throw 'ReloadRun 僅適用於 forage。' }
 if ($Mode -eq 'build') {
     New-Item -ItemType Directory $output | Out-Null
     $log = Join-Path $output 'build.log'
@@ -82,6 +86,27 @@ for species in ('Flame', 'Frost', 'Moss'):
         Write-Output $_
     }
     if ($LASTEXITCODE -ne 0) { throw '訓練失敗。' }
+} elseif ($Mode -eq 'forage') {
+    New-Item -ItemType Directory $output | Out-Null
+    if ($ReloadRun) {
+        if ($WorldConfig -or $PSBoundParameters.ContainsKey('Seed') -or $PSBoundParameters.ContainsKey('Controller')) { throw 'ReloadRun 不可同時指定 WorldConfig、Seed 或 Controller。' }
+        $record = Get-Content -LiteralPath $ReloadRun -TotalCount 1 | ConvertFrom-Json
+        if ($record.kind -ne 'run' -or $record.rules -ne 'foraging-v1' -or -not $record.config.foraging) { throw '不是相容的覓食執行紀錄。' }
+        $Seed = [int]$record.seed
+        $Controller = $record.control
+        $config = Join-Path $output 'world-config.json'
+        [IO.File]::WriteAllText($config, ($record.config | ConvertTo-Json -Depth 5), [Text.UTF8Encoding]::new($false))
+    }
+    if (-not $PSBoundParameters.ContainsKey('Steps')) { $Steps = if ($Visible) { 0 } else { 12000 } }
+    $arguments = @('--control', $Controller, '--world-seed', $Seed,  '--world-config', ('"{0}"' -f $config), '--world-log', ('"{0}"' -f (Join-Path $output 'world.jsonl')), '--world-steps' , $Steps)
+    if (-not $Visible) {
+        if ($Steps -le 0) { throw '無畫面執行須指定正數 Steps。' }
+        $arguments += @('-batchmode', '-nographics')
+    }
+    $launch = @{ FilePath = $player; ArgumentList = $arguments; Wait = $true; PassThru = $true }
+    if (-not $Visible) { $launch.WindowStyle = 'Hidden' }
+    $process = Start-Process @launch
+    if ($process.ExitCode -ne 0) { throw '覓食世界執行失敗。' }
 } else {
     New-Item -ItemType Directory $output | Out-Null
     & $player --control manual --world-seed $Seed --world-config $config --world-log (Join-Path $output 'world.jsonl')

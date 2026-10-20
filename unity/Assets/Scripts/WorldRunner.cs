@@ -18,6 +18,9 @@ namespace Ecosystem
         private int stepLimit;
         private string runId;
         private string control;
+        private readonly List<GameObject> foodViews = new List<GameObject>();
+        private int selected;
+        private Font font;
 
         private static string Argument(string name, string fallback)
         {
@@ -38,8 +41,14 @@ namespace Ecosystem
             int seed = int.Parse(Argument("--world-seed", "1"));
             world = new World(config, seed);
             control = Argument("--control", "manual");
-            if (control != "manual" && control != "python")
+            if (control != "manual" && control != "python" && control != "rules" && control != "idle")
                 throw new ArgumentException("未知控制模式。");
+            if ((control == "rules" || control == "idle") && !config.foraging)
+                throw new ArgumentException("規則控制須使用覓食配置。");
+            if (config.foraging && control == "python")
+                throw new ArgumentException("覓食策略橋接尚未實作，請使用 rules、idle 或 manual。");
+            if (Application.isBatchMode && control != "python") Time.timeScale = 100f;
+            font = Font.CreateDynamicFontFromOSFont("Microsoft JhengHei", 16);
             var academy = Academy.Instance;
             academy.AutomaticSteppingEnabled = false;
             if (control == "python" && !academy.IsCommunicatorOn)
@@ -85,7 +94,23 @@ namespace Ecosystem
                 Destroy(agent.gameObject);
             }
             agents.Clear();
+            foreach (var view in foodViews)
+            {
+                Destroy(view.GetComponent<Renderer>().sharedMaterial);
+                Destroy(view);
+            }
+            foodViews.Clear();
             world.Reset();
+            foreach (var food in world.State.foods)
+            {
+                var view = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                Destroy(view.GetComponent<Collider>());
+                view.transform.rotation = Quaternion.Euler(90, 0, 0);
+                view.transform.position = new Vector3(food.x, food.y, 0.3f);
+                view.GetComponent<Renderer>().sharedMaterial = new Material(Resources.Load<Material>("WorldMaterial"));
+                foodViews.Add(view);
+            }
+            UpdateFoodViews();
             foreach (var individual in world.State.individuals)
                 CreateAgent(individual);
             Record("reset");
@@ -93,11 +118,11 @@ namespace Ecosystem
 
         private void CreateAgent(IndividualState individual)
         {
-            var body = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            var body = GameObject.CreatePrimitive(individual.species == "Flame" ? PrimitiveType.Cube : individual.species == "Frost" ? PrimitiveType.Sphere : PrimitiveType.Cylinder);
             body.SetActive(false);
             body.name = individual.species + "-" + individual.individual;
             Destroy(body.GetComponent<Collider>());
-            body.transform.localScale = Vector3.one * 0.4f;
+            body.transform.localScale = Vector3.one * (world.Config.foraging ? 0.65f : 0.4f);
             var material = new Material(Resources.Load<Material>("WorldMaterial"));
             material.color = individual.species == "Flame" ? new Color(1f, 0.35f, 0.2f)
                 : individual.species == "Frost" ? new Color(0.35f, 0.7f, 1f) : new Color(0.35f, 0.9f, 0.4f);
@@ -106,7 +131,7 @@ namespace Ecosystem
             behavior.BehaviorName = individual.species;
             behavior.BrainParameters.VectorObservationSize = 4;
             behavior.BrainParameters.ActionSpec = ActionSpec.MakeContinuous(2);
-            behavior.BehaviorType = control == "manual" ? BehaviorType.HeuristicOnly : BehaviorType.Default;
+            behavior.BehaviorType = control != "python" ? BehaviorType.HeuristicOnly : BehaviorType.Default;
             var agent = body.AddComponent<WorldAgent>();
             agent.World = world;
             agent.Individual = individual;
@@ -124,7 +149,13 @@ namespace Ecosystem
             Academy.Instance.EnvironmentStep();
             if (stepLimit > 0 && totalSteps >= stepLimit)
                 return;
-            world.Step(agents.ToDictionary(pair => pair.Key, pair => pair.Value.Action));
+            if (world.Config.foraging)
+                world.Step(agents.ToDictionary(pair => pair.Key, pair =>
+                    control == "rules" ? ForagingController.Decide(world, pair.Value.Individual)
+                    : new WorldAction(control == "idle" ? Vector2.zero : pair.Value.Action,
+                        control == "manual" && Input.GetKey(KeyCode.Space))));
+            else
+                world.Step(agents.ToDictionary(pair => pair.Key, pair => pair.Value.Action));
             totalSteps++;
             foreach (var agent in agents.Values)
             {
@@ -132,8 +163,17 @@ namespace Ecosystem
                 agent.AddReward(agent.Individual.boundary ? -0.01f : 0.001f);
                 agent.UpdateView();
             }
+            UpdateFoodViews();
             Record("step");
-            if (world.State.step == world.Config.removeStep)
+            foreach (int id in agents.Keys.Where(id => !world.State.individuals.Any(value => value.individual == id)).ToArray())
+            {
+                var agent = agents[id];
+                Record("agent_died", agent.Individual, agent.GetInstanceID());
+                agent.gameObject.SetActive(false);
+                Destroy(agent.gameObject);
+                agents.Remove(id);
+            }
+            if (!world.Config.foraging && world.State.step == world.Config.removeStep)
                 foreach (string species in World.Species)
                 {
                     var individual = world.State.individuals.First(value => value.species == species);
@@ -144,14 +184,49 @@ namespace Ecosystem
                     agents.Remove(individual.individual);
                     world.RemoveIndividual(individual.individual);
                 }
-            if (world.State.step == world.Config.addStep)
+            if (!world.Config.foraging && world.State.step == world.Config.addStep)
                 foreach (string species in World.Species)
                     CreateAgent(world.AddIndividual(species));
             if (world.State.endReason != "")
             {
                 Record("episode_end");
-                ResetWorld();
+                if (stepLimit <= 0 || totalSteps < stepLimit) ResetWorld();
             }
+            if (control != "python" && stepLimit > 0 && totalSteps >= stepLimit)
+                Application.Quit();
+        }
+
+        private void UpdateFoodViews()
+        {
+            for (int i = 0; i < foodViews.Count; i++)
+            {
+                var food = world.State.foods[i];
+                float ratio = food.amount / food.capacity;
+                float size = food.patch ? 2.6f : 0.9f;
+                foodViews[i].transform.localScale = new Vector3(size * (0.3f + ratio * 0.7f), 0.03f, size * (0.3f + ratio * 0.7f));
+                foodViews[i].GetComponent<Renderer>().sharedMaterial.color = Color.Lerp(new Color(0.15f, 0.18f, 0.12f), new Color(0.95f, 0.8f, 0.25f), ratio);
+            }
+        }
+
+        private void Update()
+        {
+            if (!world.Config.foraging || !Input.GetMouseButtonDown(0)) return;
+            var point = Camera.main != null ? Camera.main.ScreenToWorldPoint(Input.mousePosition)
+                : FindFirstObjectByType<Camera>().ScreenToWorldPoint(Input.mousePosition);
+            var nearest = world.State.individuals.OrderBy(value => Vector2.Distance(new Vector2(value.x, value.y), point)).FirstOrDefault();
+            if (nearest != null && Vector2.Distance(new Vector2(nearest.x, nearest.y), point) < 1.2f) selected = nearest.individual;
+        }
+
+        private void OnGUI()
+        {
+            if (world == null || !world.Config.foraging) return;
+            GUI.skin.font = font;
+            GUI.skin.label.fontSize = 16;
+            GUI.Box(new Rect(8, 8, 370, 116), "");
+            GUI.Label(new Rect(18, 12, 350, 30), control == "rules" ? "規則控制・尚非學習結果" : control == "idle" ? "靜止控制・飢餓核對" : "手動控制・方向鍵／空白鍵採食");
+            GUI.Label(new Rect(18, 42, 350, 28), $"{world.State.time:F1} 秒　炎角 {world.State.individuals.Count(v => v.species == "Flame")}　霜羽 {world.State.individuals.Count(v => v.species == "Frost")}　苔靈 {world.State.individuals.Count(v => v.species == "Moss")}");
+            var individual = world.State.individuals.FirstOrDefault(value => value.individual == selected);
+            GUI.Label(new Rect(18, 72, 350, 44), individual == null ? "點選個體" : $"#{individual.individual} {individual.species}　健康 {individual.health:F1}　能量 {individual.energy:F1}");
         }
 
         private void Record(string kind, IndividualState individual = null, int unityObject = 0) => output.WriteLine(JsonUtility.ToJson(new StepRecord
@@ -168,7 +243,7 @@ namespace Ecosystem
             public string unity;
             public string device;
             public string control;
-            public string rules = "shared-policies-v1";
+            public string rules = "foraging-v1";
             public WorldConfig config;
         }
 

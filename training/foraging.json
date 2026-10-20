@@ -1,0 +1,17 @@
+{
+  "foraging": true,
+  "halfExtent": 20.0,
+  "stepSeconds": 0.02,
+  "observationRadius": 6.0,
+  "episodeSteps": 30000,
+  "individualsPerSpecies": 10,
+  "foodCapacity": 30.0,
+  "foodInitial": 20.0,
+  "foodRegeneration": 0.4,
+  "forageRadius": 0.7,
+  "forageRate": 12.0,
+  "initialEnergy": 60.0,
+  "idleCost": 0.5,
+  "movementCost": 1.2,
+  "starvationDamage": 6.0
+}
