@@ -25,7 +25,7 @@
 ./scripts/world.ps1 -Mode forage -ReloadRun './artifacts/runs/<輸出>/world.jsonl'
 ```
 
-`-Controller idle` 停止移動與採食，方便核對飢餓；`manual -Visible` 可用方向鍵移動、空白鍵採食。`-ReloadRun` 從首筆紀錄重載完整配置、種子與控制模式，重現起始世界及規則執行序列，不能與 `-Seed`、`-Controller` 或 `-WorldConfig` 混用。這不是歷史回放，也不承諾跨裝置逐影格一致。
+`-Controller idle` 停止移動與採食，方便核對飢餓；`forage -Controller manual -Visible` 可用方向鍵移動、空白鍵採食。`-ReloadRun` 從首筆紀錄重載完整配置、種子與控制模式，重現起始世界；規則及靜止模式亦可重現執行序列，手動模式需再次輸入動作。此參數不能與 `-Seed`、`-Controller` 或 `-WorldConfig` 混用。這不是歷史回放，也不承諾跨裝置逐影格一致。
 
 `manual` 使用方向鍵控制所有個體；`bridge` 讓 Python 分別送出動作，同種個體也可移往不同方向。`-Visible` 顯示場景，省略時無畫面執行。
 
