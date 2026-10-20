@@ -26,3 +26,8 @@
 - Unity 建置、Python 語法及型別、相依與 PowerShell 語法檢查通過；沒有專案既有測試套件，未新增測試檔。
 - 證據與限制見 [共享策略驗證紀錄](../../../docs/shared-policies.md)，人工操作見 [README](../../../README.md)。任務 08 的本項前置阻擋解除，不代表其餘前置任務已完成；尚未驗證學習品質。
 - 以 `4f8490c` 為固定比較點完成平行雙軸 code-review：Standards 及 Spec 均為 0 項可行動發現；另以每物種三隻的自訂配置驗證增減事件入口通過。
+
+## 討論紀錄
+
+- 2026-10-20：使用者回報 Windows PowerShell 執行 `bridge -Visible` 出現解析錯誤。已於 PowerShell 5.1 重現：無 BOM 的 UTF-8 腳本被 CP950 誤讀，產生 12 個解析錯誤；同內容明確以 UTF-8 解析為 0 個。為腳本加入 UTF-8 BOM，並以 `.editorconfig` 設定 PowerShell 檔案編碼。
+- 修正後 PowerShell 5.1／7 語法解析皆為 0 個錯誤；透過 `powershell.exe -NoProfile -NonInteractive -File ./scripts/world.ps1 -Mode bridge -Visible` 實際完成 512 步、24 個不同 agent-id、18 個 terminal-id，輸出為 `C:/Toolchains/game-ecosystem/runs/bridge-20261020-144931-f67a1200`。人工可直接重跑使用者原本指令；本次未新增測試檔。

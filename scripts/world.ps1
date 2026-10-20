@@ -1,4 +1,4 @@
-param(
+﻿param(
     [ValidateSet('build', 'manual', 'bridge', 'train')][string]$Mode = 'manual',
     [string]$Editor = 'C:/Toolchains/Unity/6000.0.85f1/Editor/Unity.exe',
     [string]$Python = 'C:/Toolchains/game-ecosystem/python/Scripts/python.exe',
