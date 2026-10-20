@@ -22,15 +22,26 @@ namespace Ecosystem
         public float recoveryEnergy = 50f;
         public float recoveryDelay = 5f;
         public float recoveryRate = 2f;
+        public float iceRange = 6f;
+        public float iceSpeed = 8f;
+        public float iceDamage = 10f;
+        public float iceEnergy = 6f;
+        public float iceWindup = 0.45f;
+        public float iceCooldown = 2.5f;
+        public float slowDuration = 1f;
+        public float slowMultiplier = 0.55f;
 
         public void Validate()
         {
             foreach (float value in new[] { meleeRange, meleeDamage, meleeEnergy, meleeCooldown,
                 chargeDistance, chargeSpeed, chargeDamage, chargeEnergy, chargeCooldown,
-                hitRadius, recoveryEnergy, recoveryDelay, recoveryRate })
+                hitRadius, recoveryEnergy, recoveryDelay, recoveryRate, iceRange, iceSpeed, iceDamage,
+                iceEnergy, iceWindup, iceCooldown, slowDuration, slowMultiplier })
                 if (!float.IsFinite(value) || value <= 0) throw new ArgumentException("戰鬥參數須為有限正數。");
-            if (meleeEnergy > 100 || chargeEnergy > 100 || recoveryEnergy > 100)
+            if (meleeEnergy > 100 || chargeEnergy > 100 || recoveryEnergy > 100 || iceEnergy > 100)
                 throw new ArgumentException("戰鬥能量門檻不得大於 100。");
+            if (slowDuration >= iceCooldown || slowMultiplier >= 1 || iceWindup >= iceCooldown)
+                throw new ArgumentException("減速時間及前搖須短於冰箭冷卻，減速倍率須介於 0 與 1。");
         }
     }
 
@@ -44,7 +55,29 @@ namespace Ecosystem
             foreach (var individual in state.individuals)
             {
                 individual.chargeActiveThisStep = individual.chargeRemaining > 0;
+                individual.windupActiveThisStep = individual.windupUntil > 0;
                 var action = actions[individual.individual];
+                if (individual.health <= 0) continue;
+                if (individual.windupUntil > 0 && state.time >= individual.windupUntil)
+                {
+                    state.projectiles.Add(new ProjectileState { projectile = ++state.nextProjectile, owner = individual.individual,
+                        species = individual.species, x = individual.x, y = individual.y,
+                        directionX = individual.aimX, directionY = individual.aimY, remaining = config.combat.iceRange });
+                    individual.windupUntil = 0;
+                    state.events.Add(new WorldEvent { kind = "ice_fired", individual = individual.individual, x = individual.x, y = individual.y });
+                }
+                if (individual.species == "Frost" && action.attack && !individual.windupActiveThisStep && action.aim.sqrMagnitude > 0 &&
+                    state.time >= individual.attackReadyAt && individual.energy >= config.combat.iceEnergy)
+                {
+                    individual.energy -= config.combat.iceEnergy;
+                    individual.attackReadyAt = state.time + config.combat.iceCooldown;
+                    individual.windupUntil = state.time + config.combat.iceWindup;
+                    individual.windupActiveThisStep = true;
+                    individual.aimX = action.aim.normalized.x;
+                    individual.aimY = action.aim.normalized.y;
+                    individual.lastCombatAt = state.time;
+                    state.events.Add(new WorldEvent { kind = "ice_windup", individual = individual.individual, amount = config.combat.iceEnergy });
+                }
                 if (individual.species != "Flame" || individual.chargeRemaining > 0 ||
                     action.skill != WorldSkill.Charge || action.aim.sqrMagnitude == 0 ||
                     state.time < individual.skillReadyAt || individual.energy < config.combat.chargeEnergy) continue;
@@ -54,6 +87,7 @@ namespace Ecosystem
                 individual.aimX = action.aim.normalized.x;
                 individual.aimY = action.aim.normalized.y;
                 individual.chargeActiveThisStep = true;
+                individual.lastCombatAt = state.time;
                 state.events.Add(new WorldEvent { kind = "charge", individual = individual.individual,
                     amount = config.combat.chargeEnergy });
             }
@@ -63,9 +97,10 @@ namespace Ecosystem
         {
             float speed = individual.species == "Frost" ? 3.2f : individual.species == "Moss" ? 2.7f : 2.5f;
             bool charging = individual.chargeRemaining > 0;
+            if (!charging && state.time < individual.slowUntil) speed *= config.combat.slowMultiplier;
             Vector2 delta = charging ? new Vector2(individual.aimX, individual.aimY) *
                 Mathf.Min(individual.chargeRemaining, config.combat.chargeSpeed * config.stepSeconds)
-                : Vector2.ClampMagnitude(action.movement, 1) * (speed * config.stepSeconds);
+                : individual.windupActiveThisStep ? Vector2.zero : Vector2.ClampMagnitude(action.movement, 1) * (speed * config.stepSeconds);
             Vector2 start = Position(individual);
             Vector2 end = start + delta;
             end = new Vector2(Mathf.Clamp(end.x, -config.halfExtent, config.halfExtent), Mathf.Clamp(end.y, -config.halfExtent, config.halfExtent));
@@ -93,11 +128,42 @@ namespace Ecosystem
                     action.aim.sqrMagnitude == 0 || state.time < individual.attackReadyAt || individual.energy < config.combat.meleeEnergy) continue;
                 individual.energy -= config.combat.meleeEnergy;
                 individual.attackReadyAt = state.time + config.combat.meleeCooldown;
+                individual.lastCombatAt = state.time;
                 state.events.Add(new WorldEvent { kind = "melee", individual = individual.individual, amount = config.combat.meleeEnergy });
                 var target = FirstHit(state, individual.species, Position(individual),
                     Position(individual) + action.aim.normalized * config.combat.meleeRange, config.combat.hitRadius, out _);
                 if (target != null) Damage(state, individual, target, config.combat.meleeDamage, "melee_hit", state.time + config.stepSeconds);
             }
+            foreach (var projectile in state.projectiles)
+            {
+                Vector2 start = new Vector2(projectile.x, projectile.y);
+                float distance = Mathf.Min(projectile.remaining, config.combat.iceSpeed * config.stepSeconds);
+                Vector2 end = start + new Vector2(projectile.directionX, projectile.directionY) * distance;
+                var target = FirstHit(state, projectile.species, start, end, config.combat.hitRadius, out _);
+                if (target != null)
+                {
+                    // 射手死亡不抹去已發射的冰箭，事件仍保留原始個體識別。
+                    var source = state.individuals.Find(value => value.individual == projectile.owner)
+                        ?? new IndividualState { individual = projectile.owner, species = projectile.species };
+                    Damage(state, source, target, config.combat.iceDamage, "ice_hit", state.time + config.stepSeconds);
+                    if (!target.chargeActiveThisStep && target.health > 0)
+                    {
+                        target.slowUntil = state.time + config.stepSeconds + config.combat.slowDuration;
+                        state.events.Add(new WorldEvent { kind = "slowed", individual = target.individual, amount = config.combat.slowDuration });
+                    }
+                    else if (target.chargeActiveThisStep)
+                        state.events.Add(new WorldEvent { kind = "slow_immune", individual = target.individual });
+                    projectile.remaining = 0;
+                }
+                else
+                {
+                    projectile.remaining = Mathf.Max(0, projectile.remaining - distance);
+                    if (Mathf.Abs(end.x) > config.halfExtent || Mathf.Abs(end.y) > config.halfExtent) projectile.remaining = 0;
+                    projectile.x = end.x;
+                    projectile.y = end.y;
+                }
+            }
+            state.projectiles.RemoveAll(value => value.remaining <= 0);
         }
 
         // 線段掃掠回傳第一個異種碰撞，避免快速衝鋒穿透；同種不受傷也不攔截。
@@ -144,6 +210,8 @@ namespace Ecosystem
         {
             individual.attackCooldown = Mathf.Max(0, individual.attackReadyAt - time);
             individual.skillCooldown = Mathf.Max(0, individual.skillReadyAt - time);
+            individual.windupRemaining = Mathf.Max(0, individual.windupUntil - time);
+            individual.slowRemaining = Mathf.Max(0, individual.slowUntil - time);
             if (individual.health <= 0 || individual.energy < config.combat.recoveryEnergy ||
                 time - individual.lastCombatAt < config.combat.recoveryDelay) return;
             float recovered = Mathf.Min(config.combat.recoveryRate * config.stepSeconds, MaxHealth(individual.species) - individual.health);

@@ -6,7 +6,7 @@ namespace Ecosystem
     {
         public static WorldAction Decide(World world, IndividualState individual)
         {
-            if (individual.species == "Flame")
+            if (individual.species == "Flame" || individual.species == "Frost")
             {
                 IndividualState enemy = null;
                 float range = world.Config.observationRadius;
@@ -20,6 +20,8 @@ namespace Ecosystem
                 if (enemy != null && individual.energy >= 20)
                 {
                     var direction = (CombatRules.Position(enemy) - CombatRules.Position(individual)).normalized;
+                    if (individual.species == "Frost")
+                        return new WorldAction(range < 3.5f ? -direction : Vector2.zero, true, direction, range <= world.Config.combat.iceRange);
                     return new WorldAction(range < world.Config.combat.meleeRange ? Vector2.zero : direction,
                         true, direction, true, range > 1.5f && range <= world.Config.combat.chargeDistance ? WorldSkill.Charge : WorldSkill.None);
                 }

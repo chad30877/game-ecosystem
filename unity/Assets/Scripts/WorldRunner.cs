@@ -22,6 +22,7 @@ namespace Ecosystem
         private int selected;
         private Font font;
         private WorldScenario scenario;
+        private readonly List<GameObject> projectileViews = new List<GameObject>();
 
         private static string Argument(string name, string fallback)
         {
@@ -101,6 +102,7 @@ namespace Ecosystem
                 Destroy(agent.gameObject);
             }
             agents.Clear();
+            ClearProjectileViews();
             foreach (var view in foodViews)
             {
                 Destroy(view.GetComponent<Renderer>().sharedMaterial);
@@ -178,6 +180,7 @@ namespace Ecosystem
             }
             UpdateFoodViews();
             Record("step");
+            UpdateProjectileViews();
             foreach (int id in agents.Keys.Where(id => !world.State.individuals.Any(value => value.individual == id)).ToArray())
             {
                 var agent = agents[id];
@@ -223,6 +226,38 @@ namespace Ecosystem
             }
         }
 
+        private void ClearProjectileViews()
+        {
+            foreach (var view in projectileViews)
+            {
+                Destroy(view.GetComponent<Renderer>().sharedMaterial);
+                Destroy(view);
+            }
+            projectileViews.Clear();
+        }
+
+        private void UpdateProjectileViews()
+        {
+            while (projectileViews.Count < world.State.projectiles.Count)
+            {
+                var view = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                Destroy(view.GetComponent<Collider>());
+                view.transform.localScale = new Vector3(0.5f, 0.12f, 0.12f);
+                var material = new Material(Resources.Load<Material>("WorldMaterial"));
+                material.color = Color.cyan;
+                view.GetComponent<Renderer>().sharedMaterial = material;
+                projectileViews.Add(view);
+            }
+            for (int i = 0; i < projectileViews.Count; i++)
+            {
+                projectileViews[i].SetActive(i < world.State.projectiles.Count);
+                if (i >= world.State.projectiles.Count) continue;
+                var arrow = world.State.projectiles[i];
+                projectileViews[i].transform.position = new Vector3(arrow.x, arrow.y, -0.2f);
+                projectileViews[i].transform.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(arrow.directionY, arrow.directionX) * Mathf.Rad2Deg);
+            }
+        }
+
         private void Update()
         {
             if (!world.Config.foraging || !Input.GetMouseButtonDown(0)) return;
@@ -245,7 +280,7 @@ namespace Ecosystem
             if (individual != null)
             {
                 GUI.Label(new Rect(18, 100, 570, 28), $"年齡 {individual.age:F1}　{(individual.age < world.Config.maturityAge ? "成長期" : "成年")}　繁殖 {individual.reproductionCooldown:F1}");
-                GUI.Label(new Rect(18, 128, 570, 28), $"攻擊 {individual.attackCooldown:F1}　技能 {individual.skillCooldown:F1}　{(individual.chargeRemaining > 0 ? "衝鋒" : "")}");
+                GUI.Label(new Rect(18, 128, 570, 28), $"攻擊 {individual.attackCooldown:F1}　技能 {individual.skillCooldown:F1}　前搖 {individual.windupRemaining:F1}　減速 {individual.slowRemaining:F1}　{(individual.chargeRemaining > 0 ? "衝鋒" : "")}");
             }
             int row = 0;
             foreach (var statistics in world.State.statistics)
@@ -268,7 +303,7 @@ namespace Ecosystem
             public string unity;
             public string device;
             public string control;
-            public string rules = "flame-v1";
+            public string rules = "frost-v1";
             public WorldConfig config;
             public WorldScenario scenario;
         }

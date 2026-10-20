@@ -87,6 +87,11 @@ namespace Ecosystem
         public float lastCombatAt = -1000f;
         public string lastDamageCause = "";
         public float hitUntil;
+        public float windupUntil;
+        public float windupRemaining;
+        public bool windupActiveThisStep;
+        public float slowUntil;
+        public float slowRemaining;
     }
 
     [Serializable]
@@ -169,6 +174,21 @@ namespace Ecosystem
         public List<IndividualState> individuals = new List<IndividualState>();
         public List<DeathRecord> deaths = new List<DeathRecord>();
         public List<SpeciesStatistics> statistics = new List<SpeciesStatistics>();
+        public List<ProjectileState> projectiles = new List<ProjectileState>();
+        public int nextProjectile;
+    }
+
+    [Serializable]
+    public sealed class ProjectileState
+    {
+        public int projectile;
+        public int owner;
+        public string species;
+        public float x;
+        public float y;
+        public float directionX;
+        public float directionY;
+        public float remaining;
     }
 
     public sealed class World

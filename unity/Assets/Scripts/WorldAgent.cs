@@ -11,6 +11,7 @@ namespace Ecosystem
         public IndividualState Individual { get; set; }
         public Vector2 Action { get; private set; }
         private TrailRenderer trail;
+        private LineRenderer aimView;
 
         public override void CollectObservations(VectorSensor sensor) => sensor.AddObservation(World.Observe(Individual));
 
@@ -32,7 +33,8 @@ namespace Ecosystem
             var renderer = GetComponent<Renderer>();
             var color = Individual.species == "Flame" ? new Color(1f, 0.35f, 0.2f)
                 : Individual.species == "Frost" ? new Color(0.35f, 0.7f, 1f) : new Color(0.35f, 0.9f, 0.4f);
-            renderer.sharedMaterial.color = World.State.time < Individual.hitUntil ? Color.white : color;
+            renderer.sharedMaterial.color = World.State.time < Individual.hitUntil ? Color.white
+                : Individual.windupRemaining > 0 ? Color.cyan : Individual.slowRemaining > 0 ? Color.Lerp(color, Color.blue, 0.5f) : color;
             if (trail == null)
             {
                 trail = gameObject.AddComponent<TrailRenderer>();
@@ -42,6 +44,17 @@ namespace Ecosystem
                 trail.endWidth = 0;
             }
             trail.emitting = Individual.chargeRemaining > 0;
+            if (aimView == null)
+            {
+                aimView = new GameObject("Aim").AddComponent<LineRenderer>();
+                aimView.transform.SetParent(transform);
+                aimView.sharedMaterial = renderer.sharedMaterial;
+                aimView.startWidth = aimView.endWidth = 0.08f;
+                aimView.positionCount = 2;
+            }
+            aimView.enabled = Individual.windupRemaining > 0;
+            aimView.SetPosition(0, transform.position);
+            aimView.SetPosition(1, transform.position + new Vector3(Individual.aimX, Individual.aimY, 0) * 1.3f);
         }
 
         private void OnDestroy() => Destroy(GetComponent<Renderer>().sharedMaterial);
