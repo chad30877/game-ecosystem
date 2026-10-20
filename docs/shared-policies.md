@@ -43,7 +43,7 @@ Python 向同種不同個體傳送不同方向的動作，三物種皆有實際�
 
 ## 證據位置與重現
 
-活躍輸出位於 `C:/Toolchains/game-ecosystem/runs`：
+任務 02 當時輸出位於 `C:/Toolchains/game-ecosystem/runs`；任務 13 已將下列同名目錄遷至專案內 `artifacts/runs`，原始紀錄中的歷史路徑保留：
 
 - `bridge-20261020-144125-edfdfda8`：無畫面世界、連線序列與摘要。
 - `bridge-20261020-144137-26e1f863`：可見世界、連線序列與摘要。

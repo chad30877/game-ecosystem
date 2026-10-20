@@ -24,12 +24,14 @@ Editor 安裝檔由 Unity 官方 release API 取得，Authenticode 簽章為 Val
 | 用途 | 路徑 |
 | --- | --- |
 | 唯一活躍來源與 Unity Library 快取 | `D:/Projects/game-ecosystem`、`unity/Library` |
-| Editor | `C:/Toolchains/Unity/6000.0.85f1/Editor/Unity.exe` |
-| Python 執行環境 | `C:/Toolchains/game-ecosystem/python` |
-| Python 基底 | `C:/Toolchains/game-ecosystem/cpython-3.10.12-windows-x86_64-none` |
-| 活躍輸出 | `C:/Toolchains/game-ecosystem/runs` |
-| 安裝下載與 uv 套件下載快取 | `D:/Toolchains/downloads` |
+| Editor | 專案內 `.tools/unity/6000.0.85f1/Editor/Unity.exe`，已登錄 Unity Hub |
+| Python 執行環境 | 專案內 `.venv` |
+| Python 基底 | 專案內 `.python/cpython-3.10.12-windows-x86_64-none` |
+| 活躍輸出 | 專案內 `artifacts/runs` |
+| 安裝下載與 uv 套件下載快取 | 專案內 `artifacts/downloads`、`artifacts/cache/uv` |
 | 歷史輸出 | `D:/TrainingHistory/game-ecosystem/toolchain-20261020`（已封存兩次 bridge 與一次 PPO 訓練） |
+
+上表為任務 13 遷移後的位置；以下任務 01／02 的實測紀錄保留當時路徑，同名執行目錄已遷至 `artifacts/runs`。環境遷移與人工驗證見 [專案內環境紀錄](project-environment.md)。
 
 安裝前 C 槽剩餘 105,957,982,208 bytes（約 98.7 GiB），D 槽剩餘 668,849,696,768 bytes（約 622.9 GiB）。安裝後量測 C 槽約 89.8 GiB，仍高於原規劃 25–30 GB 餘裕。
 
@@ -73,6 +75,6 @@ Python 訓練使用 `torch-device=cpu`，PyTorch 為 `2.5.1+cpu`、CUDA false；
 
 透過 Windows `GetFinalPathNameByHandleW` 確認，該檔案實際位於 `C:/Users/User/AppData/Local/Packages/OpenAI.Codex_2p2nqsd0c76g0/LocalCache/Roaming/uv/python/cpython-3.10.12-windows-x86_64-none/python.exe`。問題是應用程式的 AppData 重新導向，與帳號名稱或 Python 套件缺失無關。
 
-已將完整基底複製到上表的共用 `C:/Toolchains` 路徑，更新既有虛擬環境的 home，保留套件；原設定備份為 `C:/Toolchains/game-ecosystem/runs/pyvenv-before-shared-runtime.cfg`。複製前 C 槽剩餘約 70.3 GiB，基底大小約 111.1 MiB。新執行檔的 Windows 實際路徑確認仍為 `C:/Toolchains`，Python 3.10.12、PyTorch 2.5.1+cpu 匯入及 42 個套件的相依檢查通過。README 的新環境安裝命令已改為指定共用安裝目錄及基底完整路徑。
+當時將完整基底複製到共用 `C:/Toolchains/game-ecosystem/cpython-3.10.12-windows-x86_64-none`，更新既有虛擬環境的 home，保留套件；原設定備份為 `C:/Toolchains/game-ecosystem/runs/pyvenv-before-shared-runtime.cfg`。複製前 C 槽剩餘約 70.3 GiB，基底大小約 111.1 MiB。新執行檔的 Windows 實際路徑確認仍為 `C:/Toolchains`，Python 3.10.12、PyTorch 2.5.1+cpu 匯入及 42 個套件的相依檢查通過。後續再依使用者要求遷入專案，現行配置見上表。
 
 修復後透過 Windows PowerShell 5.1 完成可見 bridge 512 步，輸出為 `C:/Toolchains/game-ecosystem/runs/bridge-20261020-145451-63788c10`；使用者亦在原本出錯的 PowerShell 視窗重跑 `./scripts/world.ps1 -Mode bridge -Visible`，確認可以正常執行。

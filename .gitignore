@@ -9,5 +9,7 @@ unity/*.sln
 unity/*.slnx
 __pycache__/
 .venv/
+.python/
+.tools/
 artifacts/
 results/

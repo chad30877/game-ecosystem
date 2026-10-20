@@ -1,8 +1,8 @@
 ﻿param(
     [ValidateSet('build', 'manual', 'bridge', 'train')][string]$Mode = 'manual',
-    [string]$Editor = 'C:/Toolchains/Unity/6000.0.85f1/Editor/Unity.exe',
-    [string]$Python = 'C:/Toolchains/game-ecosystem/python/Scripts/python.exe',
-    [string]$OutputRoot = 'C:/Toolchains/game-ecosystem/runs',
+    [string]$Editor = '',
+    [string]$Python = '',
+    [string]$OutputRoot = '',
     [int]$Seed = 1,
     [int]$Steps = 512,
     [ValidateRange(1, 2147483647)][int]$TrainSteps = 2048,
@@ -12,6 +12,10 @@
 )
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
+if (-not $Editor) { $Editor = Join-Path $root '.tools/unity/6000.0.85f1/Editor/Unity.exe' }
+if (-not $Python) { $Python = Join-Path $root '.venv/Scripts/python.exe' }
+if (-not $OutputRoot) { $OutputRoot = Join-Path $root 'artifacts/runs' }
+$OutputRoot = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutputRoot)
 $project = Join-Path $root 'unity'
 $player = Join-Path $project 'Builds/World.exe'
 $config = Join-Path $root 'training/world.json'
@@ -60,14 +64,23 @@ for species in ('Flame', 'Frost', 'Moss'):
         Copy-Item -LiteralPath $source -Destination (Join-Path $output $trainerRunId) -Recurse
     }
     $trainerConfig = Join-Path $output 'trainer.yaml'
-    (Get-Content -Raw (Join-Path $root 'training/toolchain.yaml')) -replace 'max_steps: \d+', "max_steps: $TrainSteps" | Set-Content -Encoding utf8 $trainerConfig
+    $utf8 = [Text.UTF8Encoding]::new($false)
+    $trainerYaml = (Get-Content -Raw (Join-Path $root 'training/toolchain.yaml')) -replace 'max_steps: \d+', "max_steps: $TrainSteps"
+    [IO.File]::WriteAllText($trainerConfig, $trainerYaml, $utf8)
     $timeScale = if ($Visible) { '1' } else { '20' }
     $arguments = @('-m', 'mlagents.trainers.learn', $trainerConfig, '--env', $player, '--run-id', $trainerRunId, '--results-dir', $output, '--seed', $Seed, '--torch-device', 'cpu', '--time-scale', $timeScale, '--width', '960', '--height', '720', '--max-lifetime-restarts', '0')
     if ($ResumeFrom) { $arguments += '--resume' }
     if (-not $Visible) { $arguments += '--no-graphics' }
     $arguments += @('--env-args', '--world-log', (Join-Path $output 'world.jsonl'), '--world-seed', $Seed, '--world-config', $config, '--control', 'python')
-    @{ source = $ResumeFrom; trainerRunId = $trainerRunId; targetSteps = $TrainSteps; worldConfig = (Get-Content -Raw $config | ConvertFrom-Json) } | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 (Join-Path $output 'training.json')
-    & $Python @arguments 2>&1 | Tee-Object -FilePath (Join-Path $output 'trainer.log')
+    $trainingRecord = @{ source = $ResumeFrom; trainerRunId = $trainerRunId; targetSteps = $TrainSteps; worldConfig = (Get-Content -Raw $config | ConvertFrom-Json) } | ConvertTo-Json -Depth 5
+    [IO.File]::WriteAllText((Join-Path $output 'training.json'), $trainingRecord, $utf8)
+    $trainerLog = Join-Path $output 'trainer.log'
+    [IO.File]::WriteAllText($trainerLog, '', $utf8)
+    # PowerShell 5.1 合併 stderr 時會把套件警告當成終止錯誤；訓練日誌由 stdout 保存。
+    & $Python @arguments | ForEach-Object {
+        [IO.File]::AppendAllText($trainerLog, $_.ToString() + [Environment]::NewLine, $utf8)
+        Write-Output $_
+    }
     if ($LASTEXITCODE -ne 0) { throw '訓練失敗。' }
 } else {
     New-Item -ItemType Directory $output | Out-Null

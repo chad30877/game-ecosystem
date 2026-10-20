@@ -12,14 +12,14 @@
 ./scripts/world.ps1 -Mode bridge -Visible
 ./scripts/world.ps1 -Mode bridge
 ./scripts/world.ps1 -Mode train
-./scripts/world.ps1 -Mode train -TrainSteps 4096 -ResumeFrom 'C:/Toolchains/game-ecosystem/runs/<首次輸出>/<trainerRunId>'
+./scripts/world.ps1 -Mode train -TrainSteps 4096 -ResumeFrom './artifacts/runs/<首次輸出>/<trainerRunId>'
 ```
 
 `manual` 使用方向鍵控制所有個體；`bridge` 讓 Python 分別送出動作，同種個體也可移往不同方向。`-Visible` 顯示場景，省略時無畫面執行。
 
 `train` 預設以每物種 2,048 筆經驗為停止門檻，完成 rollout 批次後才停止，checkpoint 可能略超過門檻。`-TrainSteps` 設定累計門檻；續訓時須大於三物種既有 checkpoint 步數。`-ResumeFrom` 指向含 `Flame/checkpoint.pt`、`Frost/checkpoint.pt`、`Moss/checkpoint.pt` 的 trainer 目錄，會複製至新輸出目錄後恢復參數、optimizer 與累計步數。續訓從新世界開始，原始輸出保留；目前僅驗證相同模型結構與配置的工具能力。
 
-入口預設 Editor 位於 `C:/Toolchains/Unity/6000.0.85f1/Editor/Unity.exe`，Python 位於 `C:/Toolchains/game-ecosystem/python/Scripts/python.exe`；可透過 `-Editor`、`-Python` 覆寫。每次產生獨立輸出目錄，預設為 `C:/Toolchains/game-ecosystem/runs`，可用 `-OutputRoot` 調整。
+入口以專案根目錄定位 `.tools/unity/6000.0.85f1/Editor/Unity.exe`、`.venv/Scripts/python.exe` 及 `artifacts/runs`，可透過 `-Editor`、`-Python`、`-OutputRoot` 覆寫。每次執行產生獨立輸出目錄，不需要先啟用虛擬環境。
 
 ## 世界入口
 
@@ -48,11 +48,15 @@
 需要已啟用授權的 Unity 6000.0.85f1（Windows Mono 建置）及 Python 3.10.12。Unity 套件由 `unity/Packages/manifest.json` 指定，Python 相依鎖定於 `training/requirements-lock.txt`。
 
 ```powershell
-uv python install --install-dir C:/Toolchains/game-ecosystem 3.10.12
-uv venv --python C:/Toolchains/game-ecosystem/cpython-3.10.12-windows-x86_64-none/python.exe C:/Toolchains/game-ecosystem/python
-uv pip install --python C:/Toolchains/game-ecosystem/python/Scripts/python.exe -r training/requirements-lock.txt
+uv python install --install-dir .python --cache-dir artifacts/cache/uv 3.10.12
+uv venv --python .python/cpython-3.10.12-windows-x86_64-none/python.exe .venv
+uv pip install --python .venv/Scripts/python.exe --cache-dir artifacts/cache/uv -r training/requirements-lock.txt
 ```
 
-基底 Python 與虛擬環境均放在 `C:/Toolchains`，避免 Codex 的 AppData 路徑重新導向使一般 PowerShell 找不到基底執行檔。
+Python 執行檔及標準函式庫位於 `.python`，專案套件位於 `.venv`；兩者都由專案管理，避免 AppData 重新導向。Editor 安裝於 `.tools/unity/6000.0.85f1` 並登錄至 Unity Hub；另有 Editor 時可用 `-Editor` 指定。上述環境與 `artifacts` 均不納入 Git。
+
+虛擬環境包含絕對路徑；搬動整個專案後，須依上述命令重建 `.venv`，並更新 Hub 的 Editor 位置。
+
+本機遷移結果與相容性驗證見 [專案內環境紀錄](docs/project-environment.md)。
 
 目前沒有專案既有測試套件，本次未新增測試檔；以 Unity 建置、Python 語法／型別檢查及實際世界入口驗證。
