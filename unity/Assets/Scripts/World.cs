@@ -18,13 +18,19 @@ namespace Ecosystem
         public bool foraging;
         public float foodCapacity = 30f;
         public float foodInitial = 20f;
-        public float foodRegeneration = 0.4f;
+        public float foodRegeneration = 4f;
         public float forageRadius = 0.7f;
         public float forageRate = 12f;
         public float initialEnergy = 60f;
         public float idleCost = 0.5f;
         public float movementCost = 1.2f;
         public float starvationDamage = 6f;
+        public float maturityAge = 30f;
+        public float lifespan = 240f;
+        public float reproductionEnergy = 80f;
+        public float reproductionCost = 40f;
+        public float reproductionCooldown = 30f;
+        public int populationLimit = 120;
 
         public void Validate()
         {
@@ -44,6 +50,13 @@ namespace Ecosystem
                 !float.IsFinite(movementCost) || movementCost < 0 ||
                 !float.IsFinite(starvationDamage) || starvationDamage <= 0))
                 throw new ArgumentException("食物、採食與生存參數無效。");
+            if (foraging && (!float.IsFinite(maturityAge) || maturityAge <= 0 ||
+                !float.IsFinite(lifespan) || lifespan <= maturityAge ||
+                !float.IsFinite(reproductionEnergy) || reproductionEnergy <= 0 || reproductionEnergy > 100 ||
+                !float.IsFinite(reproductionCost) || reproductionCost <= 0 || reproductionCost > reproductionEnergy ||
+                !float.IsFinite(reproductionCooldown) || reproductionCooldown <= 0 ||
+                populationLimit < (long)individualsPerSpecies * 3))
+                throw new ArgumentException("成長期、壽命、繁殖或人口上限參數無效。");
         }
     }
 
@@ -57,6 +70,10 @@ namespace Ecosystem
         public bool boundary;
         public float health;
         public float energy;
+        public float age;
+        public float bornAt;
+        public float reproductionCooldown;
+        public float nextReproductionTime;
     }
 
     [Serializable]
@@ -77,6 +94,32 @@ namespace Ecosystem
         public int individual;
         public int food;
         public float amount;
+        public int parent;
+        public string species;
+        public string cause;
+        public float age;
+    }
+
+    [Serializable]
+    public sealed class DeathRecord
+    {
+        public int individual;
+        public string species;
+        public string cause;
+        public float age;
+        public float time;
+    }
+
+    [Serializable]
+    public sealed class SpeciesStatistics
+    {
+        public string species;
+        public int births;
+        public int starved;
+        public int oldAge;
+        public int populationLimitHits;
+        public int incompleteLives;
+        public float completedAgeTotal;
     }
 
     public readonly struct WorldAction
@@ -100,6 +143,8 @@ namespace Ecosystem
         public float time;
         public string endReason = "";
         public List<IndividualState> individuals = new List<IndividualState>();
+        public List<DeathRecord> deaths = new List<DeathRecord>();
+        public List<SpeciesStatistics> statistics = new List<SpeciesStatistics>();
     }
 
     public sealed class World
@@ -122,6 +167,8 @@ namespace Ecosystem
         {
             State = new WorldState { episode = ++episode };
             foreach (string species in Species)
+                State.statistics.Add(new SpeciesStatistics { species = species });
+            foreach (string species in Species)
                 for (int i = 0; i < Config.individualsPerSpecies; i++)
                     AddIndividual(species);
             if (Config.foraging)
@@ -141,6 +188,7 @@ namespace Ecosystem
                     });
                 }
             }
+            UpdateIncompleteLives();
             return State;
         }
 
@@ -156,6 +204,8 @@ namespace Ecosystem
                 individual = ++nextIndividual, species = species,
                 health = species == "Flame" ? 120f : species == "Frost" ? 70f : 90f,
                 energy = Config.initialEnergy,
+                age = Config.foraging ? Config.maturityAge : 0,
+                bornAt = Config.foraging ? State.time - Config.maturityAge : State.time,
                 x = (float)(random.NextDouble() - 0.5) * Config.halfExtent,
                 y = (float)(random.NextDouble() - 0.5) * Config.halfExtent
             };
@@ -186,6 +236,7 @@ namespace Ecosystem
                     !float.IsFinite(action.movement.x) || !float.IsFinite(action.movement.y))
                     throw new ArgumentException("每隻個體都必須取得有限數值的動作。");
             State.events.Clear();
+            float time = (State.step + 1) * Config.stepSeconds;
             foreach (var food in State.foods)
                 food.amount = Mathf.Min(food.capacity, food.amount + Config.foodRegeneration * Config.stepSeconds * (food.patch ? 1f : 0.25f));
             foreach (var individual in State.individuals)
@@ -200,6 +251,8 @@ namespace Ecosystem
                 individual.boundary = position != bounded;
                 if (!Config.foraging)
                     continue;
+                individual.age = time - individual.bornAt;
+                individual.reproductionCooldown = Mathf.Max(0, individual.nextReproductionTime - time);
                 float distance = Vector2.Distance(new Vector2(individual.x, individual.y), position - movement);
                 individual.energy = Mathf.Max(0, individual.energy - Config.idleCost * Config.stepSeconds - Config.movementCost * distance);
                 if (actions[individual.individual].forage)
@@ -215,14 +268,62 @@ namespace Ecosystem
                         }
                 if (individual.energy <= 0)
                     individual.health = Mathf.Max(0, individual.health - Config.starvationDamage * Config.stepSeconds);
-                if (individual.health <= 0)
-                    State.events.Add(new WorldEvent { kind = "starved", individual = individual.individual });
+                string cause = individual.health <= 0 ? "starved" : individual.age >= Config.lifespan ? "old_age" : "";
+                if (cause != "")
+                {
+                    individual.health = 0;
+                    State.events.Add(new WorldEvent { kind = cause, individual = individual.individual,
+                        species = individual.species, cause = cause, age = individual.age });
+                    State.deaths.Add(new DeathRecord { individual = individual.individual, species = individual.species,
+                        cause = cause, age = individual.age, time = time });
+                    var statistics = Statistics(individual.species);
+                    if (cause == "starved") statistics.starved++;
+                    else statistics.oldAge++;
+                    statistics.completedAgeTotal += individual.age;
+                }
             }
-            if (Config.foraging) State.individuals.RemoveAll(value => value.health <= 0);
+            if (Config.foraging)
+            {
+                State.individuals.RemoveAll(value => value.health <= 0);
+                // 本步新生個體不再行動或繁殖；先結算死亡，再分配可用人口名額。
+                var parents = State.individuals.ToArray();
+                foreach (var parent in parents)
+                {
+                    if (parent.age < Config.maturityAge || parent.energy < Config.reproductionEnergy ||
+                        parent.reproductionCooldown > 0) continue;
+                    var statistics = Statistics(parent.species);
+                    if (State.individuals.Count >= Config.populationLimit)
+                    {
+                        statistics.populationLimitHits++;
+                        State.events.Add(new WorldEvent { kind = "population_limit", individual = parent.individual, species = parent.species });
+                        continue;
+                    }
+                    var child = AddIndividual(parent.species);
+                    child.x = parent.x;
+                    child.y = parent.y;
+                    child.age = 0;
+                    child.bornAt = time;
+                    parent.energy -= Config.reproductionCost;
+                    parent.nextReproductionTime = time + Config.reproductionCooldown;
+                    parent.reproductionCooldown = Config.reproductionCooldown;
+                    statistics.births++;
+                    State.events.Add(new WorldEvent { kind = "born", individual = child.individual,
+                        parent = parent.individual, species = child.species, amount = Config.reproductionCost });
+                }
+                UpdateIncompleteLives();
+            }
             State.step++;
             State.time = State.step * Config.stepSeconds;
             State.endReason = State.individuals.Count == 0 ? "all_dead" : State.step >= Config.episodeSteps ? "time_limit" : "";
             return State;
+        }
+
+        private SpeciesStatistics Statistics(string species) => State.statistics.Find(value => value.species == species);
+
+        private void UpdateIncompleteLives()
+        {
+            foreach (var statistics in State.statistics)
+                statistics.incompleteLives = State.individuals.FindAll(value => value.species == statistics.species).Count;
         }
 
         public float[] Observe(IndividualState individual)

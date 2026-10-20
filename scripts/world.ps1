@@ -91,7 +91,7 @@ for species in ('Flame', 'Frost', 'Moss'):
     if ($ReloadRun) {
         if ($WorldConfig -or $PSBoundParameters.ContainsKey('Seed') -or $PSBoundParameters.ContainsKey('Controller')) { throw 'ReloadRun 不可同時指定 WorldConfig、Seed 或 Controller。' }
         $record = Get-Content -LiteralPath $ReloadRun -TotalCount 1 | ConvertFrom-Json
-        if ($record.kind -ne 'run' -or $record.rules -ne 'foraging-v1' -or -not $record.config.foraging) { throw '不是相容的覓食執行紀錄。' }
+        if ($record.kind -ne 'run' -or $record.rules -ne 'life-cycle-v1' -or -not $record.config.foraging) { throw '不是相容的生命循環執行紀錄（須為 life-cycle-v1）。' }
         $Seed = [int]$record.seed
         $Controller = $record.control
         $config = Join-Path $output 'world-config.json'

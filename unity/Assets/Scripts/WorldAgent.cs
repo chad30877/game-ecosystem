@@ -23,7 +23,12 @@ namespace Ecosystem
             actions[1] = (Input.GetKey(KeyCode.UpArrow) ? 1 : 0) - (Input.GetKey(KeyCode.DownArrow) ? 1 : 0);
         }
 
-        public void UpdateView() => transform.position = new Vector3(Individual.x, Individual.y, 0);
+        public void UpdateView()
+        {
+            transform.position = new Vector3(Individual.x, Individual.y, 0);
+            float size = World.Config.foraging ? (Individual.age < World.Config.maturityAge ? 0.4f : 0.65f) : 0.4f;
+            transform.localScale = Vector3.one * size;
+        }
 
         private void OnDestroy() => Destroy(GetComponent<Renderer>().sharedMaterial);
     }

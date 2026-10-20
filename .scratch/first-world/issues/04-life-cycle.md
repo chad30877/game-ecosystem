@@ -1,6 +1,6 @@
 # 04：繁殖、衰老與世界結束
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 **What to build:** 觀察生物成年、繁殖與老死，並在滅絕或時間上限後取得一輪完整結果。
 

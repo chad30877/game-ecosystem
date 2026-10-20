@@ -1,6 +1,6 @@
 # 生態世界
 
-目前完成 [03：可觀看的覓食與飢餓循環](.scratch/first-world/issues/03-foraging.md)。炎角獸（橘方塊）、霜羽獸（藍球）、苔靈（綠圓柱）以規則控制器覓食，尚非學習結果；既有三物種共享策略驗證仍可執行。
+目前完成 [04：繁殖、衰老與世界結束](.scratch/first-world/issues/04-life-cycle.md)。炎角獸（橘方塊）、霜羽獸（藍球）、苔靈（綠圓柱）以規則控制器覓食、繁殖並衰老，尚非學習結果；既有三物種共享策略驗證仍可執行。
 
 ## 執行
 
@@ -17,7 +17,7 @@
 ./scripts/world.ps1 -Mode train -TrainSteps 4096 -ResumeFrom './artifacts/runs/<首次輸出>/<trainerRunId>'
 ```
 
-`forage -Visible` 持續觀看；點選個體查看健康與能量，關閉視窗結束。四個大型黃色區域是產地，小型黃色區域是零散食物，亮度與大小反映存量。無畫面 `forage` 預設推進 12,000 步，可用 `-Steps` 指定步數；兩種模式共用規則與固定步長。
+`forage -Visible` 點選個體查看健康、能量、年齡與繁殖冷卻；成長期個體較小。每輪結束停留在統計畫面，按「重建世界」開始下一輪，關閉視窗結束。四個大型黃色區域是產地，小型黃色區域是零散食物，亮度與大小反映存量。無畫面 `forage` 預設推進 12,000 步，可用 `-Steps` 指定步數；無畫面及指定正數步數的可見執行均在每輪結束後自動重建，直到指定總步數。兩種模式共用規則與固定步長。
 
 ```powershell
 ./scripts/world.ps1 -Mode forage -Visible -Seed 7
@@ -25,7 +25,7 @@
 ./scripts/world.ps1 -Mode forage -ReloadRun './artifacts/runs/<輸出>/world.jsonl'
 ```
 
-`-Controller idle` 停止移動與採食，方便核對飢餓；`forage -Controller manual -Visible` 可用方向鍵移動、空白鍵採食。`-ReloadRun` 從首筆紀錄重載完整配置、種子與控制模式，重現起始世界；規則及靜止模式亦可重現執行序列，手動模式需再次輸入動作。此參數不能與 `-Seed`、`-Controller` 或 `-WorldConfig` 混用。這不是歷史回放，也不承諾跨裝置逐影格一致。
+`-Controller idle` 停止移動與採食，方便核對飢餓；`forage -Controller manual -Visible` 可用方向鍵移動、空白鍵採食。`-ReloadRun` 從 `life-cycle-v1` 首筆紀錄重載完整配置、種子與控制模式，重現起始世界；規則及靜止模式亦可重現執行序列，手動模式需再次輸入動作。此參數不能與 `-Seed`、`-Controller` 或 `-WorldConfig` 混用。舊 `foraging-v1` 紀錄因生命規則不同而拒絕重載。這不是歷史回放，也不承諾跨裝置逐影格一致。
 
 `manual` 使用方向鍵控制所有個體；`bridge` 讓 Python 分別送出動作，同種個體也可移往不同方向。`-Visible` 顯示場景，省略時無畫面執行。
 
@@ -37,9 +37,13 @@
 
 `unity/Assets/Scripts/World.cs` 提供 `Reset`、`Step(actions)`（移動與採食選擇）、`AddIndividual`、`RemoveIndividual`、`Observe(individual)` 與 `State`。一個世界步同時推進所有個體；`WorldRunner` 負責畫面、ML-Agents 生命週期與 JSONL，`WorldAgent` 只提供個體觀察與動作。
 
-`training/foraging.json` 為 40 × 40 地圖、每物種 10 隻、4 處產地與 12 處零散食物。採食距離 0.7、速率每秒 12 能量；產地容量 30、初值 20、每秒再生 0.4，零散食物為其四分之一。能量上限 100、初值 60；每秒基礎消耗 0.5，每移動單位另耗 1.2，耗盡後每秒損失 6 健康。這些是未經平衡的初始參數。`ForagingController` 只在感知半徑 6 內尋食，找不到時巡遊。`rules`、`idle` 與 `manual` 可執行覓食世界；此階段拒絕將舊 Python 模型接入覓食，以免誤用尚未擴充的觀察／動作介面。
+`training/foraging.json` 為 40 × 40 地圖、每物種 10 隻、4 處產地與 12 處零散食物。採食距離 0.7、速率每秒 12 能量；產地容量 30、初值 20、每秒再生 4，零散食物為其四分之一。再生量於任務 04 從 0.4 調至 4，讓預設規則展示可觀察出生；這些參數尚未平衡。能量上限 100、初值 60；每秒基礎消耗 0.5，每移動單位另耗 1.2，耗盡後每秒損失 6 健康。`ForagingController` 只在感知半徑 6 內尋食，找不到時巡遊。`rules`、`idle` 與 `manual` 可執行覓食世界；此階段拒絕將舊 Python 模型接入覓食，以免誤用尚未擴充的觀察／動作介面。
 
-`training/world.json` 設定邊界、速度、步長、局部觀察半徑、輪次長度及增減事件。預設每物種兩隻，第 64 步各移除一隻、第 96 步各加入一隻，每 256 步重建世界。可複製配置後修改，透過 `-WorldConfig <路徑>` 載入；須滿足每物種至少兩隻及 `0 < removeStep < addStep < episodeSteps`。這些是訓練介面驗證事件，正式出生死亡規則另由後續任務實作。
+起始個體年齡 30 秒，後代從 0 秒開始；成年門檻 30、壽命 240 模擬秒。能量達 80 且繁殖冷卻歸零時自動出生同種後代，親代扣 40 能量並冷卻 30 秒；後代能量初值 60。全世界上限 120，滿額時不扣能量或啟動冷卻。每步先結算飢餓及老死，再依個體順序繁殖；同時符合兩種死因時記為飢餓。單物種滅絕繼續運行，全體死亡（`all_dead`）或 600 秒（`time_limit`）結束。
+
+`state.deaths` 保留本輪死亡個體、物種、死因、年齡及時間；`state.statistics` 分物種累計出生、飢餓、老死、完成生命年齡總和、人口上限觸發與 `incompleteLives`。後者為當前存活樣本數，其年齡在 `individuals` 中；結束時仍存活者不混入死亡壽命樣本。人口上限每隻符合繁殖條件但遭阻擋的個體、每步計一次。起始成年個體已有 30 秒年齡，分析壽命時須區分起始個體與本輪出生個體。`episode_end` 保存完整輪次結果，重建後另起統計且個體編號不重用。
+
+`training/world.json` 設定邊界、速度、步長、局部觀察半徑、輪次長度及增減事件。預設每物種兩隻，第 64 步各移除一隻、第 96 步各加入一隻，每 256 步重建世界。可複製配置後修改，透過 `-WorldConfig <路徑>` 載入；須滿足每物種至少兩隻及 `0 < removeStep < addStep < episodeSteps`。這些是訓練介面驗證事件，正式生命循環只在 `foraging` 配置啟用。
 
 `-Seed` 固定起始隨機序列。策略只取得四個方向的局部邊界距離，超出半徑統一為 1；全圖位置只寫入外部紀錄。`Flame`、`Frost`、`Moss` 對應三個 behavior，同物種個體使用同一套參數與訓練經驗。
 
@@ -56,7 +60,7 @@
 5. 執行 `train`，確認三個 behavior 分別有更新步數、TensorBoard Policy／Value Loss 與 checkpoint；`training.json` 提供 `trainerRunId`。
 6. 程序結束後依上述 `ResumeFrom` 範例續訓。確認 `trainer.log` 對三物種各輸出 `Resuming training from step ...`，且最終 checkpoint 步數高於原始值。
 
-只使用微小存活／碰壁獎勵驗證更新機制，未驗證學習品質。覓食驗證見 [覓食驗證紀錄](docs/foraging.md)；共享策略實測證據與限制見 [共享策略驗證紀錄](docs/shared-policies.md)；環境安裝見 [工具鏈驗證紀錄](docs/toolchain.md)。
+只使用微小存活／碰壁獎勵驗證更新機制，未驗證學習品質。生命循環驗證及人工操作見 [生命循環驗證紀錄](docs/life-cycle.md)；覓食驗證見 [覓食驗證紀錄](docs/foraging.md)；共享策略實測證據與限制見 [共享策略驗證紀錄](docs/shared-policies.md)；環境安裝見 [工具鏈驗證紀錄](docs/toolchain.md)。
 
 ## 環境
 

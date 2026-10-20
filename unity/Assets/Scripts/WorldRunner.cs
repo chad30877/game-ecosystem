@@ -101,6 +101,7 @@ namespace Ecosystem
             }
             foodViews.Clear();
             world.Reset();
+            selected = 0;
             foreach (var food in world.State.foods)
             {
                 var view = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
@@ -149,6 +150,7 @@ namespace Ecosystem
             Academy.Instance.EnvironmentStep();
             if (stepLimit > 0 && totalSteps >= stepLimit)
                 return;
+            if (world.State.endReason != "") return;
             if (world.Config.foraging)
                 world.Step(agents.ToDictionary(pair => pair.Key, pair =>
                     control == "rules" ? ForagingController.Decide(world, pair.Value.Individual)
@@ -173,6 +175,8 @@ namespace Ecosystem
                 Destroy(agent.gameObject);
                 agents.Remove(id);
             }
+            foreach (var individual in world.State.individuals.Where(value => !agents.ContainsKey(value.individual)))
+                CreateAgent(individual);
             if (!world.Config.foraging && world.State.step == world.Config.removeStep)
                 foreach (string species in World.Species)
                 {
@@ -190,7 +194,7 @@ namespace Ecosystem
             if (world.State.endReason != "")
             {
                 Record("episode_end");
-                if (stepLimit <= 0 || totalSteps < stepLimit) ResetWorld();
+                if ((!world.Config.foraging || Application.isBatchMode || stepLimit > 0) && (stepLimit <= 0 || totalSteps < stepLimit)) ResetWorld();
             }
             if (control != "python" && stepLimit > 0 && totalSteps >= stepLimit)
                 Application.Quit();
@@ -222,11 +226,18 @@ namespace Ecosystem
             if (world == null || !world.Config.foraging) return;
             GUI.skin.font = font;
             GUI.skin.label.fontSize = 16;
-            GUI.Box(new Rect(8, 8, 370, 116), "");
+            GUI.Box(new Rect(8, 8, 540, 254), "");
             GUI.Label(new Rect(18, 12, 350, 30), control == "rules" ? "規則控制・尚非學習結果" : control == "idle" ? "靜止控制・飢餓核對" : "手動控制・方向鍵／空白鍵採食");
             GUI.Label(new Rect(18, 42, 350, 28), $"{world.State.time:F1} 秒　炎角 {world.State.individuals.Count(v => v.species == "Flame")}　霜羽 {world.State.individuals.Count(v => v.species == "Frost")}　苔靈 {world.State.individuals.Count(v => v.species == "Moss")}");
             var individual = world.State.individuals.FirstOrDefault(value => value.individual == selected);
-            GUI.Label(new Rect(18, 72, 350, 44), individual == null ? "點選個體" : $"#{individual.individual} {individual.species}　健康 {individual.health:F1}　能量 {individual.energy:F1}");
+            GUI.Label(new Rect(18, 72, 520, 28), individual == null ? "點選個體" : $"#{individual.individual} {individual.species}　健康 {individual.health:F1}　能量 {individual.energy:F1}");
+            if (individual != null)
+                GUI.Label(new Rect(18, 100, 520, 28), $"年齡 {individual.age:F1}　{(individual.age < world.Config.maturityAge ? "成長期" : "成年")}　繁殖冷卻 {individual.reproductionCooldown:F1}");
+            int row = 0;
+            foreach (var statistics in world.State.statistics)
+                GUI.Label(new Rect(18, 128 + row++ * 24, 520, 26), $"{statistics.species}　出生 {statistics.births}　飢餓 {statistics.starved}　老死 {statistics.oldAge}　未完成 {statistics.incompleteLives}　上限 {statistics.populationLimitHits}");
+            GUI.Label(new Rect(18, 206, 350, 28), world.State.endReason == "all_dead" ? "本輪結束・全體死亡" : world.State.endReason == "time_limit" ? "本輪結束・時間上限" : $"第 {world.State.episode} 輪");
+            if (world.State.endReason != "" && GUI.Button(new Rect(408, 216, 120, 32), "重建世界")) ResetWorld();
         }
 
         private void Record(string kind, IndividualState individual = null, int unityObject = 0) => output.WriteLine(JsonUtility.ToJson(new StepRecord
@@ -243,7 +254,7 @@ namespace Ecosystem
             public string unity;
             public string device;
             public string control;
-            public string rules = "foraging-v1";
+            public string rules = "life-cycle-v1";
             public WorldConfig config;
         }
 
