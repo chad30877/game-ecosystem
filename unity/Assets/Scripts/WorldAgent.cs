@@ -99,6 +99,9 @@ namespace Ecosystem
 
         public override void OnActionReceived(ActionBuffers actions)
         {
+            // Python 收到最後一次觀察後才關閉程序；等待期間不再推進世界。
+            if (stepLimit > 0 && totalSteps >= stepLimit)
+                return;
             world.Step(new Vector2(actions.ContinuousActions[0], actions.ContinuousActions[1]));
             totalSteps++;
             // 僅驗證訓練往返；此存活獎勵不是正式生態獎勵。
@@ -109,11 +112,6 @@ namespace Ecosystem
             {
                 Record("episode_end");
                 EndEpisode();
-            }
-            if (stepLimit > 0 && totalSteps >= stepLimit)
-            {
-                output.Flush();
-                Application.Quit();
             }
         }
 

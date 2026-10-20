@@ -14,7 +14,7 @@
 ./scripts/world.ps1 -Mode train
 ```
 
-`manual` 使用方向鍵；`bridge -Visible` 讓 Python 控制個體先向右再向上；省略 `-Visible` 使用相同場景無畫面執行。`train` 執行 2,048 步 CPU PPO 訓練，`-Visible` 可顯示訓練場景。
+`manual` 使用方向鍵；`bridge -Visible` 讓 Python 控制個體先向右再向上；省略 `-Visible` 使用相同場景無畫面執行。`train` 以 2,048 步為 CPU PPO 停止門檻，會完成當前 rollout 批次，因此最後 checkpoint 可能略超過門檻；`-Visible` 可顯示訓練場景。
 
 入口預設 Editor 位於 `C:/Toolchains/Unity/6000.0.85f1/Editor/Unity.exe`，Python 位於 `C:/Toolchains/game-ecosystem/python/Scripts/python.exe`；可透過 `-Editor`、`-Python` 覆寫。每次產生獨立輸出目錄，預設為 `C:/Toolchains/game-ecosystem/runs`，可用 `-OutputRoot` 調整。
 

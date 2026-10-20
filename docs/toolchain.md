@@ -1,15 +1,16 @@
 # 工具鏈驗證紀錄
 
-檢查日期：2026-10-19。任務 01 尚未完成；Unity 授權阻擋實際場景建置與訓練。
+檢查日期：2026-10-20。任務 01 已完成建置、可見／無畫面往返與實際 PPO 更新驗證；這不代表已驗證學習品質改善。
 
 ## 版本與相容性
 
 | 工具 | 選用版本 | 狀態 |
 | --- | --- | --- |
-| Unity Editor | 6000.0.85f1，ee7790f1426a | 已安裝；批次建置因無授權失敗 |
-| Unity ML-Agents | 4.0.0（Release 23） | manifest 已指定，尚未完成 Editor 套件解析與編譯 |
+| Unity Hub | 3.22.3 | 使用者已安裝至 `C:/Program Files/Unity Hub`，Editor 授權可用 |
+| Unity Editor | 6000.0.85f1，ee7790f1426a | 已安裝；Windows Player 建置通過 |
+| Unity ML-Agents | 4.0.0（Release 23） | C# 編譯、Python 連線通過，通訊版本 1.5.0 |
 | Python | CPython 3.10.12 | 已安裝，獨立虛擬環境 |
-| mlagents／mlagents-envs | 1.1.0 | 已安裝，訓練 CLI 可啟動 |
+| mlagents／mlagents-envs | 1.1.0 | 已完成實際 PPO 更新及模型匯出 |
 | PyTorch | 2.5.1+cpu | 已安裝；CUDA false，未使用 GPU 訓練 |
 | setuptools | 80.9.0 | 避免新版移除 `pkg_resources` 導致 ML-Agents 啟動失敗 |
 | huggingface-hub | 0.27.1 | 固定相依版本，完整解析見 requirements-lock.txt |
@@ -28,25 +29,40 @@ Editor 安裝檔由 Unity 官方 release API 取得，Authenticode 簽章為 Val
 | Python 基底 | `C:/Users/User/AppData/Roaming/uv/python/cpython-3.10.12-windows-x86_64-none` |
 | 活躍輸出 | `C:/Toolchains/game-ecosystem/runs` |
 | 安裝下載與 uv 套件下載快取 | `D:/Toolchains/downloads` |
-| 歷史輸出預留位置 | `D:/TrainingHistory/game-ecosystem`（目前為空） |
+| 歷史輸出 | `D:/TrainingHistory/game-ecosystem/toolchain-20261020`（已封存兩次 bridge 與一次 PPO 訓練） |
 
 安裝前 C 槽剩餘 105,957,982,208 bytes（約 98.7 GiB），D 槽剩餘 668,849,696,768 bytes（約 622.9 GiB）。安裝後量測 C 槽約 89.8 GiB，仍高於原規劃 25–30 GB 餘裕。
 
-`Get-Partition`、`Get-Disk` 與 `Get-PhysicalDisk` 實測 C 對應 Micron 2450、D 對應 ADATA LEGEND 900，兩者均為 NVMe SSD。因此保留 D 槽現有專案，沒有另複製一份活躍來源。下載與歷史輸出已與活躍環境分開，但本機未發現 HDD，不能宣稱已完成實體 HDD 配置；若另接 HDD，再指定歷史與下載目錄。此實測更正先前環境預檢中的使用者回報，不改寫歷史紀錄。
+`Get-Partition`、`Get-Disk` 與 `Get-PhysicalDisk` 實測 C 對應 Micron 2450、D 對應 ADATA LEGEND 900，兩者均為 NVMe SSD。因此保留 D 槽現有專案，沒有另複製一份活躍來源。2026-10-20 使用者確認採用此雙 SSD 配置，取代原 HDD 要求。當日建置期間 C 槽剩餘約 70.4 GiB、D 槽約 616.7 GiB；下載與歷史輸出以獨立目錄管理。
 
 ## 已執行檢查
 
 - Python 語法編譯通過；Pyright 對 `training/bridge.py` 回報 0 errors、0 warnings。
-- `uv pip check` 通過；`mlagents-learn --help` 可正常啟動。這些不代表訓練更新成功。
-- PyTorch 回報 `2.5.1+cpu`、`cuda=False`、預設 12 個執行緒。Unity 繪圖 GPU 與正式場景的 CPU／GPU 使用尚未量測。
-- `scripts/world.ps1 -Mode build` 實際呼叫 Editor，因授權失敗退出，沒有產生可執行場景。紀錄：`C:/Toolchains/game-ecosystem/runs/build-20261019-175224-d3c0fcae/build.log`。
-- 主要授權錯誤為 `Access token is unavailable`、`Found 0 entitlement groups and 0 free entitlements`、`com.unity.editor.headless was not found`。
-- 尚無既有測試套件，未新增測試檔。C# 編譯、可見移動、無畫面往返、實際 PPO 更新及吞吐量均待授權後驗證。
+- `uv pip check` 通過；PowerShell 語法解析通過。
+- `scripts/world.ps1 -Mode build` 通過，最終紀錄：`C:/Toolchains/game-ecosystem/runs/build-20261020-101040-89493687/build.log`。
+- 移除不存在的 `com.unity.modules.inputlegacy` 套件宣告，提交 Unity 解析所得的 `packages-lock.json`、場景及材質。
+- 往返驗證限制實際世界步數，避免 Unity 收到關閉訊號後、退出前額外執行的步數灌入吞吐量。512 步要求與實際步數一致。
+- 透過視窗截圖確認可見場景有邊界與個體；Python 動作造成位置變化，並有碰界、輪次結束與重建紀錄。鍵盤模式可開啟，短按自動化未捕捉到移動，方向鍵持續按壓仍保留人工核對步驟。
+- 可見與無畫面使用相同種子 1，512 步的狀態、事件、輪次與結束原因逐筆相同（排除各次 run-id 與裝置資訊）。
+- 尚無專案既有測試套件，未新增測試檔；以上透過實際世界入口驗證。
 
-## 接續方式
+## 實測結果
 
-手動安裝 [Unity Hub](https://unity.com/download)，登入並啟用適用授權，在 Installs 加入上述已安裝 Editor。此次自動下載及安裝 Hub 的操作被自動核准審查以 `blocked by policy` 拒絕，未執行；未嘗試繞過。
+| 執行 | 結果 |
+| --- | --- |
+| 無畫面 bridge | 512 步／0.5481 秒，約 934.15 步／秒，Null Device |
+| 可見 bridge | 512 步／10.2627 秒，約 49.89 步／秒，RTX 3070 Laptop GPU 繪圖 |
+| CPU PPO | 6 次策略更新、90 次 optimizer 更新，更新計時共 0.4633 秒 |
+| PPO 損失證據 | step 512：Policy Loss 0.110485、Value Loss 0.001885；step 2048：0.072833、0.000504 |
+| PPO 初步吞吐量 | summary step 256→2048 用時 5.300 秒，約 338.1 步／秒；不含啟動及最後匯出 |
+| PPO 完整 trainer 計時 | 約 25.149 秒；2,048 是停止門檻，最後 checkpoint 為 2,112 步，來自 rollout 批次邊界 |
 
-完成授權後依 [README](../README.md) 執行建置、可見與無畫面 bridge、PPO 訓練，檢查損失統計與更新計時，再記錄 CPU 吞吐量。首輪編譯及執行仍可能需要修正，不能將目前來源視為已測通。
+Python 訓練使用 `torch-device=cpu`，PyTorch 為 `2.5.1+cpu`、CUDA false；GPU 僅用於可見 Unity 繪圖。未量測 CPU／GPU 百分比使用率。bridge 吞吐量含 Python 通訊及 JSONL 寫入，不含程序啟動／退出；只有單次小場景量測，不能推估完整生態效能。
 
-歷史封存時只複製已結束的執行目錄至 `D:/TrainingHistory/game-ecosystem`；目前沒有成功訓練成果可封存。
+證據目錄位於 `C:/Toolchains/game-ecosystem/runs`，相同名稱已複製至歷史目錄：
+
+- `bridge-20261020-101112-4ced4c4f`：無畫面 `bridge.json`、`world.jsonl`。
+- `bridge-20261020-101121-cfde1b46`：可見 `bridge.json`、`world.jsonl`。
+- `train-20261020-101139-7ab522ae`：世界紀錄；同名子目錄內含 TensorBoard、`run_logs/timers.json`、checkpoint 與 ONNX。`_update_policy.count=6`、`TorchPPOOptimizer.update.count=90`，並非僅以模型檔存在推定成功。
+
+2026-10-19 的首次建置曾因無授權失敗，Hub 自動安裝曾被拒絕；2026-10-20 使用者安裝 Hub 後授權阻擋解除。重現步驟見 [README](../README.md)。

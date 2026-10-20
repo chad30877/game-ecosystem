@@ -30,6 +30,7 @@ def main():
         side_channels=[channel], log_folder=str(args.output.resolve()),
         additional_args=["--world-log", str((args.output / "world.jsonl").resolve()),
                          "--world-config", str(args.config.resolve()),
+                         "--world-steps", str(args.steps),
                          "--world-seed", str(args.seed), "--control", "python"],
     )
     try:
@@ -56,6 +57,8 @@ def main():
     states = [record for record in records if record["kind"] in ("step", "boundary")]
     if not states or observations == 0:
         raise RuntimeError("未取得實際世界步進")
+    if len(states) != args.steps:
+        raise RuntimeError(f"世界步數不符：{len(states)} != {args.steps}")
     resets = {record["state"]["episode"]: record["state"] for record in records if record["kind"] == "reset"}
     moved = any(abs(record["state"]["x"] - resets[record["state"]["episode"]]["x"]) > 0.01
                 for record in states)
