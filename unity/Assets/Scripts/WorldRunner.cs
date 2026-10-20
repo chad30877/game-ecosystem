@@ -21,6 +21,7 @@ namespace Ecosystem
         private readonly List<GameObject> foodViews = new List<GameObject>();
         private int selected;
         private Font font;
+        private WorldScenario scenario;
 
         private static string Argument(string name, string fallback)
         {
@@ -41,12 +42,18 @@ namespace Ecosystem
             int seed = int.Parse(Argument("--world-seed", "1"));
             world = new World(config, seed);
             control = Argument("--control", "manual");
-            if (control != "manual" && control != "python" && control != "rules" && control != "idle")
+            if (control != "manual" && control != "python" && control != "rules" && control != "idle" && control != "scripted")
                 throw new ArgumentException("未知控制模式。");
             if ((control == "rules" || control == "idle") && !config.foraging)
                 throw new ArgumentException("規則控制須使用覓食配置。");
             if (config.foraging && control == "python")
                 throw new ArgumentException("覓食策略橋接尚未實作，請使用 rules、idle 或 manual。");
+            if (control == "scripted")
+            {
+                if (!config.foraging) throw new ArgumentException("指定動作須使用覓食配置。");
+                scenario = JsonUtility.FromJson<WorldScenario>(File.ReadAllText(Argument("--world-scenario", "")));
+                if (scenario == null) throw new ArgumentException("缺少指定動作場景。");
+            }
             if (Application.isBatchMode && control != "python") Time.timeScale = 100f;
             font = Font.CreateDynamicFontFromOSFont("Microsoft JhengHei", 16);
             var academy = Academy.Instance;
@@ -63,7 +70,7 @@ namespace Ecosystem
             output.WriteLine(JsonUtility.ToJson(new RunRecord
             {
                 run = runId, seed = seed, unity = Application.unityVersion,
-                device = SystemInfo.graphicsDeviceName, config = config, control = control
+                device = SystemInfo.graphicsDeviceName, config = config, control = control, scenario = scenario
             }));
             var camera = new GameObject("Camera").AddComponent<Camera>();
             camera.orthographic = true;
@@ -101,6 +108,7 @@ namespace Ecosystem
             }
             foodViews.Clear();
             world.Reset();
+            scenario?.Apply(world);
             selected = 0;
             foreach (var food in world.State.foods)
             {
@@ -154,8 +162,11 @@ namespace Ecosystem
             if (world.Config.foraging)
                 world.Step(agents.ToDictionary(pair => pair.Key, pair =>
                     control == "rules" ? ForagingController.Decide(world, pair.Value.Individual)
+                    : control == "scripted" ? scenario.Decide(pair.Key, world.State.step + 1)
                     : new WorldAction(control == "idle" ? Vector2.zero : pair.Value.Action,
-                        control == "manual" && Input.GetKey(KeyCode.Space))));
+                        control == "manual" && Input.GetKey(KeyCode.Space), pair.Value.Action,
+                        control == "manual" && Input.GetKey(KeyCode.A),
+                        control == "manual" && Input.GetKey(KeyCode.S) ? WorldSkill.Charge : WorldSkill.None)));
             else
                 world.Step(agents.ToDictionary(pair => pair.Key, pair => pair.Value.Action));
             totalSteps++;
@@ -226,18 +237,21 @@ namespace Ecosystem
             if (world == null || !world.Config.foraging) return;
             GUI.skin.font = font;
             GUI.skin.label.fontSize = 16;
-            GUI.Box(new Rect(8, 8, 540, 254), "");
-            GUI.Label(new Rect(18, 12, 350, 30), control == "rules" ? "規則控制・尚非學習結果" : control == "idle" ? "靜止控制・飢餓核對" : "手動控制・方向鍵／空白鍵採食");
+            GUI.Box(new Rect(8, 8, 590, 282), "");
+            GUI.Label(new Rect(18, 12, 570, 30), control == "rules" ? "規則控制・尚非學習結果" : control == "idle" ? "靜止控制・飢餓核對" : control == "scripted" ? "指定動作・尚非學習結果" : "手動・方向鍵／空白採食／A 攻擊／S 技能");
             GUI.Label(new Rect(18, 42, 350, 28), $"{world.State.time:F1} 秒　炎角 {world.State.individuals.Count(v => v.species == "Flame")}　霜羽 {world.State.individuals.Count(v => v.species == "Frost")}　苔靈 {world.State.individuals.Count(v => v.species == "Moss")}");
             var individual = world.State.individuals.FirstOrDefault(value => value.individual == selected);
             GUI.Label(new Rect(18, 72, 520, 28), individual == null ? "點選個體" : $"#{individual.individual} {individual.species}　健康 {individual.health:F1}　能量 {individual.energy:F1}");
             if (individual != null)
-                GUI.Label(new Rect(18, 100, 520, 28), $"年齡 {individual.age:F1}　{(individual.age < world.Config.maturityAge ? "成長期" : "成年")}　繁殖冷卻 {individual.reproductionCooldown:F1}");
+            {
+                GUI.Label(new Rect(18, 100, 570, 28), $"年齡 {individual.age:F1}　{(individual.age < world.Config.maturityAge ? "成長期" : "成年")}　繁殖 {individual.reproductionCooldown:F1}");
+                GUI.Label(new Rect(18, 128, 570, 28), $"攻擊 {individual.attackCooldown:F1}　技能 {individual.skillCooldown:F1}　{(individual.chargeRemaining > 0 ? "衝鋒" : "")}");
+            }
             int row = 0;
             foreach (var statistics in world.State.statistics)
-                GUI.Label(new Rect(18, 128 + row++ * 24, 520, 26), $"{statistics.species}　出生 {statistics.births}　飢餓 {statistics.starved}　老死 {statistics.oldAge}　未完成 {statistics.incompleteLives}　上限 {statistics.populationLimitHits}");
-            GUI.Label(new Rect(18, 206, 350, 28), world.State.endReason == "all_dead" ? "本輪結束・全體死亡" : world.State.endReason == "time_limit" ? "本輪結束・時間上限" : $"第 {world.State.episode} 輪");
-            if (world.State.endReason != "" && GUI.Button(new Rect(408, 216, 120, 32), "重建世界")) ResetWorld();
+                GUI.Label(new Rect(18, 156 + row++ * 24, 570, 26), $"{statistics.species}　出生 {statistics.births}　戰死 {statistics.combat}　飢餓 {statistics.starved}　老死 {statistics.oldAge}　存活 {statistics.incompleteLives}");
+            GUI.Label(new Rect(18, 246, 350, 28), world.State.endReason == "all_dead" ? "本輪結束・全體死亡" : world.State.endReason == "time_limit" ? "本輪結束・時間上限" : $"第 {world.State.episode} 輪　上限觸發 {world.State.statistics.Sum(v => v.populationLimitHits)}");
+            if (world.State.endReason != "" && GUI.Button(new Rect(458, 244, 120, 32), "重建世界")) ResetWorld();
         }
 
         private void Record(string kind, IndividualState individual = null, int unityObject = 0) => output.WriteLine(JsonUtility.ToJson(new StepRecord
@@ -254,8 +268,9 @@ namespace Ecosystem
             public string unity;
             public string device;
             public string control;
-            public string rules = "life-cycle-v1";
+            public string rules = "flame-v1";
             public WorldConfig config;
+            public WorldScenario scenario;
         }
 
         [Serializable]

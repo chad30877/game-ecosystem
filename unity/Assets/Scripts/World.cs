@@ -31,6 +31,7 @@ namespace Ecosystem
         public float reproductionCost = 40f;
         public float reproductionCooldown = 30f;
         public int populationLimit = 120;
+        public CombatConfig combat = new CombatConfig();
 
         public void Validate()
         {
@@ -57,6 +58,7 @@ namespace Ecosystem
                 !float.IsFinite(reproductionCooldown) || reproductionCooldown <= 0 ||
                 populationLimit < (long)individualsPerSpecies * 3))
                 throw new ArgumentException("成長期、壽命、繁殖或人口上限參數無效。");
+            if (foraging) (combat ?? throw new ArgumentException("缺少戰鬥配置。")).Validate();
         }
     }
 
@@ -74,6 +76,17 @@ namespace Ecosystem
         public float bornAt;
         public float reproductionCooldown;
         public float nextReproductionTime;
+        public float attackReadyAt;
+        public float skillReadyAt;
+        public float attackCooldown;
+        public float skillCooldown;
+        public float chargeRemaining;
+        public bool chargeActiveThisStep;
+        public float aimX;
+        public float aimY;
+        public float lastCombatAt = -1000f;
+        public string lastDamageCause = "";
+        public float hitUntil;
     }
 
     [Serializable]
@@ -98,6 +111,10 @@ namespace Ecosystem
         public string species;
         public string cause;
         public float age;
+        public int target;
+        public float rawAmount;
+        public float x;
+        public float y;
     }
 
     [Serializable]
@@ -117,6 +134,7 @@ namespace Ecosystem
         public int births;
         public int starved;
         public int oldAge;
+        public int combat;
         public int populationLimitHits;
         public int incompleteLives;
         public float completedAgeTotal;
@@ -126,10 +144,16 @@ namespace Ecosystem
     {
         public readonly Vector2 movement;
         public readonly bool forage;
-        public WorldAction(Vector2 movement, bool forage = false)
+        public readonly Vector2 aim;
+        public readonly bool attack;
+        public readonly WorldSkill skill;
+        public WorldAction(Vector2 movement, bool forage = false, Vector2 aim = default, bool attack = false, WorldSkill skill = WorldSkill.None)
         {
             this.movement = movement;
             this.forage = forage;
+            this.aim = aim;
+            this.attack = attack;
+            this.skill = skill;
         }
     }
 
@@ -202,7 +226,7 @@ namespace Ecosystem
             var individual = new IndividualState
             {
                 individual = ++nextIndividual, species = species,
-                health = species == "Flame" ? 120f : species == "Frost" ? 70f : 90f,
+                health = CombatRules.MaxHealth(species),
                 energy = Config.initialEnergy,
                 age = Config.foraging ? Config.maturityAge : 0,
                 bornAt = Config.foraging ? State.time - Config.maturityAge : State.time,
@@ -233,31 +257,37 @@ namespace Ecosystem
                 throw new InvalidOperationException("請先重建世界。");
             foreach (var individual in State.individuals)
                 if (!actions.TryGetValue(individual.individual, out var action) ||
-                    !float.IsFinite(action.movement.x) || !float.IsFinite(action.movement.y))
+                    !float.IsFinite(action.movement.x) || !float.IsFinite(action.movement.y) ||
+                    !float.IsFinite(action.aim.x) || !float.IsFinite(action.aim.y) || !Enum.IsDefined(typeof(WorldSkill), action.skill))
                     throw new ArgumentException("每隻個體都必須取得有限數值的動作。");
             State.events.Clear();
             float time = (State.step + 1) * Config.stepSeconds;
             foreach (var food in State.foods)
                 food.amount = Mathf.Min(food.capacity, food.amount + Config.foodRegeneration * Config.stepSeconds * (food.patch ? 1f : 0.25f));
+            if (Config.foraging) CombatRules.BeginStep(Config, State, actions);
+            var distances = new Dictionary<int, float>();
             foreach (var individual in State.individuals)
             {
-                float speed = Config.foraging ? (individual.species == "Frost" ? 3.2f : individual.species == "Moss" ? 2.7f : 2.5f) : Config.speed;
-                var movement = Vector2.ClampMagnitude(actions[individual.individual].movement, 1f) * (speed * Config.stepSeconds);
-                var position = new Vector2(individual.x, individual.y) + movement;
-                var bounded = new Vector2(Mathf.Clamp(position.x, -Config.halfExtent, Config.halfExtent),
-                    Mathf.Clamp(position.y, -Config.halfExtent, Config.halfExtent));
+                var start = CombatRules.Position(individual);
+                var position = start + Vector2.ClampMagnitude(actions[individual.individual].movement, 1f) * (Config.speed * Config.stepSeconds);
+                var bounded = Config.foraging ? (individual.health > 0 ? CombatRules.Move(Config, State, individual, actions[individual.individual]) : start)
+                    : new Vector2(Mathf.Clamp(position.x, -Config.halfExtent, Config.halfExtent), Mathf.Clamp(position.y, -Config.halfExtent, Config.halfExtent));
                 individual.x = bounded.x;
                 individual.y = bounded.y;
-                individual.boundary = position != bounded;
-                if (!Config.foraging)
-                    continue;
+                if (!Config.foraging) individual.boundary = position != bounded;
+                distances[individual.individual] = Vector2.Distance(start, bounded);
+            }
+            if (Config.foraging) CombatRules.Resolve(Config, State, actions);
+            foreach (var individual in State.individuals)
+            {
+                if (!Config.foraging) continue;
                 individual.age = time - individual.bornAt;
                 individual.reproductionCooldown = Mathf.Max(0, individual.nextReproductionTime - time);
-                float distance = Vector2.Distance(new Vector2(individual.x, individual.y), position - movement);
+                float distance = distances[individual.individual];
                 individual.energy = Mathf.Max(0, individual.energy - Config.idleCost * Config.stepSeconds - Config.movementCost * distance);
-                if (actions[individual.individual].forage)
+                if (individual.health > 0 && actions[individual.individual].forage)
                     foreach (var food in State.foods)
-                        if (Vector2.Distance(bounded, new Vector2(food.x, food.y)) <= Config.forageRadius)
+                        if (Vector2.Distance(CombatRules.Position(individual), new Vector2(food.x, food.y)) <= Config.forageRadius)
                         {
                             float eaten = Mathf.Min(food.amount, Config.forageRate * Config.stepSeconds, 100f - individual.energy);
                             if (eaten <= 0) continue;
@@ -266,9 +296,13 @@ namespace Ecosystem
                             State.events.Add(new WorldEvent { kind = "ate", individual = individual.individual, food = food.food, amount = eaten });
                             break;
                         }
-                if (individual.energy <= 0)
+                if (individual.health > 0 && individual.energy <= 0)
+                {
                     individual.health = Mathf.Max(0, individual.health - Config.starvationDamage * Config.stepSeconds);
-                string cause = individual.health <= 0 ? "starved" : individual.age >= Config.lifespan ? "old_age" : "";
+                    individual.lastDamageCause = "starved";
+                }
+                CombatRules.Recover(Config, State, individual, time);
+                string cause = individual.health <= 0 ? individual.lastDamageCause : individual.age >= Config.lifespan ? "old_age" : "";
                 if (cause != "")
                 {
                     individual.health = 0;
@@ -278,6 +312,7 @@ namespace Ecosystem
                         cause = cause, age = individual.age, time = time });
                     var statistics = Statistics(individual.species);
                     if (cause == "starved") statistics.starved++;
+                    else if (cause == "combat") statistics.combat++;
                     else statistics.oldAge++;
                     statistics.completedAgeTotal += individual.age;
                 }

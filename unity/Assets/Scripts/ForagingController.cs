@@ -6,6 +6,24 @@ namespace Ecosystem
     {
         public static WorldAction Decide(World world, IndividualState individual)
         {
+            if (individual.species == "Flame")
+            {
+                IndividualState enemy = null;
+                float range = world.Config.observationRadius;
+                foreach (var other in world.State.individuals)
+                {
+                    float distance = Vector2.Distance(CombatRules.Position(individual), CombatRules.Position(other));
+                    if (other.species == individual.species || distance > range) continue;
+                    enemy = other;
+                    range = distance;
+                }
+                if (enemy != null && individual.energy >= 20)
+                {
+                    var direction = (CombatRules.Position(enemy) - CombatRules.Position(individual)).normalized;
+                    return new WorldAction(range < world.Config.combat.meleeRange ? Vector2.zero : direction,
+                        true, direction, true, range > 1.5f && range <= world.Config.combat.chargeDistance ? WorldSkill.Charge : WorldSkill.None);
+                }
+            }
             var position = new Vector2(individual.x, individual.y);
             FoodState target = null;
             float nearest = world.Config.observationRadius;

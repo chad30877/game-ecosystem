@@ -1,0 +1,11 @@
+{
+  "placements": [
+    { "slot": 1, "x": -3, "y": 0 },
+    { "slot": 2, "x": 0, "y": 0 },
+    { "slot": 3, "x": 8, "y": 0 }
+  ],
+  "commands": [
+    { "slot": 1, "fromStep": 1, "toStep": 1, "aimX": 1, "skill": "Charge" },
+    { "slot": 1, "fromStep": 2, "toStep": 300, "aimX": 1, "attack": true, "skill": "Charge" }
+  ]
+}

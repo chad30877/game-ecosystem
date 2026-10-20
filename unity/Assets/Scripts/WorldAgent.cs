@@ -10,6 +10,7 @@ namespace Ecosystem
         public World World { private get; set; }
         public IndividualState Individual { get; set; }
         public Vector2 Action { get; private set; }
+        private TrailRenderer trail;
 
         public override void CollectObservations(VectorSensor sensor) => sensor.AddObservation(World.Observe(Individual));
 
@@ -28,6 +29,19 @@ namespace Ecosystem
             transform.position = new Vector3(Individual.x, Individual.y, 0);
             float size = World.Config.foraging ? (Individual.age < World.Config.maturityAge ? 0.4f : 0.65f) : 0.4f;
             transform.localScale = Vector3.one * size;
+            var renderer = GetComponent<Renderer>();
+            var color = Individual.species == "Flame" ? new Color(1f, 0.35f, 0.2f)
+                : Individual.species == "Frost" ? new Color(0.35f, 0.7f, 1f) : new Color(0.35f, 0.9f, 0.4f);
+            renderer.sharedMaterial.color = World.State.time < Individual.hitUntil ? Color.white : color;
+            if (trail == null)
+            {
+                trail = gameObject.AddComponent<TrailRenderer>();
+                trail.sharedMaterial = renderer.sharedMaterial;
+                trail.time = 0.25f;
+                trail.startWidth = 0.3f;
+                trail.endWidth = 0;
+            }
+            trail.emitting = Individual.chargeRemaining > 0;
         }
 
         private void OnDestroy() => Destroy(GetComponent<Renderer>().sharedMaterial);

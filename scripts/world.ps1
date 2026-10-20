@@ -9,8 +9,9 @@
     [string]$ResumeFrom = '',
     [string]$WorldConfig = '',
     [string]$ReloadRun = '',
+    [string]$Scenario = '',
     [switch]$Visible,
-    [ValidateSet('rules', 'idle', 'manual')][string]$Controller = 'rules'
+    [ValidateSet('rules', 'idle', 'manual', 'scripted')][string]$Controller = 'rules'
 )
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
@@ -24,6 +25,8 @@ $config = Join-Path $root 'training/world.json'
 if ($Mode -eq 'forage') { $config = Join-Path $root 'training/foraging.json' }
 if ($WorldConfig) { $config = (Resolve-Path -LiteralPath $WorldConfig).Path }
 if ($ResumeFrom -and $Mode -ne 'train') { throw 'ResumeFrom 僅適用於 train。' }
+if ($Scenario -and $Mode -ne 'forage') { throw 'Scenario 僅適用於 forage。' }
+if ($Scenario) { $Scenario = (Resolve-Path -LiteralPath $Scenario).Path; $Controller = 'scripted' }
 $runId = '{0}-{1}-{2}' -f $Mode, (Get-Date -Format 'yyyyMMdd-HHmmss'), ([guid]::NewGuid().ToString('N').Substring(0, 8))
 $output = Join-Path $OutputRoot $runId
 New-Item -ItemType Directory -Force $OutputRoot | Out-Null
@@ -89,16 +92,24 @@ for species in ('Flame', 'Frost', 'Moss'):
 } elseif ($Mode -eq 'forage') {
     New-Item -ItemType Directory $output | Out-Null
     if ($ReloadRun) {
-        if ($WorldConfig -or $PSBoundParameters.ContainsKey('Seed') -or $PSBoundParameters.ContainsKey('Controller')) { throw 'ReloadRun 不可同時指定 WorldConfig、Seed 或 Controller。' }
+        if ($WorldConfig -or $Scenario -or $PSBoundParameters.ContainsKey('Seed') -or $PSBoundParameters.ContainsKey('Controller')) { throw 'ReloadRun 不可同時指定 WorldConfig、Scenario、Seed 或 Controller。' }
         $record = Get-Content -LiteralPath $ReloadRun -TotalCount 1 | ConvertFrom-Json
-        if ($record.kind -ne 'run' -or $record.rules -ne 'life-cycle-v1' -or -not $record.config.foraging) { throw '不是相容的生命循環執行紀錄（須為 life-cycle-v1）。' }
+        if ($record.kind -ne 'run' -or $record.rules -ne 'flame-v1' -or -not $record.config.foraging) { throw '不是相容的執行紀錄（須為 flame-v1）。' }
         $Seed = [int]$record.seed
         $Controller = $record.control
         $config = Join-Path $output 'world-config.json'
         [IO.File]::WriteAllText($config, ($record.config | ConvertTo-Json -Depth 5), [Text.UTF8Encoding]::new($false))
+        if ($Controller -eq 'scripted') {
+            $Scenario = Join-Path $output 'scenario.json'
+            [IO.File]::WriteAllText($Scenario, ($record.scenario | ConvertTo-Json -Depth 8), [Text.UTF8Encoding]::new($false))
+        }
     }
     if (-not $PSBoundParameters.ContainsKey('Steps')) { $Steps = if ($Visible) { 0 } else { 12000 } }
     $arguments = @('--control', $Controller, '--world-seed', $Seed,  '--world-config', ('"{0}"' -f $config), '--world-log', ('"{0}"' -f (Join-Path $output 'world.jsonl')), '--world-steps' , $Steps)
+    if ($Controller -eq 'scripted') {
+        if (-not $Scenario) { throw 'scripted 控制須提供 Scenario。' }
+        $arguments += @('--world-scenario', ('"{0}"' -f $Scenario))
+    }
     if (-not $Visible) {
         if ($Steps -le 0) { throw '無畫面執行須指定正數 Steps。' }
         $arguments += @('-batchmode', '-nographics')

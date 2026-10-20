@@ -1,0 +1,72 @@
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+
+namespace Ecosystem
+{
+    [Serializable]
+    public sealed class WorldScenario
+    {
+        public Placement[] placements = Array.Empty<Placement>();
+        public Command[] commands = Array.Empty<Command>();
+        [NonSerialized] private Dictionary<int, int> slots;
+
+        public void Apply(World world)
+        {
+            if (placements == null || commands == null) throw new ArgumentException("場景配置不可為 null。");
+            int count = world.State.individuals.Count;
+            var placed = new HashSet<int>();
+            foreach (var placement in placements)
+            {
+                if (placement.slot < 1 || placement.slot > count || !placed.Add(placement.slot) ||
+                    !float.IsFinite(placement.x) || !float.IsFinite(placement.y) ||
+                    Mathf.Abs(placement.x) > world.Config.halfExtent || Mathf.Abs(placement.y) > world.Config.halfExtent)
+                    throw new ArgumentException("場景位置須在邊界內，且起始個體 slot 不可重複。");
+                var individual = world.State.individuals[placement.slot - 1];
+                individual.x = placement.x;
+                individual.y = placement.y;
+            }
+            for (int i = 0; i < commands.Length; i++)
+            {
+                var command = commands[i];
+                if (command.slot < 1 || command.slot > count || command.fromStep < 1 || command.toStep < command.fromStep ||
+                    !float.IsFinite(command.moveX) || !float.IsFinite(command.moveY) ||
+                    !float.IsFinite(command.aimX) || !float.IsFinite(command.aimY) ||
+                    !Enum.TryParse<WorldSkill>(command.skill, out var skill) || !Enum.IsDefined(typeof(WorldSkill), skill))
+                    throw new ArgumentException("指定動作的個體、步數、方向或技能無效。");
+                for (int j = 0; j < i; j++)
+                    if (commands[j].slot == command.slot && command.fromStep <= commands[j].toStep && command.toStep >= commands[j].fromStep)
+                        throw new ArgumentException("同一個體的指定動作區間不可重疊。");
+            }
+            slots = new Dictionary<int, int>();
+            for (int i = 0; i < count; i++) slots.Add(world.State.individuals[i].individual, i + 1);
+        }
+
+        public WorldAction Decide(int individual, int step)
+        {
+            if (slots.TryGetValue(individual, out int slot))
+                foreach (var command in commands)
+                    if (command.slot == slot && step >= command.fromStep && step <= command.toStep)
+                        return new WorldAction(new Vector2(command.moveX, command.moveY), command.forage,
+                            new Vector2(command.aimX, command.aimY), command.attack, Enum.Parse<WorldSkill>(command.skill));
+            return new WorldAction(Vector2.zero);
+        }
+
+        [Serializable]
+        public sealed class Placement { public int slot; public float x; public float y; }
+        [Serializable]
+        public sealed class Command
+        {
+            public int slot;
+            public int fromStep;
+            public int toStep;
+            public float moveX;
+            public float moveY;
+            public float aimX;
+            public float aimY;
+            public bool forage;
+            public bool attack;
+            public string skill = "None";
+        }
+    }
+}
