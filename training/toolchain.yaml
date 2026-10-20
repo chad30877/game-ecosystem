@@ -1,5 +1,5 @@
 behaviors:
-  Toolchain:
+  Flame: &species
     trainer_type: ppo
     hyperparameters:
       batch_size: 64
@@ -23,3 +23,5 @@ behaviors:
     summary_freq: 256
     checkpoint_interval: 2048
     keep_checkpoints: 1
+  Frost: *species
+  Moss: *species
