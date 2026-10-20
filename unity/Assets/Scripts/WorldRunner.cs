@@ -135,8 +135,6 @@ namespace Ecosystem
             Destroy(body.GetComponent<Collider>());
             body.transform.localScale = Vector3.one * (world.Config.foraging ? 0.65f : 0.4f);
             var material = new Material(Resources.Load<Material>("WorldMaterial"));
-            material.color = individual.species == "Flame" ? new Color(1f, 0.35f, 0.2f)
-                : individual.species == "Frost" ? new Color(0.35f, 0.7f, 1f) : new Color(0.35f, 0.9f, 0.4f);
             body.GetComponent<Renderer>().sharedMaterial = material;
             var behavior = body.AddComponent<BehaviorParameters>();
             behavior.BehaviorName = individual.species;
