@@ -10,22 +10,60 @@ namespace Ecosystem
             var baseAction = Forage(world, individual);
             var enemy = individual.perception.Where(value => value.visible && value.species != individual.species)
                 .OrderBy(value => Vector2.Distance(CombatRules.Position(individual), new Vector2(value.x, value.y))).FirstOrDefault();
-            int skillSlot = -1;
-            WorldSkill requested = individual.species == "Moss" ? WorldSkill.Cultivate
-                : enemy != null ? WorldSkill.Charge : WorldSkill.None;
-            for (int slot = 0; slot < individual.loadout.Length; slot++)
-                if (individual.loadout[slot] == requested) skillSlot = slot;
+            Vector2 aim = enemy == null ? CombatRules.Position(individual) : new Vector2(enemy.x, enemy.y);
+            int skillSlot = ChooseSkill(world, individual, enemy, ref aim);
             if (enemy != null && individual.energy >= 20 && individual.species != "Moss")
             {
                 var delta = new Vector2(enemy.x, enemy.y) - CombatRules.Position(individual);
                 float range = delta.magnitude;
                 var movement = individual.species == "Frost" ? (range < 3.5f ? -delta.normalized : Vector2.zero)
                     : range < world.Config.combat.meleeRange ? Vector2.zero : delta.normalized;
-                int turn = Turn(individual, delta);
-                return new WorldAction(movement, true, delta.normalized, true,
-                    turn: turn, skillSlot: individual.species == "Flame" && range > 1.5f ? skillSlot : -1);
+                return new WorldAction(movement, true, aim, true, turn: Turn(individual, delta), skillSlot: skillSlot);
             }
-            return new WorldAction(baseAction.movement, baseAction.forage, turn: Turn(individual, baseAction.movement), skillSlot: skillSlot);
+            return new WorldAction(baseAction.movement, baseAction.forage, aim, turn: Turn(individual, baseAction.movement), skillSlot: skillSlot);
+        }
+
+        private static int ChooseSkill(World world, IndividualState individual, EntityObservation enemy, ref Vector2 aim)
+        {
+            var c = world.Config.combat;
+            var position = CombatRules.Position(individual);
+            float distance = enemy == null ? float.PositiveInfinity : Vector2.Distance(position, new Vector2(enemy.x, enemy.y));
+            for (int offset = 0; offset < 2; offset++)
+            {
+                int slot = (world.State.step / 60 + individual.individual + offset) % 2;
+                if (individual.skillCooldowns[slot] > 0) continue;
+                switch (individual.loadout[slot])
+                {
+                    case WorldSkill.Charge: if (distance > 1.5f && distance <= c.chargeDistance) return slot; break;
+                    case WorldSkill.HotStrike: if (distance <= c.hotStrikeRange) return slot; break;
+                    case WorldSkill.Shield: if (distance <= c.roarRange) return slot; break;
+                    case WorldSkill.IntimidatingRoar: if (distance <= c.roarRange) return slot; break;
+                    case WorldSkill.FrostbindArrow: if (distance <= c.iceRange) return slot; break;
+                    case WorldSkill.PiercingIceArrow: if (distance <= c.piercingRange) return slot; break;
+                    case WorldSkill.ColdMistDash:
+                        if (distance < 2.5f)
+                        {
+                            aim = position + (position - aim).normalized * c.dashDistance;
+                            return slot;
+                        }
+                        break;
+                    case WorldSkill.FrostTrap: if (distance <= c.trapRange) return slot; break;
+                    case WorldSkill.EntanglingRoots: if (distance <= c.rootsRange) return slot; break;
+                    case WorldSkill.SporeSmoke: if (distance <= c.smokeRadius) return slot; break;
+                    case WorldSkill.Cultivate:
+                        if (world.State.foods.Exists(food => food.mature && food.amount < food.capacity &&
+                            Vector2.Distance(position, new Vector2(food.x, food.y)) <= Mathf.Min(c.cultivateRange, world.Config.observationRadius))) return slot;
+                        break;
+                    case WorldSkill.Sow:
+                        if (individual.energy >= 30)
+                        {
+                            aim = position + new Vector2(Mathf.Cos(individual.facing * Mathf.Deg2Rad), Mathf.Sin(individual.facing * Mathf.Deg2Rad)) * (c.sowRange * 0.7f);
+                            return slot;
+                        }
+                        break;
+                }
+            }
+            return -1;
         }
 
         private static int Turn(IndividualState individual, Vector2 direction)
@@ -43,7 +81,7 @@ namespace Ecosystem
             foreach (var food in world.State.foods)
             {
                 float distance = Vector2.Distance(position, new Vector2(food.x, food.y));
-                if (food.amount > 0.01f && distance <= nearest)
+                if (food.mature && food.amount > 0.01f && distance <= nearest)
                 {
                     nearest = distance;
                     target = food;

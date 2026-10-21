@@ -1,0 +1,38 @@
+{
+  "placements": [
+    {
+      "slot": 1,
+      "x": -1,
+      "y": 0,
+      "loadout": [
+        "HotStrike",
+        "IntimidatingRoar"
+      ]
+    },
+    {
+      "slot": 2,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "slot": 3,
+      "x": 10,
+      "y": 10
+    }
+  ],
+  "commands": [
+    {
+      "slot": 1,
+      "fromStep": 1,
+      "toStep": 1,
+      "skillSlot": 0,
+      "aimX": 0
+    },
+    {
+      "slot": 1,
+      "fromStep": 26,
+      "toStep": 26,
+      "skillSlot": 1
+    }
+  ]
+}

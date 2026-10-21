@@ -24,6 +24,7 @@ namespace Ecosystem
         private Font font;
         private WorldScenario scenario;
         private readonly List<GameObject> projectileViews = new List<GameObject>();
+        private readonly List<GameObject> areaViews = new List<GameObject>();
 
         private static string Argument(string name, string fallback)
         {
@@ -104,6 +105,12 @@ namespace Ecosystem
             }
             agents.Clear();
             ClearProjectileViews();
+            foreach (var view in areaViews)
+            {
+                Destroy(view.GetComponent<Renderer>().sharedMaterial);
+                Destroy(view);
+            }
+            areaViews.Clear();
             foreach (var view in foodViews)
             {
                 Destroy(view.GetComponent<Renderer>().sharedMaterial);
@@ -113,15 +120,6 @@ namespace Ecosystem
             world.Reset();
             scenario?.Apply(world);
             selected = 0;
-            foreach (var food in world.State.foods)
-            {
-                var view = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-                Destroy(view.GetComponent<Collider>());
-                view.transform.rotation = Quaternion.Euler(90, 0, 0);
-                view.transform.position = new Vector3(food.x, food.y, 0.3f);
-                view.GetComponent<Renderer>().sharedMaterial = new Material(Resources.Load<Material>("WorldMaterial"));
-                foodViews.Add(view);
-            }
             UpdateFoodViews();
             foreach (var individual in world.State.individuals)
                 CreateAgent(individual);
@@ -182,6 +180,7 @@ namespace Ecosystem
             UpdateFoodViews();
             Record("step");
             UpdateProjectileViews();
+            UpdateAreaViews();
             foreach (int id in agents.Keys.Where(id => !world.State.individuals.Any(value => value.individual == id)).ToArray())
             {
                 var agent = agents[id];
@@ -218,13 +217,46 @@ namespace Ecosystem
 
         private void UpdateFoodViews()
         {
+            while (foodViews.Count < world.State.foods.Count)
+            {
+                var food = world.State.foods[foodViews.Count];
+                var view = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                Destroy(view.GetComponent<Collider>());
+                view.transform.rotation = Quaternion.Euler(90, 0, 0);
+                view.transform.position = new Vector3(food.x, food.y, 0.3f);
+                view.GetComponent<Renderer>().sharedMaterial = new Material(Resources.Load<Material>("WorldMaterial"));
+                foodViews.Add(view);
+            }
             for (int i = 0; i < foodViews.Count; i++)
             {
                 var food = world.State.foods[i];
                 float ratio = food.amount / food.capacity;
-                float size = food.patch ? 2.6f : 0.9f;
+                float size = !food.mature ? 0.4f : food.patch ? 2.6f : 0.9f;
                 foodViews[i].transform.localScale = new Vector3(size * (0.3f + ratio * 0.7f), 0.03f, size * (0.3f + ratio * 0.7f));
-                foodViews[i].GetComponent<Renderer>().sharedMaterial.color = Color.Lerp(new Color(0.15f, 0.18f, 0.12f), new Color(0.95f, 0.8f, 0.25f), ratio);
+                foodViews[i].GetComponent<Renderer>().sharedMaterial.color = !food.mature ? new Color(0.45f, 0.3f, 0.15f) : Color.Lerp(new Color(0.15f, 0.18f, 0.12f), new Color(0.95f, 0.8f, 0.25f), ratio);
+            }
+        }
+
+        private void UpdateAreaViews()
+        {
+            while (areaViews.Count < world.State.areas.Count)
+            {
+                var view = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                Destroy(view.GetComponent<Collider>());
+                view.transform.rotation = Quaternion.Euler(90, 0, 0);
+                view.GetComponent<Renderer>().sharedMaterial = new Material(Resources.Load<Material>("WorldMaterial"));
+                areaViews.Add(view);
+            }
+            for (int i = 0; i < areaViews.Count; i++)
+            {
+                bool active = i < world.State.areas.Count;
+                areaViews[i].SetActive(active);
+                if (!active) continue;
+                var area = world.State.areas[i];
+                areaViews[i].transform.position = new Vector3(area.x, area.y, 0.2f);
+                areaViews[i].transform.localScale = new Vector3(area.radius * 2, 0.02f, area.radius * 2);
+                areaViews[i].GetComponent<Renderer>().sharedMaterial.color = area.skill == WorldSkill.FrostTrap
+                    ? new Color(0.3f, 0.8f, 1f, 0.55f) : new Color(0.65f, 0.4f, 0.8f, 0.25f);
             }
         }
 
@@ -255,6 +287,8 @@ namespace Ecosystem
                 projectileViews[i].SetActive(i < world.State.projectiles.Count);
                 if (i >= world.State.projectiles.Count) continue;
                 var arrow = world.State.projectiles[i];
+                projectileViews[i].GetComponent<Renderer>().sharedMaterial.color = arrow.skill == WorldSkill.PiercingIceArrow ? Color.white
+                    : arrow.skill == WorldSkill.FrostbindArrow ? Color.blue : Color.cyan;
                 projectileViews[i].transform.position = new Vector3(arrow.x, arrow.y, -0.2f);
                 projectileViews[i].transform.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(arrow.directionY, arrow.directionX) * Mathf.Rad2Deg);
             }
@@ -275,14 +309,14 @@ namespace Ecosystem
             GUI.skin.font = font;
             GUI.skin.label.fontSize = 16;
             GUI.Box(new Rect(8, 8, 590, 282), "");
-            GUI.Label(new Rect(18, 12, 570, 30), control == "rules" ? "規則控制・尚非學習結果" : control == "idle" ? "靜止控制・飢餓核對" : control == "scripted" ? "指定動作・尚非學習結果" : "手動・方向鍵／空白採食／A 攻擊／Q/E 轉向／S/D 技能");
+            GUI.Label(new Rect(18, 12, 570, 30), control == "rules" ? "規則控制・尚非學習結果" : control == "idle" ? "靜止控制・飢餓核對" : control == "scripted" ? "指定動作・尚非學習結果" : "方向鍵移動／滑鼠瞄準／A攻擊／S/D技能／Q/E轉向／空白採食");
             GUI.Label(new Rect(18, 42, 350, 28), $"{world.State.time:F1} 秒　炎角 {world.State.individuals.Count(v => v.species == "Flame")}　霜羽 {world.State.individuals.Count(v => v.species == "Frost")}　苔靈 {world.State.individuals.Count(v => v.species == "Moss")}");
             var individual = world.State.individuals.FirstOrDefault(value => value.individual == selected);
             GUI.Label(new Rect(18, 72, 520, 28), individual == null ? "點選個體" : $"#{individual.individual} {individual.species}　健康 {individual.health:F1}　能量 {individual.energy:F1}");
             if (individual != null)
             {
                 GUI.Label(new Rect(18, 100, 570, 28), $"年齡 {individual.age:F1}　{(individual.age < world.Config.maturityAge ? "成長期" : "成年")}　繁殖 {individual.reproductionCooldown:F1}");
-                GUI.Label(new Rect(18, 128, 570, 28), $"攻擊 {individual.attackCooldown:F1}　{individual.loadout[0]} {individual.skillCooldowns[0]:F1}／{individual.loadout[1]} {individual.skillCooldowns[1]:F1}　{ActiveStatus(individual)}");
+                GUI.Label(new Rect(18, 128, 570, 28), $"攻擊 {individual.attackCooldown:F1}　{SkillName(individual.loadout[0])} {individual.skillCooldowns[0]:F1}／{SkillName(individual.loadout[1])} {individual.skillCooldowns[1]:F1}　{ActiveStatus(individual)}");
             }
             int row = 0;
             foreach (var statistics in world.State.statistics)
@@ -291,14 +325,26 @@ namespace Ecosystem
             if (world.State.endReason != "" && GUI.Button(new Rect(458, 244, 120, 32), "重建世界")) ResetWorld();
         }
 
+        private static string SkillName(WorldSkill skill) => skill switch
+        {
+            WorldSkill.Charge => "烈焰衝鋒", WorldSkill.HotStrike => "熾熱猛擊", WorldSkill.Shield => "防禦姿態",
+            WorldSkill.IntimidatingRoar => "威嚇咆哮", WorldSkill.FrostbindArrow => "霜縛箭", WorldSkill.PiercingIceArrow => "穿透冰矢",
+            WorldSkill.ColdMistDash => "寒霧遁行", WorldSkill.FrostTrap => "冰霜陷阱", WorldSkill.Cultivate => "培育",
+            WorldSkill.Sow => "播種", WorldSkill.EntanglingRoots => "根鬚纏繞", WorldSkill.SporeSmoke => "孢子煙幕", _ => ""
+        };
+
         private static string ActiveStatus(IndividualState individual)
         {
-            if (individual.shieldRemaining > 0) return $"護盾 {individual.shieldRemaining:F1}";
-            if (individual.cultivateRemaining > 0) return $"培育 {individual.cultivateRemaining:F1}";
-            if (individual.windupRemaining > 0) return $"前搖 {individual.windupRemaining:F1}";
-            if (individual.chargeRemaining > 0) return "衝鋒";
-            if (individual.slowRemaining > 0) return $"減速 {individual.slowRemaining:F1}";
-            return "";
+            var statuses = new List<string>();
+            if (individual.rootRemaining > 0) statuses.Add($"定身 {individual.rootRemaining:F1}");
+            if (individual.poisonStacks > 0) statuses.Add($"中毒 {individual.poisonStacks}");
+            if (individual.dashRemaining > 0) statuses.Add("遁行");
+            if (individual.shieldRemaining > 0) statuses.Add($"防禦 {individual.shieldRemaining:F1}");
+            if (individual.cultivateRemaining > 0) statuses.Add($"培育 {individual.cultivateRemaining:F1}");
+            if (individual.windupRemaining > 0) statuses.Add($"前搖 {individual.windupRemaining:F1}");
+            if (individual.chargeRemaining > 0) statuses.Add("衝鋒");
+            if (individual.slowRemaining > 0) statuses.Add($"減速 {individual.slowRemaining:F1}");
+            return string.Join("　", statuses);
         }
 
         private void Record(string kind, IndividualState individual = null, int unityObject = 0) => output.WriteLine(JsonUtility.ToJson(new StepRecord
@@ -315,7 +361,7 @@ namespace Ecosystem
             public string unity;
             public string device;
             public string control;
-            public string rules = "perception-v1";
+            public string rules = "skills-v1";
             public WorldConfig config;
             public WorldScenario scenario;
         }

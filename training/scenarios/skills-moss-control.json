@@ -1,0 +1,37 @@
+{
+  "placements": [
+    {
+      "slot": 1,
+      "x": 0.5,
+      "y": 0
+    },
+    {
+      "slot": 2,
+      "x": 1.5,
+      "y": 0
+    },
+    {
+      "slot": 3,
+      "x": 0,
+      "y": 0,
+      "loadout": [
+        "EntanglingRoots",
+        "SporeSmoke"
+      ]
+    }
+  ],
+  "commands": [
+    {
+      "slot": 3,
+      "fromStep": 1,
+      "toStep": 1,
+      "skillSlot": 0
+    },
+    {
+      "slot": 3,
+      "fromStep": 2,
+      "toStep": 2,
+      "skillSlot": 1
+    }
+  ]
+}

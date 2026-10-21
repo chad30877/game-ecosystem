@@ -1,0 +1,46 @@
+{
+  "placements": [
+    {
+      "slot": 1,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "slot": 2,
+      "x": 4,
+      "y": 0,
+      "loadout": [
+        "FrostTrap",
+        "ColdMistDash"
+      ]
+    },
+    {
+      "slot": 3,
+      "x": -10,
+      "y": -10
+    }
+  ],
+  "commands": [
+    {
+      "slot": 2,
+      "fromStep": 1,
+      "toStep": 1,
+      "skillSlot": 0,
+      "aimX": 0
+    },
+    {
+      "slot": 2,
+      "fromStep": 10,
+      "toStep": 10,
+      "skillSlot": 1,
+      "aimX": 4,
+      "aimY": 3
+    },
+    {
+      "slot": 1,
+      "fromStep": 1,
+      "toStep": 300,
+      "moveX": 1
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "placements": [
+    {
+      "slot": 1,
+      "x": -10,
+      "y": 10
+    },
+    {
+      "slot": 2,
+      "x": 10,
+      "y": 10
+    },
+    {
+      "slot": 3,
+      "x": 0,
+      "y": 0,
+      "loadout": [
+        "Sow",
+        "Cultivate"
+      ]
+    }
+  ],
+  "commands": [
+    {
+      "slot": 3,
+      "fromStep": 1,
+      "toStep": 1,
+      "skillSlot": 0,
+      "aimX": 1.5
+    },
+    {
+      "slot": 3,
+      "fromStep": 2,
+      "toStep": 26,
+      "moveX": 1,
+      "forage": true
+    },
+    {
+      "slot": 3,
+      "fromStep": 27,
+      "toStep": 250,
+      "forage": true
+    },
+    {
+      "slot": 3,
+      "fromStep": 251,
+      "toStep": 251,
+      "skillSlot": 1,
+      "forage": true
+    },
+    {
+      "slot": 3,
+      "fromStep": 252,
+      "toStep": 500,
+      "forage": true
+    }
+  ]
+}

@@ -27,7 +27,7 @@ namespace Ecosystem
             var continuous = actions.ContinuousActions;
             var discrete = actions.DiscreteActions;
             Action = new WorldAction(new Vector2(continuous[0], continuous[1]), discrete[3] == 1,
-                new Vector2(continuous[2], continuous[3]), discrete[2] == 1,
+                new Vector2(continuous[2], continuous[3]) * World.Config.halfExtent, discrete[2] == 1,
                 turn: discrete[0] - 1, skillSlot: discrete[1] - 1);
         }
 
@@ -36,8 +36,10 @@ namespace Ecosystem
             var actions = actionsOut.ContinuousActions;
             actions[0] = (Input.GetKey(KeyCode.RightArrow) ? 1 : 0) - (Input.GetKey(KeyCode.LeftArrow) ? 1 : 0);
             actions[1] = (Input.GetKey(KeyCode.UpArrow) ? 1 : 0) - (Input.GetKey(KeyCode.DownArrow) ? 1 : 0);
-            actions[2] = actions[0];
-            actions[3] = actions[1];
+            var camera = FindFirstObjectByType<Camera>();
+            var aim = camera != null ? camera.ScreenToWorldPoint(Input.mousePosition) : Vector3.zero;
+            actions[2] = Mathf.Clamp(aim.x / World.Config.halfExtent, -1f, 1f);
+            actions[3] = Mathf.Clamp(aim.y / World.Config.halfExtent, -1f, 1f);
             var discrete = actionsOut.DiscreteActions;
             discrete[0] = 1 + (Input.GetKey(KeyCode.E) ? 1 : 0) - (Input.GetKey(KeyCode.Q) ? 1 : 0);
             discrete[1] = Input.GetKey(KeyCode.S) ? 1 : Input.GetKey(KeyCode.D) ? 2 : 0;
@@ -54,6 +56,8 @@ namespace Ecosystem
             var color = Individual.species == "Flame" ? new Color(1f, 0.35f, 0.2f)
                 : Individual.species == "Frost" ? new Color(0.35f, 0.7f, 1f) : new Color(0.35f, 0.9f, 0.4f);
             renderer.sharedMaterial.color = World.State.time < Individual.hitUntil ? Color.white
+                : Individual.rootRemaining > 0 ? new Color(0.8f, 0.4f, 1f)
+                : Individual.poisonStacks > 0 ? Color.Lerp(color, new Color(0.6f, 0.8f, 0.1f), 0.5f)
                 : Individual.windupRemaining > 0 ? Color.cyan : Individual.slowRemaining > 0 ? Color.Lerp(color, Color.blue, 0.5f) : color;
             if (trail == null)
             {
@@ -63,7 +67,7 @@ namespace Ecosystem
                 trail.startWidth = 0.3f;
                 trail.endWidth = 0;
             }
-            trail.emitting = Individual.chargeRemaining > 0;
+            trail.emitting = Individual.chargeRemaining > 0 || Individual.dashRemaining > 0;
             if (aimView == null)
             {
                 aimView = new GameObject("Aim").AddComponent<LineRenderer>();
@@ -83,9 +87,11 @@ namespace Ecosystem
                 aura.startWidth = aura.endWidth = 0.08f;
                 aura.positionCount = 33;
             }
-            aura.enabled = Individual.shieldRemaining > 0 || Individual.cultivateRemaining > 0;
-            aura.sharedMaterial.color = Individual.shieldRemaining > 0 ? Color.cyan : Color.yellow;
-            float radius = Individual.shieldRemaining > 0 ? 0.65f : 0.9f;
+            aura.enabled = Individual.shieldRemaining > 0 || Individual.cultivateRemaining > 0 || World.State.time < Individual.skillFlashUntil;
+            aura.sharedMaterial.color = Individual.shieldRemaining > 0 ? Color.cyan : Individual.cultivateRemaining > 0 ? Color.yellow
+                : Individual.species == "Flame" ? new Color(1, 0.5f, 0.1f) : Individual.species == "Moss" ? Color.green : Color.cyan;
+            float radius = Individual.shieldRemaining > 0 ? 0.65f : Individual.lastSkill == WorldSkill.IntimidatingRoar ? World.Config.combat.roarRange
+                : Individual.lastSkill == WorldSkill.EntanglingRoots ? World.Config.combat.rootsRange : 0.9f;
             for (int i = 0; i <= 32; i++)
             {
                 float angle = i * Mathf.PI / 16;

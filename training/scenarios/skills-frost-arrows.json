@@ -1,0 +1,46 @@
+{
+  "placements": [
+    {
+      "slot": 1,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "slot": 2,
+      "x": 3,
+      "y": 0,
+      "loadout": [
+        "FrostbindArrow",
+        "PiercingIceArrow"
+      ]
+    },
+    {
+      "slot": 3,
+      "x": -1.5,
+      "y": 0
+    }
+  ],
+  "commands": [
+    {
+      "slot": 2,
+      "fromStep": 1,
+      "toStep": 1,
+      "skillSlot": 1,
+      "aimX": -3
+    },
+    {
+      "slot": 2,
+      "fromStep": 31,
+      "toStep": 31,
+      "skillSlot": 0,
+      "aimX": 0
+    },
+    {
+      "slot": 2,
+      "fromStep": 61,
+      "toStep": 61,
+      "attack": true,
+      "aimX": 0
+    }
+  ]
+}

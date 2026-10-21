@@ -19,6 +19,7 @@ namespace Ecosystem
         public float foodCapacity = 30f;
         public float foodInitial = 20f;
         public float foodRegeneration = 4f;
+        public int foodSourceLimit = 64;
         public float forageRadius = 0.7f;
         public float forageRate = 12f;
         public float initialEnergy = 60f;
@@ -42,7 +43,7 @@ namespace Ecosystem
                 individualsPerSpecies < 1 || (!foraging && (individualsPerSpecies < 2 || removeStep <= 0 || addStep <= removeStep || addStep >= episodeSteps)))
                 throw new ArgumentException("世界配置須為有限正數、每物種至少兩隻，且 0 < removeStep < addStep < episodeSteps。");
             if (foraging && (!float.IsFinite(foodCapacity) || foodCapacity <= 0 ||
-                !float.IsFinite(foodInitial) || foodInitial < 0 || foodInitial > foodCapacity ||
+                foodSourceLimit < 16 || !float.IsFinite(foodInitial) || foodInitial < 0 || foodInitial > foodCapacity ||
                 !float.IsFinite(foodRegeneration) || foodRegeneration < 0 ||
                 !float.IsFinite(forageRadius) || forageRadius <= 0 ||
                 !float.IsFinite(forageRate) || forageRate <= 0 ||
@@ -85,9 +86,21 @@ namespace Ecosystem
         public float[] skillReadyTimes = new float[2];
         public float[] skillCooldowns = new float[2];
         public bool skillUsedThisStep;
+        public WorldSkill lastSkill;
+        public float skillFlashUntil;
         public List<EntityObservation> perception = new List<EntityObservation>();
         public float attackCooldown;
         public float skillCooldown;
+        public float dashRemaining;
+        public bool dashActiveThisStep;
+        public float rootUntil;
+        public float rootRemaining;
+        public bool trapSlowPending;
+        public float poisonUntil;
+        public int poisonStacks;
+        public float nextPoisonExposureAt;
+        public float nextPoisonDamageAt;
+        public int poisonOwner;
         public float chargeRemaining;
         public bool chargeActiveThisStep;
         public float aimX;
@@ -95,6 +108,7 @@ namespace Ecosystem
         public float lastCombatAt = -1000f;
         public string lastDamageCause = "";
         public float hitUntil;
+        public WorldSkill windupSkill;
         public float windupUntil;
         public float windupRemaining;
         public bool windupActiveThisStep;
@@ -105,6 +119,17 @@ namespace Ecosystem
         public float cultivateUntil;
         public float cultivateRemaining;
         public int cultivatingFood;
+        public List<MovementBiasState> movementBiases = new List<MovementBiasState>();
+    }
+
+    [Serializable]
+    public sealed class MovementBiasState
+    {
+        public WorldSkill skill;
+        public float until;
+        public float angle;
+        public float targetAngle;
+        public float nextDirectionAt;
     }
 
     [Serializable]
@@ -126,6 +151,8 @@ namespace Ecosystem
         public float y;
         public float amount;
         public float capacity;
+        public bool mature = true;
+        public float matureAt;
     }
 
     [Serializable]
@@ -141,6 +168,7 @@ namespace Ecosystem
         public float age;
         public int target;
         public float rawAmount;
+        public WorldSkill skill;
         public float x;
         public float y;
     }
@@ -203,11 +231,27 @@ namespace Ecosystem
         public List<SpeciesStatistics> statistics = new List<SpeciesStatistics>();
         public List<ProjectileState> projectiles = new List<ProjectileState>();
         public int nextProjectile;
+        public int nextFood;
+        public int nextArea;
+        public List<AreaState> areas = new List<AreaState>();
+    }
+
+    [Serializable]
+    public sealed class AreaState
+    {
+        public int area;
+        public int owner;
+        public string species;
+        public WorldSkill skill;
+        public float x, y, radius, until;
     }
 
     [Serializable]
     public sealed class ProjectileState
     {
+        public WorldSkill skill;
+        public List<int> hitIndividuals = new List<int>();
+        public float damage;
         public int projectile;
         public int owner;
         public string species;
@@ -224,6 +268,7 @@ namespace Ecosystem
         public WorldConfig Config { get; }
         public WorldState State { get; private set; }
         private readonly System.Random random;
+        private readonly System.Random effectRandom;
         private int episode;
         private int nextIndividual;
         private readonly int[] loadoutCycle = new int[3];
@@ -242,6 +287,7 @@ namespace Ecosystem
             config.Validate();
             Config = config;
             random = new System.Random(seed);
+            effectRandom = new System.Random(seed ^ 0x43f214);
         }
 
         public WorldState Reset()
@@ -273,6 +319,7 @@ namespace Ecosystem
                     });
                 }
             }
+            State.nextFood = State.foods.Count;
             UpdateIncompleteLives();
             RefreshPerception();
             return State;
@@ -327,8 +374,19 @@ namespace Ecosystem
             State.events.Clear();
             float time = (State.step + 1) * Config.stepSeconds;
             foreach (var food in State.foods)
-                food.amount = Mathf.Min(food.capacity, food.amount + Config.foodRegeneration * Config.stepSeconds * (food.patch ? 1f : 0.25f));
-            if (Config.foraging) CombatRules.BeginStep(Config, State, actions);
+            {
+                if (!food.mature && time >= food.matureAt)
+                {
+                    food.mature = true;
+                    State.events.Add(new WorldEvent { kind = "food_matured", food = food.food, x = food.x, y = food.y });
+                }
+                if (food.mature) food.amount = Mathf.Min(food.capacity, food.amount + Config.foodRegeneration * Config.stepSeconds * (food.patch ? 1f : 0.25f));
+            }
+            if (Config.foraging)
+            {
+                CombatRules.BeginStep(Config, State, actions);
+                ControlEffects.PrepareMovement(Config, State, effectRandom);
+            }
             var distances = new Dictionary<int, float>();
             foreach (var individual in State.individuals)
             {
@@ -344,7 +402,11 @@ namespace Ecosystem
                 if (!Config.foraging) individual.boundary = position != bounded;
                 distances[individual.individual] = Vector2.Distance(start, bounded);
             }
-            if (Config.foraging) CombatRules.Resolve(Config, State, actions);
+            if (Config.foraging)
+            {
+                CombatRules.Resolve(Config, State, actions);
+                ControlEffects.Resolve(Config, State, effectRandom);
+            }
             foreach (var individual in State.individuals)
             {
                 if (!Config.foraging) continue;
@@ -354,7 +416,7 @@ namespace Ecosystem
                 individual.energy = Mathf.Max(0, individual.energy - Config.idleCost * Config.stepSeconds - Config.movementCost * distance);
                 if (individual.health > 0 && actions[individual.individual].forage)
                     foreach (var food in State.foods)
-                        if (Vector2.Distance(CombatRules.Position(individual), new Vector2(food.x, food.y)) <= Config.forageRadius)
+                        if (food.mature && Vector2.Distance(CombatRules.Position(individual), new Vector2(food.x, food.y)) <= Config.forageRadius)
                         {
                             float eaten = Mathf.Min(food.amount, Config.forageRate * Config.stepSeconds, 100f - individual.energy);
                             if (eaten <= 0) continue;
