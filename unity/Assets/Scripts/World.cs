@@ -228,7 +228,14 @@ namespace Ecosystem
         private int nextIndividual;
         private readonly int[] loadoutCycle = new int[3];
         private readonly int[,] loadoutOrder = new int[3, 6];
-        private readonly Dictionary<int, Dictionary<int, EntityObservation>> enemyMemory = new Dictionary<int, Dictionary<int, EntityObservation>>();
+        private readonly Dictionary<int, Dictionary<int, EnemySighting>> enemyMemory = new Dictionary<int, Dictionary<int, EnemySighting>>();
+
+        private sealed class EnemySighting
+        {
+            public string species;
+            public Vector2 position;
+            public float lastSeenAt;
+        }
 
         public World(WorldConfig config, int seed)
         {
@@ -485,7 +492,7 @@ namespace Ecosystem
             {
                 alive.Add(observer.individual);
                 if (!enemyMemory.TryGetValue(observer.individual, out var memory))
-                    enemyMemory.Add(observer.individual, memory = new Dictionary<int, EntityObservation>());
+                    enemyMemory.Add(observer.individual, memory = new Dictionary<int, EnemySighting>());
                 observer.perception.Clear();
                 var visible = new HashSet<int>();
                 foreach (var target in State.individuals)
@@ -495,16 +502,16 @@ namespace Ecosystem
                     observer.perception.Add(new EntityObservation { species = target.species, x = target.x, y = target.y,
                         visible = true, velocityX = target.velocityX, velocityY = target.velocityY });
                     if (target.species != observer.species)
-                        memory[target.individual] = new EntityObservation { species = target.species, x = target.x, y = target.y, age = State.time };
+                        memory[target.individual] = new EnemySighting { species = target.species, position = CombatRules.Position(target), lastSeenAt = State.time };
                 }
                 var expired = new List<int>();
                 foreach (var pair in memory)
                 {
                     var last = pair.Value;
-                    float age = State.time - last.age;
+                    float age = State.time - last.lastSeenAt;
                     if (age >= 5f) expired.Add(pair.Key);
                     else if (!visible.Contains(pair.Key))
-                        observer.perception.Add(new EntityObservation { species = last.species, x = last.x, y = last.y, age = age });
+                        observer.perception.Add(new EntityObservation { species = last.species, x = last.position.x, y = last.position.y, age = age });
                 }
                 foreach (int id in expired) memory.Remove(id);
                 // 以空間排序，避免觀察列順序成為個體的穩定識別。
