@@ -5,6 +5,7 @@ using System.Linq;
 using Unity.MLAgents;
 using Unity.MLAgents.Actuators;
 using Unity.MLAgents.Policies;
+using Unity.MLAgents.Sensors;
 using UnityEngine;
 
 namespace Ecosystem
@@ -138,8 +139,16 @@ namespace Ecosystem
             body.GetComponent<Renderer>().sharedMaterial = material;
             var behavior = body.AddComponent<BehaviorParameters>();
             behavior.BehaviorName = individual.species;
-            behavior.BrainParameters.VectorObservationSize = 4;
-            behavior.BrainParameters.ActionSpec = ActionSpec.MakeContinuous(2);
+            behavior.BrainParameters.VectorObservationSize = 11;
+            behavior.BrainParameters.ActionSpec = new ActionSpec(4, new[] { 3, 3, 2, 2 });
+            var entities = body.AddComponent<BufferSensorComponent>();
+            entities.SensorName = "Entities";
+            entities.ObservableSize = 7;
+            // 張量預留世界人口及五秒內所有可能的新生個體；世界觀察本身不截斷。
+            entities.MaxNumObservables = world.Config.foraging
+                ? checked(Mathf.Max(world.Config.populationLimit, world.Config.individualsPerSpecies * 3) *
+                    (Mathf.CeilToInt(5f / (world.Config.maturityAge >= 5f ? Mathf.Max(world.Config.stepSeconds, world.Config.reproductionCooldown) : world.Config.stepSeconds)) + 1))
+                : world.Config.individualsPerSpecies * 6;
             behavior.BehaviorType = control != "python" ? BehaviorType.HeuristicOnly : BehaviorType.Default;
             var agent = body.AddComponent<WorldAgent>();
             agent.World = world;
@@ -159,17 +168,10 @@ namespace Ecosystem
             if (stepLimit > 0 && totalSteps >= stepLimit)
                 return;
             if (world.State.endReason != "") return;
-            if (world.Config.foraging)
-                world.Step(agents.ToDictionary(pair => pair.Key, pair =>
-                    control == "rules" ? ForagingController.Decide(world, pair.Value.Individual)
-                    : control == "scripted" ? scenario.Decide(pair.Key, world.State.step + 1)
-                    : new WorldAction(control == "idle" ? Vector2.zero : pair.Value.Action,
-                        control == "manual" && Input.GetKey(KeyCode.Space), pair.Value.Action,
-                        control == "manual" && Input.GetKey(KeyCode.A),
-                        control == "manual" && Input.GetKey(KeyCode.D) ? WorldSkill.Shield
-                        : control == "manual" && Input.GetKey(KeyCode.S) ? (pair.Value.Individual.species == "Moss" ? WorldSkill.Cultivate : WorldSkill.Charge) : WorldSkill.None)));
-            else
-                world.Step(agents.ToDictionary(pair => pair.Key, pair => pair.Value.Action));
+            world.Step(agents.ToDictionary(pair => pair.Key, pair =>
+                control == "rules" ? ForagingController.Decide(world, pair.Value.Individual)
+                : control == "scripted" ? scenario.Decide(pair.Key, world.State.step + 1)
+                : control == "idle" ? new WorldAction(Vector2.zero) : pair.Value.Action));
             totalSteps++;
             foreach (var agent in agents.Values)
             {
@@ -204,6 +206,7 @@ namespace Ecosystem
             if (!world.Config.foraging && world.State.step == world.Config.addStep)
                 foreach (string species in World.Species)
                     CreateAgent(world.AddIndividual(species));
+            world.RefreshPerception();
             if (world.State.endReason != "")
             {
                 Record("episode_end");
@@ -272,14 +275,14 @@ namespace Ecosystem
             GUI.skin.font = font;
             GUI.skin.label.fontSize = 16;
             GUI.Box(new Rect(8, 8, 590, 282), "");
-            GUI.Label(new Rect(18, 12, 570, 30), control == "rules" ? "規則控制・尚非學習結果" : control == "idle" ? "靜止控制・飢餓核對" : control == "scripted" ? "指定動作・尚非學習結果" : "手動・方向鍵／空白採食／A 攻擊／S 技能／D 護盾");
+            GUI.Label(new Rect(18, 12, 570, 30), control == "rules" ? "規則控制・尚非學習結果" : control == "idle" ? "靜止控制・飢餓核對" : control == "scripted" ? "指定動作・尚非學習結果" : "手動・方向鍵／空白採食／A 攻擊／Q/E 轉向／S/D 技能");
             GUI.Label(new Rect(18, 42, 350, 28), $"{world.State.time:F1} 秒　炎角 {world.State.individuals.Count(v => v.species == "Flame")}　霜羽 {world.State.individuals.Count(v => v.species == "Frost")}　苔靈 {world.State.individuals.Count(v => v.species == "Moss")}");
             var individual = world.State.individuals.FirstOrDefault(value => value.individual == selected);
             GUI.Label(new Rect(18, 72, 520, 28), individual == null ? "點選個體" : $"#{individual.individual} {individual.species}　健康 {individual.health:F1}　能量 {individual.energy:F1}");
             if (individual != null)
             {
                 GUI.Label(new Rect(18, 100, 570, 28), $"年齡 {individual.age:F1}　{(individual.age < world.Config.maturityAge ? "成長期" : "成年")}　繁殖 {individual.reproductionCooldown:F1}");
-                GUI.Label(new Rect(18, 128, 570, 28), $"攻擊 {individual.attackCooldown:F1}　技能 {individual.skillCooldown:F1}　{ActiveStatus(individual)}");
+                GUI.Label(new Rect(18, 128, 570, 28), $"攻擊 {individual.attackCooldown:F1}　{individual.loadout[0]} {individual.skillCooldowns[0]:F1}／{individual.loadout[1]} {individual.skillCooldowns[1]:F1}　{ActiveStatus(individual)}");
             }
             int row = 0;
             foreach (var statistics in world.State.statistics)
@@ -312,7 +315,7 @@ namespace Ecosystem
             public string unity;
             public string device;
             public string control;
-            public string rules = "combat-v1";
+            public string rules = "perception-v1";
             public WorldConfig config;
             public WorldScenario scenario;
         }

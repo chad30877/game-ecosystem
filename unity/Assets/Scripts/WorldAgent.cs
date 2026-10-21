@@ -9,21 +9,40 @@ namespace Ecosystem
     {
         public World World { private get; set; }
         public IndividualState Individual { get; set; }
-        public Vector2 Action { get; private set; }
+        public WorldAction Action { get; private set; }
+        private BufferSensorComponent entitySensor;
         private TrailRenderer trail;
         private LineRenderer aimView;
         private LineRenderer aura;
 
-        public override void CollectObservations(VectorSensor sensor) => sensor.AddObservation(World.Observe(Individual));
+        public override void CollectObservations(VectorSensor sensor)
+        {
+            sensor.AddObservation(World.Observe(Individual));
+            if (entitySensor == null) entitySensor = GetComponent<BufferSensorComponent>();
+            foreach (var entity in World.ObserveEntities(Individual)) entitySensor.AppendObservation(entity);
+        }
 
-        public override void OnActionReceived(ActionBuffers actions) =>
-            Action = new Vector2(actions.ContinuousActions[0], actions.ContinuousActions[1]);
+        public override void OnActionReceived(ActionBuffers actions)
+        {
+            var continuous = actions.ContinuousActions;
+            var discrete = actions.DiscreteActions;
+            Action = new WorldAction(new Vector2(continuous[0], continuous[1]), discrete[3] == 1,
+                new Vector2(continuous[2], continuous[3]), discrete[2] == 1,
+                turn: discrete[0] - 1, skillSlot: discrete[1] - 1);
+        }
 
         public override void Heuristic(in ActionBuffers actionsOut)
         {
             var actions = actionsOut.ContinuousActions;
             actions[0] = (Input.GetKey(KeyCode.RightArrow) ? 1 : 0) - (Input.GetKey(KeyCode.LeftArrow) ? 1 : 0);
             actions[1] = (Input.GetKey(KeyCode.UpArrow) ? 1 : 0) - (Input.GetKey(KeyCode.DownArrow) ? 1 : 0);
+            actions[2] = actions[0];
+            actions[3] = actions[1];
+            var discrete = actionsOut.DiscreteActions;
+            discrete[0] = 1 + (Input.GetKey(KeyCode.E) ? 1 : 0) - (Input.GetKey(KeyCode.Q) ? 1 : 0);
+            discrete[1] = Input.GetKey(KeyCode.S) ? 1 : Input.GetKey(KeyCode.D) ? 2 : 0;
+            discrete[2] = Input.GetKey(KeyCode.A) ? 1 : 0;
+            discrete[3] = Input.GetKey(KeyCode.Space) ? 1 : 0;
         }
 
         public void UpdateView()
@@ -53,9 +72,9 @@ namespace Ecosystem
                 aimView.startWidth = aimView.endWidth = 0.08f;
                 aimView.positionCount = 2;
             }
-            aimView.enabled = Individual.windupRemaining > 0;
+            aimView.enabled = true;
             aimView.SetPosition(0, transform.position);
-            aimView.SetPosition(1, transform.position + new Vector3(Individual.aimX, Individual.aimY, 0) * 1.3f);
+            aimView.SetPosition(1, transform.position + new Vector3(Mathf.Cos(Individual.facing * Mathf.Deg2Rad), Mathf.Sin(Individual.facing * Mathf.Deg2Rad), 0) * 1.3f);
             if (aura == null)
             {
                 aura = new GameObject("Aura").AddComponent<LineRenderer>();

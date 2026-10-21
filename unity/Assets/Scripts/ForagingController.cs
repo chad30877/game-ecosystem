@@ -1,3 +1,4 @@
+using System.Linq;
 using UnityEngine;
 
 namespace Ecosystem
@@ -7,35 +8,31 @@ namespace Ecosystem
         public static WorldAction Decide(World world, IndividualState individual)
         {
             var baseAction = Forage(world, individual);
-            if (individual.species == "Moss")
+            var enemy = individual.perception.Where(value => value.visible && value.species != individual.species)
+                .OrderBy(value => Vector2.Distance(CombatRules.Position(individual), new Vector2(value.x, value.y))).FirstOrDefault();
+            int skillSlot = -1;
+            WorldSkill requested = individual.species == "Moss" ? WorldSkill.Cultivate
+                : enemy != null ? WorldSkill.Charge : WorldSkill.None;
+            for (int slot = 0; slot < individual.loadout.Length; slot++)
+                if (individual.loadout[slot] == requested) skillSlot = slot;
+            if (enemy != null && individual.energy >= 20 && individual.species != "Moss")
             {
-                bool threatened = false;
-                foreach (var other in world.State.individuals)
-                    if (other.species != "Moss" && Vector2.Distance(CombatRules.Position(individual), CombatRules.Position(other)) <= Mathf.Min(3f, world.Config.observationRadius))
-                        threatened = true;
-                return new WorldAction(baseAction.movement, true, skill: threatened ? WorldSkill.Shield : WorldSkill.Cultivate);
+                var delta = new Vector2(enemy.x, enemy.y) - CombatRules.Position(individual);
+                float range = delta.magnitude;
+                var movement = individual.species == "Frost" ? (range < 3.5f ? -delta.normalized : Vector2.zero)
+                    : range < world.Config.combat.meleeRange ? Vector2.zero : delta.normalized;
+                int turn = Turn(individual, delta);
+                return new WorldAction(movement, true, delta.normalized, true,
+                    turn: turn, skillSlot: individual.species == "Flame" && range > 1.5f ? skillSlot : -1);
             }
-            if (individual.species == "Flame" || individual.species == "Frost")
-            {
-                IndividualState enemy = null;
-                float range = world.Config.observationRadius;
-                foreach (var other in world.State.individuals)
-                {
-                    float distance = Vector2.Distance(CombatRules.Position(individual), CombatRules.Position(other));
-                    if (other.species == individual.species || distance > range) continue;
-                    enemy = other;
-                    range = distance;
-                }
-                if (enemy != null && individual.energy >= 20)
-                {
-                    var direction = (CombatRules.Position(enemy) - CombatRules.Position(individual)).normalized;
-                    if (individual.species == "Frost")
-                        return new WorldAction(range < 3.5f ? -direction : Vector2.zero, true, direction, range <= world.Config.combat.iceRange);
-                    return new WorldAction(range < world.Config.combat.meleeRange ? Vector2.zero : direction,
-                        true, direction, true, range > 1.5f && range <= world.Config.combat.chargeDistance ? WorldSkill.Charge : WorldSkill.None);
-                }
-            }
-            return baseAction;
+            return new WorldAction(baseAction.movement, baseAction.forage, turn: Turn(individual, baseAction.movement), skillSlot: skillSlot);
+        }
+
+        private static int Turn(IndividualState individual, Vector2 direction)
+        {
+            if (direction.sqrMagnitude == 0) return 0;
+            float angle = Mathf.DeltaAngle(individual.facing, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg);
+            return Mathf.Abs(angle) < 4 ? 0 : angle > 0 ? 1 : -1;
         }
 
         private static WorldAction Forage(World world, IndividualState individual)

@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Ecosystem
 {
-    public enum WorldSkill { None, Charge, Cultivate, Shield }
+    public enum WorldSkill { None, Charge, Cultivate, Shield, HotStrike, IntimidatingRoar, FrostbindArrow, PiercingIceArrow, ColdMistDash, FrostTrap, Sow, EntanglingRoots, SporeSmoke }
 
     [Serializable]
     public sealed class CombatConfig
@@ -72,17 +72,24 @@ namespace Ecosystem
                 individual.chargeActiveThisStep = individual.chargeRemaining > 0;
                 individual.windupActiveThisStep = individual.windupUntil > 0;
                 var action = actions[individual.individual];
+                individual.skillUsedThisStep = false;
                 if (individual.health <= 0) continue;
-                if (individual.species == "Moss" && state.time >= individual.skillReadyAt)
+                WorldSkill requestedSkill = action.skillSlot >= 0 && action.skillSlot < individual.loadout.Length
+                    ? individual.loadout[action.skillSlot] : action.skill;
+                int skillIndex = Array.IndexOf(individual.loadout, requestedSkill);
+                bool skillReady = skillIndex >= 0 && state.time >= individual.skillReadyTimes[skillIndex] && individual.chargeRemaining <= 0 && !individual.windupActiveThisStep && state.time >= individual.cultivateUntil;
+                if (skillReady)
                 {
-                    if (action.skill == WorldSkill.Shield && individual.energy >= config.combat.shieldEnergy)
+                    if (individual.species == "Flame" && requestedSkill == WorldSkill.Shield && individual.energy >= config.combat.shieldEnergy)
                     {
                         individual.energy -= config.combat.shieldEnergy;
                         individual.shieldUntil = state.time + config.combat.shieldDuration;
                         individual.skillReadyAt = state.time + config.combat.shieldCooldown;
+                        individual.skillReadyTimes[skillIndex] = state.time + config.combat.shieldCooldown;
+                        individual.skillUsedThisStep = true;
                         state.events.Add(new WorldEvent { kind = "shield", individual = individual.individual, amount = config.combat.shieldEnergy });
                     }
-                    else if (action.skill == WorldSkill.Cultivate && individual.energy >= config.combat.cultivateEnergy)
+                    else if (individual.species == "Moss" && requestedSkill == WorldSkill.Cultivate && individual.energy >= config.combat.cultivateEnergy)
                     {
                         FoodState target = null;
                         float nearest = config.combat.cultivateRange;
@@ -99,6 +106,8 @@ namespace Ecosystem
                             individual.cultivatingFood = target.food;
                             individual.cultivateUntil = state.time + config.combat.cultivateDuration;
                             individual.skillReadyAt = state.time + config.combat.cultivateCooldown;
+                            individual.skillReadyTimes[skillIndex] = state.time + config.combat.cultivateCooldown;
+                            individual.skillUsedThisStep = true;
                             state.events.Add(new WorldEvent { kind = "cultivate", individual = individual.individual,
                                 food = target.food, amount = config.combat.cultivateEnergy });
                         }
@@ -112,7 +121,7 @@ namespace Ecosystem
                     individual.windupUntil = 0;
                     state.events.Add(new WorldEvent { kind = "ice_fired", individual = individual.individual, x = individual.x, y = individual.y });
                 }
-                if (individual.species == "Frost" && action.attack && !individual.windupActiveThisStep && action.aim.sqrMagnitude > 0 &&
+                if (individual.species == "Frost" && action.attack && !individual.windupActiveThisStep && !individual.skillUsedThisStep && action.aim.sqrMagnitude > 0 &&
                     state.time >= individual.attackReadyAt && individual.energy >= config.combat.iceEnergy)
                 {
                     individual.energy -= config.combat.iceEnergy;
@@ -125,10 +134,12 @@ namespace Ecosystem
                     state.events.Add(new WorldEvent { kind = "ice_windup", individual = individual.individual, amount = config.combat.iceEnergy });
                 }
                 if (individual.species != "Flame" || individual.chargeRemaining > 0 ||
-                    action.skill != WorldSkill.Charge || action.aim.sqrMagnitude == 0 ||
-                    state.time < individual.skillReadyAt || individual.energy < config.combat.chargeEnergy) continue;
+                    requestedSkill != WorldSkill.Charge || !skillReady || action.aim.sqrMagnitude == 0 ||
+                    individual.energy < config.combat.chargeEnergy) continue;
                 individual.energy -= config.combat.chargeEnergy;
                 individual.skillReadyAt = state.time + config.combat.chargeCooldown;
+                individual.skillReadyTimes[skillIndex] = state.time + config.combat.chargeCooldown;
+                individual.skillUsedThisStep = true;
                 individual.chargeRemaining = config.combat.chargeDistance;
                 individual.aimX = action.aim.normalized.x;
                 individual.aimY = action.aim.normalized.y;
@@ -270,7 +281,9 @@ namespace Ecosystem
         public static void Recover(WorldConfig config, WorldState state, IndividualState individual, float time)
         {
             individual.attackCooldown = Mathf.Max(0, individual.attackReadyAt - time);
-            individual.skillCooldown = Mathf.Max(0, individual.skillReadyAt - time);
+            for (int slot = 0; slot < individual.skillCooldowns.Length; slot++)
+                individual.skillCooldowns[slot] = Mathf.Max(0, individual.skillReadyTimes[slot] - time);
+            individual.skillCooldown = Mathf.Max(individual.skillCooldowns[0], individual.skillCooldowns[1]);
             individual.windupRemaining = Mathf.Max(0, individual.windupUntil - time);
             individual.slowRemaining = Mathf.Max(0, individual.slowUntil - time);
             individual.shieldRemaining = Mathf.Max(0, individual.shieldUntil - time);

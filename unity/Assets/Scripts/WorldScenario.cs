@@ -19,18 +19,29 @@ namespace Ecosystem
             foreach (var placement in placements)
             {
                 if (placement.slot < 1 || placement.slot > count || !placed.Add(placement.slot) ||
-                    !float.IsFinite(placement.x) || !float.IsFinite(placement.y) ||
+                    !float.IsFinite(placement.facing) || !float.IsFinite(placement.x) || !float.IsFinite(placement.y) ||
                     Mathf.Abs(placement.x) > world.Config.halfExtent || Mathf.Abs(placement.y) > world.Config.halfExtent)
                     throw new ArgumentException("場景位置須在邊界內，且起始個體 slot 不可重複。");
                 var individual = world.State.individuals[placement.slot - 1];
                 individual.x = placement.x;
                 individual.y = placement.y;
+                individual.facing = Mathf.Repeat(placement.facing, 360f);
+                if (placement.loadout != null && placement.loadout.Length > 0)
+                {
+                    if (placement.loadout.Length != 2) throw new ArgumentException("配置須恰有兩個技能。");
+                    var skills = new WorldSkill[2];
+                    for (int slot = 0; slot < 2; slot++)
+                        if (!Enum.TryParse(placement.loadout[slot], out skills[slot]) || !World.IsSpeciesSkill(individual.species, skills[slot]))
+                            throw new ArgumentException("配置必須來自所屬物種技能池。");
+                    if (skills[0] == skills[1]) throw new ArgumentException("配置技能不可重複。");
+                    individual.loadout = skills;
+                }
             }
             for (int i = 0; i < commands.Length; i++)
             {
                 var command = commands[i];
                 if (command.slot < 1 || command.slot > count || command.fromStep < 1 || command.toStep < command.fromStep ||
-                    !float.IsFinite(command.moveX) || !float.IsFinite(command.moveY) ||
+                    (command.turn < -1 || command.turn > 1) || command.skillSlot < -1 || command.skillSlot > 1 || !float.IsFinite(command.moveX) || !float.IsFinite(command.moveY) ||
                     !float.IsFinite(command.aimX) || !float.IsFinite(command.aimY) ||
                     !Enum.TryParse<WorldSkill>(command.skill, out var skill) || !Enum.IsDefined(typeof(WorldSkill), skill))
                     throw new ArgumentException("指定動作的個體、步數、方向或技能無效。");
@@ -38,6 +49,7 @@ namespace Ecosystem
                     if (commands[j].slot == command.slot && command.fromStep <= commands[j].toStep && command.toStep >= commands[j].fromStep)
                         throw new ArgumentException("同一個體的指定動作區間不可重疊。");
             }
+            world.RefreshPerception(clearMemory: true);
             slots = new Dictionary<int, int>();
             for (int i = 0; i < count; i++) slots.Add(world.State.individuals[i].individual, i + 1);
         }
@@ -48,12 +60,12 @@ namespace Ecosystem
                 foreach (var command in commands)
                     if (command.slot == slot && step >= command.fromStep && step <= command.toStep)
                         return new WorldAction(new Vector2(command.moveX, command.moveY), command.forage,
-                            new Vector2(command.aimX, command.aimY), command.attack, Enum.Parse<WorldSkill>(command.skill));
+                            new Vector2(command.aimX, command.aimY), command.attack, Enum.Parse<WorldSkill>(command.skill), command.turn, command.skillSlot);
             return new WorldAction(Vector2.zero);
         }
 
         [Serializable]
-        public sealed class Placement { public int slot; public float x; public float y; }
+        public sealed class Placement { public int slot; public float x; public float y; public float facing; public string[] loadout; }
         [Serializable]
         public sealed class Command
         {
@@ -66,6 +78,8 @@ namespace Ecosystem
             public float aimY;
             public bool forage;
             public bool attack;
+            public int turn;
+            public int skillSlot = -1;
             public string skill = "None";
         }
     }

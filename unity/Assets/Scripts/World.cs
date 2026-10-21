@@ -78,6 +78,14 @@ namespace Ecosystem
         public float nextReproductionTime;
         public float attackReadyAt;
         public float skillReadyAt;
+        public WorldSkill[] loadout = Array.Empty<WorldSkill>();
+        public float facing;
+        public float velocityX;
+        public float velocityY;
+        public float[] skillReadyTimes = new float[2];
+        public float[] skillCooldowns = new float[2];
+        public bool skillUsedThisStep;
+        public List<EntityObservation> perception = new List<EntityObservation>();
         public float attackCooldown;
         public float skillCooldown;
         public float chargeRemaining;
@@ -97,6 +105,16 @@ namespace Ecosystem
         public float cultivateUntil;
         public float cultivateRemaining;
         public int cultivatingFood;
+    }
+
+    [Serializable]
+    public sealed class EntityObservation
+    {
+        public string species;
+        public float x, y;
+        public bool visible;
+        public float velocityX, velocityY;
+        public float age;
     }
 
     [Serializable]
@@ -157,13 +175,17 @@ namespace Ecosystem
         public readonly Vector2 aim;
         public readonly bool attack;
         public readonly WorldSkill skill;
-        public WorldAction(Vector2 movement, bool forage = false, Vector2 aim = default, bool attack = false, WorldSkill skill = WorldSkill.None)
+        public readonly int turn;
+        public readonly int skillSlot;
+        public WorldAction(Vector2 movement, bool forage = false, Vector2 aim = default, bool attack = false, WorldSkill skill = WorldSkill.None, int turn = 0, int skillSlot = -1)
         {
             this.movement = movement;
             this.forage = forage;
             this.aim = aim;
             this.attack = attack;
             this.skill = skill;
+            this.turn = turn;
+            this.skillSlot = skillSlot;
         }
     }
 
@@ -204,6 +226,9 @@ namespace Ecosystem
         private readonly System.Random random;
         private int episode;
         private int nextIndividual;
+        private readonly int[] loadoutCycle = new int[3];
+        private readonly int[,] loadoutOrder = new int[3, 6];
+        private readonly Dictionary<int, Dictionary<int, EntityObservation>> enemyMemory = new Dictionary<int, Dictionary<int, EntityObservation>>();
 
         public World(WorldConfig config, int seed)
         {
@@ -217,9 +242,13 @@ namespace Ecosystem
             State = new WorldState { episode = ++episode };
             foreach (string species in Species)
                 State.statistics.Add(new SpeciesStatistics { species = species });
+            Array.Clear(loadoutCycle, 0, loadoutCycle.Length);
+            enemyMemory.Clear();
+            for (int species = 0; species < 3; species++)
+                ShuffleLoadouts(species);
             foreach (string species in Species)
                 for (int i = 0; i < Config.individualsPerSpecies; i++)
-                    AddIndividual(species);
+                    AddIndividual(species, balancedLoadout: true);
             if (Config.foraging)
             {
                 for (int i = 0; i < 16; i++)
@@ -238,10 +267,11 @@ namespace Ecosystem
                 }
             }
             UpdateIncompleteLives();
+            RefreshPerception();
             return State;
         }
 
-        public IndividualState AddIndividual(string species)
+        public IndividualState AddIndividual(string species, bool balancedLoadout = false)
         {
             bool known = false;
             foreach (string value in Species)
@@ -256,8 +286,10 @@ namespace Ecosystem
                 age = Config.foraging ? Config.maturityAge : 0,
                 bornAt = Config.foraging ? State.time - Config.maturityAge : State.time,
                 x = (float)(random.NextDouble() - 0.5) * Config.halfExtent,
-                y = (float)(random.NextDouble() - 0.5) * Config.halfExtent
+                y = (float)(random.NextDouble() - 0.5) * Config.halfExtent,
+                facing = (float)random.NextDouble() * 360f
             };
+            individual.loadout = CreateLoadout(species, balancedLoadout);
             State.individuals.Add(individual);
             return individual;
         }
@@ -283,7 +315,7 @@ namespace Ecosystem
             foreach (var individual in State.individuals)
                 if (!actions.TryGetValue(individual.individual, out var action) ||
                     !float.IsFinite(action.movement.x) || !float.IsFinite(action.movement.y) ||
-                    !float.IsFinite(action.aim.x) || !float.IsFinite(action.aim.y) || !Enum.IsDefined(typeof(WorldSkill), action.skill))
+                    !float.IsFinite(action.aim.x) || !float.IsFinite(action.aim.y) || (action.turn < -1 || action.turn > 1) || action.skillSlot < -1 || action.skillSlot > 1 || !Enum.IsDefined(typeof(WorldSkill), action.skill))
                     throw new ArgumentException("每隻個體都必須取得有限數值的動作。");
             State.events.Clear();
             float time = (State.step + 1) * Config.stepSeconds;
@@ -297,8 +329,11 @@ namespace Ecosystem
                 var position = start + Vector2.ClampMagnitude(actions[individual.individual].movement, 1f) * (Config.speed * Config.stepSeconds);
                 var bounded = Config.foraging ? (individual.health > 0 ? CombatRules.Move(Config, State, individual, actions[individual.individual]) : start)
                     : new Vector2(Mathf.Clamp(position.x, -Config.halfExtent, Config.halfExtent), Mathf.Clamp(position.y, -Config.halfExtent, Config.halfExtent));
+                individual.velocityX = (bounded.x - start.x) / Config.stepSeconds;
+                individual.velocityY = (bounded.y - start.y) / Config.stepSeconds;
                 individual.x = bounded.x;
                 individual.y = bounded.y;
+                individual.facing = Mathf.Repeat(individual.facing + actions[individual.individual].turn * 180f * Config.stepSeconds, 360f);
                 if (!Config.foraging) individual.boundary = position != bounded;
                 distances[individual.individual] = Vector2.Distance(start, bounded);
             }
@@ -374,6 +409,7 @@ namespace Ecosystem
             }
             State.step++;
             State.time = State.step * Config.stepSeconds;
+            RefreshPerception();
             State.endReason = State.individuals.Count == 0 ? "all_dead" : State.step >= Config.episodeSteps ? "time_limit" : "";
             return State;
         }
@@ -386,16 +422,105 @@ namespace Ecosystem
                 statistics.incompleteLives = State.individuals.FindAll(value => value.species == statistics.species).Count;
         }
 
+        private WorldSkill[] CreateLoadout(string species, bool balanced = false)
+        {
+            WorldSkill[] pool = SkillPool(species);
+            int speciesIndex = SpeciesIndex(species);
+            int cycle = loadoutCycle[speciesIndex]++;
+            if (balanced && cycle > 0 && cycle % 6 == 0) ShuffleLoadouts(speciesIndex);
+            int combo = balanced ? loadoutOrder[speciesIndex, cycle % 6] : random.Next(6);
+            int first = 0, second = 1, index = 0;
+            for (int a = 0; a < 4; a++) for (int b = a + 1; b < 4; b++, index++) if (index == combo) { first = a; second = b; }
+            return new[] { pool[first], pool[second] };
+        }
+
+        public static bool IsSpeciesSkill(string species, WorldSkill skill) => Array.IndexOf(SkillPool(species), skill) >= 0;
+
+        private static WorldSkill[] SkillPool(string species) => species == "Flame" ? new[] { WorldSkill.Charge, WorldSkill.HotStrike, WorldSkill.Shield, WorldSkill.IntimidatingRoar }
+                : species == "Frost" ? new[] { WorldSkill.FrostbindArrow, WorldSkill.PiercingIceArrow, WorldSkill.ColdMistDash, WorldSkill.FrostTrap }
+                : new[] { WorldSkill.Cultivate, WorldSkill.Sow, WorldSkill.EntanglingRoots, WorldSkill.SporeSmoke };
+
+        private void ShuffleLoadouts(int species)
+        {
+            for (int i = 0; i < 6; i++) loadoutOrder[species, i] = i;
+            for (int i = 5; i > 0; i--)
+            {
+                int other = random.Next(i + 1);
+                int value = loadoutOrder[species, i];
+                loadoutOrder[species, i] = loadoutOrder[species, other];
+                loadoutOrder[species, other] = value;
+            }
+        }
+
+        private static int SpeciesIndex(string species) => species == "Flame" ? 0 : species == "Frost" ? 1 : 2;
+
         public float[] Observe(IndividualState individual)
         {
-            float radius = Config.observationRadius;
             return new[]
             {
-                Mathf.Clamp01((Config.halfExtent - individual.x) / radius),
-                Mathf.Clamp01((Config.halfExtent + individual.x) / radius),
-                Mathf.Clamp01((Config.halfExtent - individual.y) / radius),
-                Mathf.Clamp01((Config.halfExtent + individual.y) / radius)
+                Mathf.Clamp01((Config.halfExtent - individual.x) / Config.observationRadius),
+                Mathf.Clamp01((Config.halfExtent + individual.x) / Config.observationRadius),
+                Mathf.Clamp01((Config.halfExtent - individual.y) / Config.observationRadius),
+                Mathf.Clamp01((Config.halfExtent + individual.y) / Config.observationRadius),
+                individual.facing / 360f, Mathf.Clamp01(individual.energy / 100f),
+                (int)individual.loadout[0] / 12f, (int)individual.loadout[1] / 12f,
+                individual.health / CombatRules.MaxHealth(individual.species),
+                individual.skillCooldowns[0] / 10f, individual.skillCooldowns[1] / 10f
             };
+        }
+
+        public bool CanSee(IndividualState observer, IndividualState target)
+        {
+            Vector2 delta = CombatRules.Position(target) - CombatRules.Position(observer);
+            Vector2 facing = new Vector2(Mathf.Cos(observer.facing * Mathf.Deg2Rad), Mathf.Sin(observer.facing * Mathf.Deg2Rad));
+            return target != observer && target.health > 0 && delta.sqrMagnitude <= Config.observationRadius * Config.observationRadius
+                && (delta.sqrMagnitude == 0 || Vector2.Angle(facing, delta) <= 60f);
+        }
+
+        public void RefreshPerception(bool clearMemory = false)
+        {
+            if (clearMemory) enemyMemory.Clear();
+            var alive = new HashSet<int>();
+            foreach (var observer in State.individuals)
+            {
+                alive.Add(observer.individual);
+                if (!enemyMemory.TryGetValue(observer.individual, out var memory))
+                    enemyMemory.Add(observer.individual, memory = new Dictionary<int, EntityObservation>());
+                observer.perception.Clear();
+                var visible = new HashSet<int>();
+                foreach (var target in State.individuals)
+                {
+                    if (!CanSee(observer, target)) continue;
+                    visible.Add(target.individual);
+                    observer.perception.Add(new EntityObservation { species = target.species, x = target.x, y = target.y,
+                        visible = true, velocityX = target.velocityX, velocityY = target.velocityY });
+                    if (target.species != observer.species)
+                        memory[target.individual] = new EntityObservation { species = target.species, x = target.x, y = target.y, age = State.time };
+                }
+                var expired = new List<int>();
+                foreach (var pair in memory)
+                {
+                    var last = pair.Value;
+                    float age = State.time - last.age;
+                    if (age >= 5f) expired.Add(pair.Key);
+                    else if (!visible.Contains(pair.Key))
+                        observer.perception.Add(new EntityObservation { species = last.species, x = last.x, y = last.y, age = age });
+                }
+                foreach (int id in expired) memory.Remove(id);
+                // 以空間排序，避免觀察列順序成為個體的穩定識別。
+                observer.perception.Sort((a, b) => a.x != b.x ? a.x.CompareTo(b.x) : a.y.CompareTo(b.y));
+            }
+            var removed = new List<int>();
+            foreach (int id in enemyMemory.Keys) if (!alive.Contains(id)) removed.Add(id);
+            foreach (int id in removed) enemyMemory.Remove(id);
+        }
+
+        public IEnumerable<float[]> ObserveEntities(IndividualState individual)
+        {
+            foreach (var entity in individual.perception)
+                yield return new[] { (SpeciesIndex(entity.species) + 1) / 3f,
+                    (entity.x - individual.x) / Config.observationRadius, (entity.y - individual.y) / Config.observationRadius,
+                    entity.velocityX / 4f, entity.velocityY / 4f, entity.visible ? 1f : 0f, entity.age / 5f };
         }
     }
 }

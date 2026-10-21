@@ -66,8 +66,10 @@ def main():
                         raise RuntimeError(f"移除個體未送出 terminal：{behavior} step={step}")
                     retired.update(terminal_ids)
                     populations[species] = decision_ids
-                    observation = decisions.obs[0]
-                    if observation.shape != (expected, 4) or not np.isfinite(observation).all():
+                    observations_by_rank = {obs.ndim: obs for obs in decisions.obs}
+                    observation = observations_by_rank[2]
+                    entities = observations_by_rank[3]
+                    if observation.shape != (expected, 11) or entities.shape[2] != 7 or not all(np.isfinite(obs).all() for obs in decisions.obs):
                         raise RuntimeError("局部觀察格式不符")
                     observations += len(decisions)
                     connection.write(json.dumps({"step": step, "behavior": behavior,
@@ -77,7 +79,9 @@ def main():
                         # 同一 behavior 的個體可接受不同動作，便於核對共享不等於同步。
                         direction = np.array([1.0, 0.0] if step < args.steps // 2 else [0.0, 1.0], dtype=np.float32)
                         signs = np.array([1 if int(agent_id) % 2 else -1 for agent_id in decisions.agent_id], dtype=np.float32)
-                        env.set_actions(behavior, ActionTuple(continuous=signs[:, None] * direction))
+                        env.set_actions(behavior, ActionTuple(
+                            continuous=np.concatenate((signs[:, None] * direction, signs[:, None] * direction), axis=1),
+                            discrete=np.tile(np.array([2, 0, 0, 0], dtype=np.int32), (expected, 1))))
                 if step < args.steps:
                     env.step()
         elapsed = time.perf_counter() - started

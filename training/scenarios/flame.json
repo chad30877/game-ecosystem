@@ -1,6 +1,6 @@
 {
   "placements": [
-    { "slot": 1, "x": -3, "y": 0 },
+    { "slot": 1, "x": -3, "y": 0, "loadout": ["Charge", "Shield"] },
     { "slot": 2, "x": 0, "y": 0 },
     { "slot": 3, "x": 8, "y": 0 }
   ],
