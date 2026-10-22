@@ -20,6 +20,14 @@ namespace Ecosystem
                 !float.IsFinite(recoveryFraction) || recoveryFraction <= 0 || recoveryFraction > 1)
                 throw new ArgumentException("食物生長類型參數無效。");
         }
+
+        public bool Grow(FoodState food, float amount)
+        {
+            food.amount = Mathf.Min(food.capacity, food.amount + amount);
+            if (food.phase != FoodPhase.Recovering || food.amount < food.capacity * recoveryFraction) return false;
+            food.phase = FoodPhase.Available;
+            return true;
+        }
     }
 
     public enum FoodPhase { Available, Resting, Recovering }
@@ -556,12 +564,9 @@ namespace Ecosystem
                     food.phase = FoodPhase.Recovering;
                     State.events.Add(new WorldEvent { kind = "food_recovering", food = food.food, x = food.x, y = food.y });
                 }
-                food.amount = Mathf.Min(food.capacity, food.amount + Growth(food).growthRate * Config.stepSeconds);
-                if (food.phase == FoodPhase.Recovering && food.amount >= food.capacity * Growth(food).recoveryFraction)
-                {
-                    food.phase = FoodPhase.Available;
+                var growth = Growth(food);
+                if (growth.Grow(food, growth.growthRate * Config.stepSeconds))
                     State.events.Add(new WorldEvent { kind = "food_available", food = food.food, x = food.x, y = food.y });
-                }
             }
             if (Config.foraging && time >= State.nextNaturalSpawnAt)
             {

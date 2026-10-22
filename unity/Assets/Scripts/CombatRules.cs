@@ -245,15 +245,11 @@ namespace Ecosystem
                     Mathf.Min(config.stepSeconds, individual.cultivateUntil - state.time));
                 if (grown <= 0) continue;
                 cultivatedFoods.Add(food.food);
-                food.amount += grown;
+                var growth = food.growthType == FoodGrowthType.Large ? config.largeFood : config.smallFood;
+                bool available = growth.Grow(food, grown);
                 state.events.Add(new WorldEvent { kind = "cultivated", individual = individual.individual, food = food.food, amount = grown });
-                float threshold = food.capacity * (food.growthType == FoodGrowthType.Large
-                    ? config.largeFood.recoveryFraction : config.smallFood.recoveryFraction);
-                if (food.phase == FoodPhase.Recovering && food.amount >= threshold)
-                {
-                    food.phase = FoodPhase.Available;
+                if (available)
                     state.events.Add(new WorldEvent { kind = "food_available", food = food.food, x = food.x, y = food.y });
-                }
             }
         }
 
