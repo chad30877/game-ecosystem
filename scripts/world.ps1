@@ -46,6 +46,7 @@ if ($Mode -eq 'bridge') {
     & $Python @arguments
     if ($LASTEXITCODE -ne 0) { throw 'Python 往返驗證失敗。' }
 } elseif ($Mode -eq 'train') {
+    if (-not $WorldConfig) { $config = Join-Path $root 'training/foraging.json' }
     New-Item -ItemType Directory $output | Out-Null
     $trainerRunId = $runId
     if ($ResumeFrom) {
@@ -79,7 +80,7 @@ for species in ('Flame', 'Frost', 'Moss'):
     if ($ResumeFrom) { $arguments += '--resume' }
     if (-not $Visible) { $arguments += '--no-graphics' }
     $arguments += @('--env-args', '--world-log', (Join-Path $output 'world.jsonl'), '--world-seed', $Seed, '--world-config', $config, '--control', 'python')
-    $trainingRecord = @{ source = $ResumeFrom; trainerRunId = $trainerRunId; targetSteps = $TrainSteps; worldConfig = (Get-Content -Raw $config | ConvertFrom-Json) } | ConvertTo-Json -Depth 5
+    $trainingRecord = @{ seed = $Seed; source = $ResumeFrom; trainerRunId = $trainerRunId; targetSteps = $TrainSteps; worldConfig = (Get-Content -Raw $config | ConvertFrom-Json) } | ConvertTo-Json -Depth 5
     [IO.File]::WriteAllText((Join-Path $output 'training.json'), $trainingRecord, $utf8)
     $trainerLog = Join-Path $output 'trainer.log'
     [IO.File]::WriteAllText($trainerLog, '', $utf8)
@@ -89,6 +90,8 @@ for species in ('Flame', 'Frost', 'Moss'):
         Write-Output $_
     }
     if ($LASTEXITCODE -ne 0) { throw '訓練失敗。' }
+    & $Python (Join-Path $root 'training/summarize.py') (Join-Path $output 'world.jsonl') (Join-Path $output 'training-summary.json')
+    if ($LASTEXITCODE -ne 0) { throw '訓練統計整理失敗。' }
 } elseif ($Mode -eq 'forage') {
     New-Item -ItemType Directory $output | Out-Null
     if ($ReloadRun) {

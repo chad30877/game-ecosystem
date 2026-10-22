@@ -1,6 +1,6 @@
 # 生態世界
 
-目前完成固定技能配置與視野，以及三物種各四招技能池。個體出生攜帶兩招，依 120° 視野與短期警戒記憶行動；包含近戰、遠程、位移、培育、播種與區域控制。現在使用規則控制器，尚非生態學習結果；既有三物種共享策略驗證仍可執行。技能與展示見[三物種技能池](docs/skill-pools.md)。
+目前支援三物種各四招技能池及完整生態 PPO 訓練。個體出生攜帶兩招，依局部食物、120° 視野與短期警戒記憶行動；同種共用策略，訓練可見／無畫面跨輪延續。規則展示與學習訓練分開，尚未證明學習品質改善。設定與證據見[戰術學習](docs/tactical-learning.md)。
 
 ## 執行
 
@@ -14,6 +14,7 @@
 ./scripts/world.ps1 -Mode bridge -Visible
 ./scripts/world.ps1 -Mode bridge
 ./scripts/world.ps1 -Mode train
+./scripts/world.ps1 -Mode train -Visible
 ./scripts/world.ps1 -Mode train -TrainSteps 4096 -ResumeFrom './artifacts/runs/<首次輸出>/<trainerRunId>'
 ```
 
@@ -48,13 +49,13 @@
 
 `unity/Assets/Scripts/World.cs` 提供 `Reset`、`Step(actions)`（移動、朝向、採食、攻擊及技能選擇）、`AddIndividual`、`RemoveIndividual`、`Observe(individual)` 與 `State`。一個世界步同時推進所有個體；`WorldRunner` 負責畫面、ML-Agents 生命週期與 JSONL，`WorldAgent` 只提供個體觀察與動作。
 
-`training/foraging.json` 為 40 × 40 地圖、每物種 10 隻、4 處產地與 12 處零散食物。採食距離 0.7、速率每秒 12 能量；產地容量 30、初值 20、每秒再生 4，零散食物為其四分之一。再生量於任務 04 從 0.4 調至 4，讓預設規則展示可觀察出生；這些參數尚未平衡。能量上限 100、初值 60；每秒基礎消耗 0.5，每移動單位另耗 1.2，耗盡後每秒損失 6 健康。`ForagingController` 只在感知半徑 6 內尋食，找不到時巡遊。`rules`、`idle` 與 `manual` 可執行覓食世界；完整生態訓練仍待任務 08，此階段尚未開放 Python 控制覓食世界。
+`training/foraging.json` 為 40 × 40 地圖、每物種 10 隻、4 處產地與 12 處零散食物。採食距離 0.7、速率每秒 12 能量；產地容量 30、初值 20、每秒再生 4，零散食物為其四分之一。再生量於任務 04 從 0.4 調至 4，讓預設規則展示可觀察出生；這些參數尚未平衡。能量上限 100、初值 60；每秒基礎消耗 0.5，每移動單位另耗 1.2，耗盡後每秒損失 6 健康。`ForagingController` 只在感知半徑 6 內尋食，找不到時巡遊。`rules`、`idle` 與 `manual` 可執行覓食世界；`train` 以 Python 策略控制相同世界。
 
 起始個體年齡 30 秒，後代從 0 秒開始；成年門檻 30、壽命 240 模擬秒。能量達 80 且繁殖冷卻歸零時自動出生同種後代，親代扣 40 能量並冷卻 30 秒；後代能量初值 60。全世界上限 120，滿額時不扣能量或啟動冷卻。每步先結算戰鬥、飢餓及老死，再依個體順序繁殖；同時符合多種死因時依戰鬥、飢餓、老死的順序判定。單物種滅絕繼續運行，全體死亡（`all_dead`）或 600 秒（`time_limit`）結束。
 
 `state.deaths` 保留本輪死亡個體、物種、死因、年齡及時間；`state.statistics` 分物種累計出生、戰死、飢餓、老死、完成生命年齡總和、人口上限觸發與 `incompleteLives`。後者為當前存活樣本數，其年齡在 `individuals` 中；結束時仍存活者不混入死亡壽命樣本。人口上限每隻符合繁殖條件但遭阻擋的個體、每步計一次。起始成年個體已有 30 秒年齡，分析壽命時須區分起始個體與本輪出生個體。`episode_end` 保存完整輪次結果，重建後另起統計且個體編號不重用。
 
-`WorldAction` 分開提供移動、瞄準、採食、攻擊及技能選擇。戰鬥參數由 `config.combat` 設定並完整寫入 run 紀錄；`state.projectiles` 提供在途冰箭，`state.areas` 提供陷阱及煙幕；個體保留施放、控制及中毒狀態，食物保留成熟狀態。`rules` 只讀視野內敵人，並依自己攜帶技能及情況決定攻擊、撤退、控制或培育／播種。這些是展示規則，學習策略尚未接入。
+`WorldAction` 分開提供移動、瞄準、採食、攻擊及技能選擇。戰鬥參數由 `config.combat` 設定並完整寫入 run 紀錄；`state.projectiles` 提供在途冰箭，`state.areas` 提供陷阱及煙幕；個體保留施放、控制及中毒狀態，食物保留成熟狀態。`rules` 是展示控制器；`train` 使用 Python 策略自行選擇動作，無效嘗試由世界拒絕，不代為改選。
 
 `training/world.json` 設定邊界、速度、步長、局部觀察半徑、輪次長度及增減事件。預設每物種兩隻，第 64 步各移除一隻、第 96 步各加入一隻，每 256 步重建世界。可複製配置後修改，透過 `-WorldConfig <路徑>` 載入；須滿足每物種至少兩隻及 `0 < removeStep < addStep < episodeSteps`。這些是訓練介面驗證事件，正式生命循環只在 `foraging` 配置啟用。
 
@@ -73,7 +74,7 @@
 5. 執行 `train`，確認三個 behavior 分別有更新步數、TensorBoard Policy／Value Loss 與 checkpoint；`training.json` 提供 `trainerRunId`。
 6. 程序結束後依上述 `ResumeFrom` 範例續訓。確認 `trainer.log` 對三物種各輸出 `Resuming training from step ...`，且最終 checkpoint 步數高於原始值。
 
-只使用微小存活／碰壁獎勵驗證更新機制，未驗證學習品質。生命循環驗證及人工操作見 [生命循環驗證紀錄](docs/life-cycle.md)；覓食驗證見 [覓食驗證紀錄](docs/foraging.md)；共享策略實測證據與限制見 [共享策略驗證紀錄](docs/shared-policies.md)；環境安裝見 [工具鏈驗證紀錄](docs/toolchain.md)。
+訓練以存活與成功繁殖為獎勵，死亡扣分，不直接獎勵傷害或擊殺；權重、探索與逐配置統計見[戰術學習](docs/tactical-learning.md)。未驗證學習品質。生命循環驗證及人工操作見 [生命循環驗證紀錄](docs/life-cycle.md)；覓食驗證見 [覓食驗證紀錄](docs/foraging.md)；共享策略實測證據與限制見 [共享策略驗證紀錄](docs/shared-policies.md)；環境安裝見 [工具鏈驗證紀錄](docs/toolchain.md)。
 
 ## 環境
 

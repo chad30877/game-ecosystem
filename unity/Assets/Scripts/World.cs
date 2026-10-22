@@ -32,6 +32,9 @@ namespace Ecosystem
         public float reproductionCost = 40f;
         public float reproductionCooldown = 30f;
         public int populationLimit = 120;
+        public float trainingSurvivalReward;
+        public float trainingBirthReward;
+        public float trainingDeathPenalty;
         public CombatConfig combat = new CombatConfig();
 
         public void Validate()
@@ -59,6 +62,8 @@ namespace Ecosystem
                 !float.IsFinite(reproductionCooldown) || reproductionCooldown <= 0 ||
                 populationLimit < (long)individualsPerSpecies * 3))
                 throw new ArgumentException("成長期、壽命、繁殖或人口上限參數無效。");
+            if (!float.IsFinite(trainingSurvivalReward) || !float.IsFinite(trainingBirthReward) || !float.IsFinite(trainingDeathPenalty))
+                throw new ArgumentException("訓練獎勵必須是有限數值。");
             if (foraging) (combat ?? throw new ArgumentException("缺少戰鬥配置。")).Validate();
         }
     }
@@ -590,6 +595,13 @@ namespace Ecosystem
                 yield return new[] { (SpeciesIndex(entity.species) + 1) / 3f,
                     (entity.x - individual.x) / Config.observationRadius, (entity.y - individual.y) / Config.observationRadius,
                     entity.velocityX / 4f, entity.velocityY / 4f, entity.visible ? 1f : 0f, entity.age / 5f };
+            foreach (var food in State.foods)
+            {
+                var delta = new Vector2(food.x - individual.x, food.y - individual.y);
+                if (delta.sqrMagnitude > Config.observationRadius * Config.observationRadius) continue;
+                yield return new[] { 0f, delta.x / Config.observationRadius, delta.y / Config.observationRadius,
+                    0f, 0f, food.mature ? 1f : 0f, food.capacity > 0 ? food.amount / food.capacity : 0f };
+            }
         }
     }
 }

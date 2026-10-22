@@ -19,5 +19,8 @@
   "reproductionEnergy": 80.0,
   "reproductionCost": 40.0,
   "reproductionCooldown": 30.0,
-  "populationLimit": 120
+  "populationLimit": 120,
+  "trainingSurvivalReward": 0.001,
+  "trainingBirthReward": 1.0,
+  "trainingDeathPenalty": -1.0
 }

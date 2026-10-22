@@ -49,8 +49,6 @@ namespace Ecosystem
                 throw new ArgumentException("未知控制模式。");
             if ((control == "rules" || control == "idle") && !config.foraging)
                 throw new ArgumentException("規則控制須使用覓食配置。");
-            if (config.foraging && control == "python")
-                throw new ArgumentException("覓食策略橋接尚未實作，請使用 rules、idle 或 manual。");
             if (control == "scripted")
             {
                 if (!config.foraging) throw new ArgumentException("指定動作須使用覓食配置。");
@@ -99,7 +97,7 @@ namespace Ecosystem
         {
             foreach (var agent in agents.Values)
             {
-                // 停用會送出最後觀察與 terminal；不重新啟用舊個體識別。
+                // 停用送出最後觀察與 terminal；策略由 trainer 保留。
                 agent.gameObject.SetActive(false);
                 Destroy(agent.gameObject);
             }
@@ -142,10 +140,10 @@ namespace Ecosystem
             var entities = body.AddComponent<BufferSensorComponent>();
             entities.SensorName = "Entities";
             entities.ObservableSize = 7;
-            // 張量預留世界人口及五秒內所有可能的新生個體；世界觀察本身不截斷。
+            // 張量預留人口、五秒警戒記憶與全部食物；世界觀察本身不截斷。
             entities.MaxNumObservables = world.Config.foraging
                 ? checked(Mathf.Max(world.Config.populationLimit, world.Config.individualsPerSpecies * 3) *
-                    (Mathf.CeilToInt(5f / (world.Config.maturityAge >= 5f ? Mathf.Max(world.Config.stepSeconds, world.Config.reproductionCooldown) : world.Config.stepSeconds)) + 1))
+                    (Mathf.CeilToInt(5f / (world.Config.maturityAge >= 5f ? Mathf.Max(world.Config.stepSeconds, world.Config.reproductionCooldown) : world.Config.stepSeconds)) + 1) + world.Config.foodSourceLimit)
                 : world.Config.individualsPerSpecies * 6;
             behavior.BehaviorType = control != "python" ? BehaviorType.HeuristicOnly : BehaviorType.Default;
             var agent = body.AddComponent<WorldAgent>();
@@ -173,17 +171,19 @@ namespace Ecosystem
             totalSteps++;
             foreach (var agent in agents.Values)
             {
-                // 只驗證更新機制，尚非正式生態獎勵。
-                agent.AddReward(agent.Individual.boundary ? -0.01f : 0.001f);
+                if (agent.Individual.health > 0) agent.AddReward(world.Config.trainingSurvivalReward);
                 agent.UpdateView();
             }
             UpdateFoodViews();
+            foreach (var birth in world.State.events.Where(value => value.kind == "born"))
+                if (agents.TryGetValue(birth.parent, out var parent)) parent.AddReward(world.Config.trainingBirthReward);
             Record("step");
             UpdateProjectileViews();
             UpdateAreaViews();
             foreach (int id in agents.Keys.Where(id => !world.State.individuals.Any(value => value.individual == id)).ToArray())
             {
                 var agent = agents[id];
+                agent.AddReward(world.Config.trainingDeathPenalty);
                 Record("agent_died", agent.Individual, agent.GetInstanceID());
                 agent.gameObject.SetActive(false);
                 Destroy(agent.gameObject);
@@ -209,7 +209,7 @@ namespace Ecosystem
             if (world.State.endReason != "")
             {
                 Record("episode_end");
-                if ((!world.Config.foraging || Application.isBatchMode || stepLimit > 0) && (stepLimit <= 0 || totalSteps < stepLimit)) ResetWorld();
+                if ((control == "python" || !world.Config.foraging || Application.isBatchMode || stepLimit > 0) && (stepLimit <= 0 || totalSteps < stepLimit)) ResetWorld();
             }
             if (control != "python" && stepLimit > 0 && totalSteps >= stepLimit)
                 Application.Quit();
@@ -309,7 +309,7 @@ namespace Ecosystem
             GUI.skin.font = font;
             GUI.skin.label.fontSize = 16;
             GUI.Box(new Rect(8, 8, 590, 282), "");
-            GUI.Label(new Rect(18, 12, 570, 30), control == "rules" ? "規則控制・尚非學習結果" : control == "idle" ? "靜止控制・飢餓核對" : control == "scripted" ? "指定動作・尚非學習結果" : "方向鍵移動／滑鼠瞄準／A攻擊／S/D技能／Q/E轉向／空白採食");
+            GUI.Label(new Rect(18, 12, 570, 30), control == "python" ? "Python 策略控制" : control == "rules" ? "規則控制・尚非學習結果" : control == "idle" ? "靜止控制・飢餓核對" : control == "scripted" ? "指定動作・尚非學習結果" : "方向鍵移動／滑鼠瞄準／A攻擊／S/D技能／Q/E轉向／空白採食");
             GUI.Label(new Rect(18, 42, 350, 28), $"{world.State.time:F1} 秒　炎角 {world.State.individuals.Count(v => v.species == "Flame")}　霜羽 {world.State.individuals.Count(v => v.species == "Frost")}　苔靈 {world.State.individuals.Count(v => v.species == "Moss")}");
             var individual = world.State.individuals.FirstOrDefault(value => value.individual == selected);
             GUI.Label(new Rect(18, 72, 520, 28), individual == null ? "點選個體" : $"#{individual.individual} {individual.species}　健康 {individual.health:F1}　能量 {individual.energy:F1}");
