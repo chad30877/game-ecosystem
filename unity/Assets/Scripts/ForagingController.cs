@@ -20,7 +20,7 @@ namespace Ecosystem
                     : range < world.Config.combat.meleeRange ? Vector2.zero : delta.normalized;
                 return new WorldAction(movement, true, aim, true, turn: Turn(individual, delta), skillSlot: skillSlot);
             }
-            return new WorldAction(baseAction.movement, baseAction.forage, aim, turn: Turn(individual, baseAction.movement), skillSlot: skillSlot);
+            return new WorldAction(baseAction.movement, baseAction.forage, aim, turn: baseAction.turn, skillSlot: skillSlot);
         }
 
         private static int ChooseSkill(World world, IndividualState individual, EntityObservation enemy, ref Vector2 aim)
@@ -51,8 +51,8 @@ namespace Ecosystem
                     case WorldSkill.EntanglingRoots: if (distance <= c.rootsRange) return slot; break;
                     case WorldSkill.SporeSmoke: if (distance <= c.smokeRadius) return slot; break;
                     case WorldSkill.Cultivate:
-                        if (world.State.foods.Exists(food => food.mature && food.phase != FoodPhase.Resting && food.amount < food.capacity &&
-                            Vector2.Distance(position, new Vector2(food.x, food.y)) <= Mathf.Min(c.cultivateRange, world.Config.observationRadius))) return slot;
+                        if (individual.foodMemory.Exists(food => food.visible && food.mature && food.phase != FoodPhase.Resting && food.amount < food.capacity &&
+                            Vector2.Distance(position, new Vector2(food.x, food.y)) <= c.cultivateRange)) return slot;
                         break;
                     case WorldSkill.Sow:
                         if (individual.energy >= 30)
@@ -76,25 +76,59 @@ namespace Ecosystem
         private static WorldAction Forage(World world, IndividualState individual)
         {
             var position = new Vector2(individual.x, individual.y);
-            FoodState target = null;
-            float nearest = world.Config.observationRadius;
-            foreach (var food in world.State.foods)
+            FoodMemory target = null;
+            float best = float.PositiveInfinity;
+            foreach (var food in individual.foodMemory)
             {
                 float distance = Vector2.Distance(position, new Vector2(food.x, food.y));
-                if (food.mature && food.phase == FoodPhase.Available && food.amount > 0.01f && distance <= nearest)
+                float age = world.State.time - food.lastSeenAt;
+                float score = distance + (food.visible ? 0 : Mathf.Min(age / world.Config.foodMemorySeconds, 2f) * world.Config.observationRadius);
+                if (food.mature && food.phase == FoodPhase.Available && food.amount > 0.01f && score < best)
                 {
-                    nearest = distance;
+                    best = score;
                     target = food;
                 }
             }
             if (target != null)
-                return new WorldAction(nearest <= world.Config.forageRadius * 0.9f ? Vector2.zero
-                    : (new Vector2(target.x, target.y) - position).normalized, true);
-            float angle = individual.individual * 2.39996f + (world.State.step / 180) * 1.7f;
-            var movement = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
-            if (Mathf.Abs(individual.x) > world.Config.halfExtent - 1) movement.x = -Mathf.Sign(individual.x);
-            if (Mathf.Abs(individual.y) > world.Config.halfExtent - 1) movement.y = -Mathf.Sign(individual.y);
-            return new WorldAction(movement);
+            {
+                Vector2 delta = new Vector2(target.x, target.y) - position;
+                float distance = delta.magnitude;
+                Vector2 movement = distance <= world.Config.forageRadius * 0.9f ? Vector2.zero : delta.normalized;
+                return new WorldAction(movement, true, turn: target.visible && movement == Vector2.zero ? 0 : Turn(individual, delta));
+            }
+            return Explore(world, individual, position);
+        }
+
+        private static WorldAction Explore(World world, IndividualState individual, Vector2 position)
+        {
+            var config = world.Config;
+            int columns = Mathf.CeilToInt(config.halfExtent * 2 / config.explorationCellSize);
+            bool targetKnown = individual.areaMemory.Exists(value => value.cellX == individual.explorationTargetX &&
+                value.cellY == individual.explorationTargetY && world.State.time - value.lastSeenAt < config.areaMemorySeconds);
+            if (individual.explorationTargetX < 0 || targetKnown)
+            {
+                float best = float.PositiveInfinity;
+                individual.explorationTargetX = individual.explorationTargetY = -1;
+                for (int x = 0; x < columns; x++)
+                    for (int y = 0; y < columns; y++)
+                    {
+                        Vector2 point = world.ExplorationCellCenter(x, y);
+                        Vector2 delta = point - position;
+                        float distance = delta.magnitude;
+                        if (distance < config.forageRadius) continue;
+                        var known = individual.areaMemory.Find(value => value.cellX == x && value.cellY == y);
+                        if (known != null && world.State.time - known.lastSeenAt < config.areaMemorySeconds) continue;
+                        float score = distance + (known == null ? 0 : config.observationRadius);
+                        score += Mathf.Abs(Mathf.DeltaAngle(individual.facing, Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg)) / 180f;
+                        if (score >= best) continue;
+                        best = score;
+                        individual.explorationTargetX = x;
+                        individual.explorationTargetY = y;
+                    }
+            }
+            if (individual.explorationTargetX < 0) return new WorldAction(Vector2.zero);
+            Vector2 direction = world.ExplorationCellCenter(individual.explorationTargetX, individual.explorationTargetY) - position;
+            return new WorldAction(direction.normalized, turn: Turn(individual, direction));
         }
     }
 }

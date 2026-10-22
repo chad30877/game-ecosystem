@@ -199,10 +199,11 @@ namespace Ecosystem
             var entities = body.AddComponent<BufferSensorComponent>();
             entities.SensorName = "Entities";
             entities.ObservableSize = 7;
-            // 張量預留人口、五秒警戒記憶與全部食物；世界觀察本身不截斷。
+            // 張量預留人口、五秒警戒記憶、可見食物與有限探索記憶；當前可見生物不截斷。
             entities.MaxNumObservables = world.Config.foraging
                 ? checked(Mathf.Max(world.Config.populationLimit, world.Config.individualsPerSpecies * 3) *
-                    (Mathf.CeilToInt(5f / (world.Config.maturityAge >= 5f ? Mathf.Max(world.Config.stepSeconds, world.Config.reproductionCooldown) : world.Config.stepSeconds)) + 1) + world.Config.foodSourceLimit)
+                    (Mathf.CeilToInt(5f / (world.Config.maturityAge >= 5f ? Mathf.Max(world.Config.stepSeconds, world.Config.reproductionCooldown) : world.Config.stepSeconds)) + 1) +
+                    world.Config.foodSourceLimit + world.Config.foodMemoryLimit + world.Config.areaMemoryLimit)
                 : world.Config.individualsPerSpecies * 6;
             behavior.BehaviorType = control != "python" ? BehaviorType.HeuristicOnly : BehaviorType.Default;
             var agent = body.AddComponent<WorldAgent>();
@@ -436,7 +437,7 @@ namespace Ecosystem
             {
                 var food = world.State.foods[i];
                 foodViews[i].GetComponent<Renderer>().forceRenderingOff = selected != null &&
-                    Vector2.Distance(CombatRules.Position(selected), new Vector2(food.x, food.y)) > world.Config.observationRadius;
+                    !world.CanSeePoint(selected, new Vector2(food.x, food.y));
             }
             for (int i = 0; i < areaViews.Count; i++)
                 areaViews[i].GetComponent<Renderer>().forceRenderingOff = selected != null && i < world.State.areas.Count &&
@@ -503,7 +504,7 @@ namespace Ecosystem
             public string device;
             public string control;
             public string policyMode;
-            public string rules = "resources-v2";
+            public string rules = "perception-v3";
             public WorldConfig config;
             public WorldScenario scenario;
         }

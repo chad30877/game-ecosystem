@@ -114,7 +114,8 @@ namespace Ecosystem
                     foreach (var food in state.foods)
                     {
                         float distance = Vector2.Distance(CombatRules.Position(individual), new Vector2(food.x, food.y));
-                        if (distance > nearest || !food.mature || food.phase == FoodPhase.Resting || food.amount >= food.capacity) continue;
+                        if (distance > nearest || !World.InView(config, individual, new Vector2(food.x, food.y)) ||
+                            !food.mature || food.phase == FoodPhase.Resting || food.amount >= food.capacity) continue;
                         nearest = distance;
                         foodTarget = food;
                     }

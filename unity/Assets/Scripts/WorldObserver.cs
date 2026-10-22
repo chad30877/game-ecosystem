@@ -205,7 +205,7 @@ namespace Ecosystem
             if (individual.cultivateRemaining > 0)
             {
                 var food = world.State.foods.Find(value => value.food == individual.cultivatingFood);
-                if (food != null && Vector2.Distance(CombatRules.Position(individual), new Vector2(food.x, food.y)) <= world.Config.observationRadius)
+                if (food != null && world.CanSeePoint(individual, new Vector2(food.x, food.y)))
                     GUILayout.Label($"培育 → 食物 ({food.x:F1}, {food.y:F1})");
             }
             foreach (var area in world.State.areas.Where(value => value.owner == selected && world.CanSeePoint(individual, new Vector2(value.x, value.y))))
@@ -213,7 +213,11 @@ namespace Ecosystem
             if (world.State.time < feedbackUntil) GUILayout.Label(feedback);
             GUILayout.Space(8);
             GUILayout.Label($"朝向 {individual.facing:F0}°　視野 120° / {world.Config.observationRadius:g}");
-            GUILayout.Label($"可見 {individual.perception.Count(value => value.visible)}　警戒記憶 {individual.perception.Count(value => !value.visible)}");
+            if (individual.scanIntervened) GUILayout.Label($"掃視　{individual.rawTurn} → {individual.actualTurn}");
+            else if (individual.scanDeferred) GUILayout.Label($"掃視暫緩　{ScanReason(individual.scanReason)}　{individual.scanDeferredSeconds:F1}s");
+            GUILayout.Label($"可見 {individual.perception.Count(value => value.visible)}　警戒記憶 {individual.perception.Count(value => !value.visible)}　區域 {individual.areaMemory.Count}");
+            foreach (var food in individual.foodMemory)
+                GUILayout.Label($"食物 ({food.x:F1}, {food.y:F1})　{(food.visible ? "可見" : world.State.time - food.lastSeenAt >= world.Config.foodMemorySeconds ? "舊情報" : "記憶")}　{(food.mature && food.phase == FoodPhase.Available ? "可採" : food.phase == FoodPhase.Resting ? "休養" : "成長中")}　{food.amount:F1}");
             foreach (var entity in individual.perception.Where(value => !value.visible))
                 GUILayout.Label($"{SpeciesName(entity.species)} 最後位置 ({entity.x:F1}, {entity.y:F1})　{entity.age:F1}s 前");
             foreach (var target in world.State.individuals.Where(value => world.CanSee(individual, value)))
@@ -228,6 +232,12 @@ namespace Ecosystem
                 var point = worldCamera.WorldToScreenPoint(new Vector3(memory.x, memory.y, 0));
                 var rect = new Rect(point.x - 40, Screen.height - point.y - 12, 100, 24);
                 if (point.z > 0 && !toolbar.Overlaps(rect) && !inspector.Overlaps(rect)) GUI.Label(rect, $"◇ {SpeciesName(memory.species)}");
+            }
+            foreach (var food in individual.foodMemory.Where(value => !value.visible))
+            {
+                var point = worldCamera.WorldToScreenPoint(new Vector3(food.x, food.y, 0));
+                var rect = new Rect(point.x - 40, Screen.height - point.y - 12, 100, 24);
+                if (point.z > 0 && !toolbar.Overlaps(rect) && !inspector.Overlaps(rect)) GUI.Label(rect, "◇ 食物");
             }
         }
 
@@ -261,6 +271,7 @@ namespace Ecosystem
         };
 
         private static string DeathName(string cause) => cause == "old_age" ? "老死" : cause == "starved" ? "飢餓" : "戰鬥";
+        private static string ScanReason(string reason) => reason == "energy" ? "能量不足" : reason == "escape" ? "撤退中" : "近迫威脅";
         private static string SpeciesName(string species) => species == "Flame" ? "炎角獸" : species == "Frost" ? "霜羽獸" : "苔靈";
         private static string EffectName(string kind) => kind switch
         {

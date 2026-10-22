@@ -40,6 +40,15 @@ namespace Ecosystem
         public float speed = 2.5f;
         public float stepSeconds = 0.02f;
         public float observationRadius = 2f;
+        public float explorationCellSize = 2f;
+        public int areaMemoryLimit = 64;
+        public float areaMemorySeconds = 30f;
+        public int foodMemoryLimit = 32;
+        public float foodMemorySeconds = 30f;
+        public bool scanEnabled = true;
+        public float scanFreshnessSeconds = 8f;
+        public float scanThreatRadius = 2.5f;
+        public float scanEnergyThreshold = 12f;
         public int episodeSteps = 256;
         public int individualsPerSpecies = 2;
         public int removeStep = 64;
@@ -84,7 +93,15 @@ namespace Ecosystem
                 !float.IsFinite(observationRadius) || observationRadius <= 0 || episodeSteps <= 0 ||
                 individualsPerSpecies < 1 || (!foraging && (individualsPerSpecies < 2 || removeStep <= 0 || addStep <= removeStep || addStep >= episodeSteps)))
                 throw new ArgumentException("世界配置須為有限正數、每物種至少兩隻，且 0 < removeStep < addStep < episodeSteps。");
-            if (foraging && (foodSourceLimit < 1 || naturalFoodLimit < 0 || naturalFoodLimit > foodSourceLimit ||
+            if (foraging && (foodSourceLimit < 1 || foodSourceLimit > 256 || naturalFoodLimit < 0 || naturalFoodLimit > foodSourceLimit ||
+                !float.IsFinite(explorationCellSize) || explorationCellSize <= 0 ||
+                halfExtent * 2 / explorationCellSize > 64 ||
+                areaMemoryLimit < 1 || areaMemoryLimit > 256 || foodMemoryLimit < 1 || foodMemoryLimit > 128 ||
+                !float.IsFinite(areaMemorySeconds) || areaMemorySeconds <= 0 ||
+                !float.IsFinite(foodMemorySeconds) || foodMemorySeconds <= 0 ||
+                !float.IsFinite(scanFreshnessSeconds) || scanFreshnessSeconds <= 0 ||
+                !float.IsFinite(scanThreatRadius) || scanThreatRadius <= 0 ||
+                !float.IsFinite(scanEnergyThreshold) || scanEnergyThreshold < 0 || scanEnergyThreshold > 100 ||
                 !float.IsFinite(naturalSpawnInterval) || naturalSpawnInterval <= 0 || naturalSpawnBatch <= 0 ||
                 !float.IsFinite(naturalFoodSpacing) || naturalFoodSpacing <= 0 || naturalFoodSpacing > halfExtent * 2 ||
                 !float.IsFinite(newFoodFraction) || newFoodFraction < 0 || newFoodFraction >= smallFood.recoveryFraction ||
@@ -166,6 +183,40 @@ namespace Ecosystem
         public float cultivateRemaining;
         public int cultivatingFood;
         public List<MovementBiasState> movementBiases = new List<MovementBiasState>();
+        public List<AreaMemory> areaMemory = new List<AreaMemory>();
+        public List<FoodMemory> foodMemory = new List<FoodMemory>();
+        public int explorationTargetX = -1;
+        public int explorationTargetY = -1;
+        public float[] directionLastSeenAt = new float[8];
+        public int scanTargetSector = -1;
+        public int rawTurn;
+        public int actualTurn;
+        public bool scanIntervened;
+        public bool scanDeferred;
+        public string scanReason = "";
+        public float scanDeferredSeconds;
+    }
+
+    [Serializable]
+    public sealed class AreaMemory
+    {
+        public int cellX;
+        public int cellY;
+        public float lastSeenAt;
+    }
+
+    [Serializable]
+    public sealed class FoodMemory
+    {
+        public int food;
+        public float x;
+        public float y;
+        public float amount;
+        public float capacity;
+        public bool mature;
+        public FoodPhase phase;
+        public bool visible;
+        public float lastSeenAt;
     }
 
     [Serializable]
@@ -439,7 +490,7 @@ namespace Ecosystem
                 individual.velocityY = (bounded.y - start.y) / Config.stepSeconds;
                 individual.x = bounded.x;
                 individual.y = bounded.y;
-                individual.facing = Mathf.Repeat(individual.facing + actions[individual.individual].turn * 180f * Config.stepSeconds, 360f);
+                individual.facing = Mathf.Repeat(individual.facing + ResolveTurn(individual, actions[individual.individual]) * 180f * Config.stepSeconds, 360f);
                 if (!Config.foraging) individual.boundary = position != bounded;
                 distances[individual.individual] = Vector2.Distance(start, bounded);
             }
@@ -532,6 +583,54 @@ namespace Ecosystem
         }
 
         private SpeciesStatistics Statistics(string species) => State.statistics.Find(value => value.species == species);
+
+        private int ResolveTurn(IndividualState individual, WorldAction action)
+        {
+            individual.rawTurn = action.turn;
+            individual.actualTurn = action.turn;
+            individual.scanIntervened = false;
+            individual.scanDeferred = false;
+            individual.scanReason = "";
+            if (!Config.foraging || !Config.scanEnabled) return action.turn;
+            if (action.turn != 0)
+            {
+                individual.scanTargetSector = -1;
+                individual.scanDeferredSeconds = 0;
+                return action.turn;
+            }
+            int oldest = 0;
+            for (int sector = 1; sector < individual.directionLastSeenAt.Length; sector++)
+                if (individual.directionLastSeenAt[sector] < individual.directionLastSeenAt[oldest]) oldest = sector;
+            if (State.time - individual.directionLastSeenAt[oldest] < Config.scanFreshnessSeconds)
+            {
+                individual.scanTargetSector = -1;
+                individual.scanDeferredSeconds = 0;
+                return 0;
+            }
+            var threat = individual.perception.Find(value => value.species != individual.species &&
+                Vector2.Distance(CombatRules.Position(individual), new Vector2(value.x, value.y)) <= Config.scanThreatRadius);
+            string reason = individual.energy <= Config.scanEnergyThreshold ? "energy"
+                : individual.dashRemaining > 0 ? "escape"
+                : threat != null ? "threat" : "";
+            if (reason != "")
+            {
+                individual.scanDeferred = true;
+                individual.scanReason = reason;
+                individual.scanDeferredSeconds += Config.stepSeconds;
+                return 0;
+            }
+            individual.scanDeferredSeconds = 0;
+            if (action.movement.sqrMagnitude > 0.04f) return 0;
+            if (individual.scanTargetSector < 0 ||
+                State.time - individual.directionLastSeenAt[individual.scanTargetSector] < Config.scanFreshnessSeconds)
+                individual.scanTargetSector = oldest;
+            float delta = Mathf.DeltaAngle(individual.facing, individual.scanTargetSector * 45f);
+            if (Mathf.Abs(delta) < 1f) return 0;
+            individual.actualTurn = delta > 0 ? 1 : -1;
+            individual.scanIntervened = true;
+            individual.scanReason = "stale_direction";
+            return individual.actualTurn;
+        }
 
         private FoodGrowthConfig Growth(FoodState food) => food.growthType == FoodGrowthType.Large ? Config.largeFood : Config.smallFood;
 
@@ -660,17 +759,30 @@ namespace Ecosystem
             return target != observer && target.health > 0 && CanSeePoint(observer, CombatRules.Position(target));
         }
 
-        public bool CanSeePoint(IndividualState observer, Vector2 point)
+        public bool CanSeePoint(IndividualState observer, Vector2 point) => InView(Config, observer, point);
+
+        public static bool InView(WorldConfig config, IndividualState observer, Vector2 point)
         {
             Vector2 delta = point - CombatRules.Position(observer);
             Vector2 facing = new Vector2(Mathf.Cos(observer.facing * Mathf.Deg2Rad), Mathf.Sin(observer.facing * Mathf.Deg2Rad));
-            return delta.sqrMagnitude <= Config.observationRadius * Config.observationRadius
+            return delta.sqrMagnitude <= config.observationRadius * config.observationRadius
                 && (delta.sqrMagnitude == 0 || Vector2.Angle(facing, delta) <= 60f);
         }
 
         public void RefreshPerception(bool clearMemory = false)
         {
-            if (clearMemory) enemyMemory.Clear();
+            if (clearMemory)
+            {
+                enemyMemory.Clear();
+                foreach (var individual in State.individuals)
+                {
+                    individual.areaMemory.Clear();
+                    individual.foodMemory.Clear();
+                    Array.Clear(individual.directionLastSeenAt, 0, individual.directionLastSeenAt.Length);
+                    individual.explorationTargetX = individual.explorationTargetY = -1;
+                    individual.scanTargetSector = -1;
+                }
+            }
             var alive = new HashSet<int>();
             foreach (var observer in State.individuals)
             {
@@ -700,11 +812,80 @@ namespace Ecosystem
                 foreach (int id in expired) memory.Remove(id);
                 // 以空間排序，避免觀察列順序成為個體的穩定識別。
                 observer.perception.Sort((a, b) => a.x != b.x ? a.x.CompareTo(b.x) : a.y.CompareTo(b.y));
+                if (Config.foraging)
+                {
+                    RefreshFoodMemory(observer);
+                    RefreshAreaMemory(observer);
+                    for (int sector = 0; sector < observer.directionLastSeenAt.Length; sector++)
+                        if (Mathf.Abs(Mathf.DeltaAngle(observer.facing, sector * 45f)) <= 60f)
+                            observer.directionLastSeenAt[sector] = State.time;
+                }
             }
             var removed = new List<int>();
             foreach (int id in enemyMemory.Keys) if (!alive.Contains(id)) removed.Add(id);
             foreach (int id in removed) enemyMemory.Remove(id);
         }
+
+        public Vector2 ExplorationCellCenter(int x, int y) => new Vector2(
+            Mathf.Min(Config.halfExtent, -Config.halfExtent + (x + 0.5f) * Config.explorationCellSize),
+            Mathf.Min(Config.halfExtent, -Config.halfExtent + (y + 0.5f) * Config.explorationCellSize));
+
+        private void RefreshAreaMemory(IndividualState observer)
+        {
+            int columns = Mathf.CeilToInt(Config.halfExtent * 2 / Config.explorationCellSize);
+            int minX = Mathf.Max(0, Mathf.FloorToInt((observer.x - Config.observationRadius + Config.halfExtent) / Config.explorationCellSize));
+            int maxX = Mathf.Min(columns - 1, Mathf.FloorToInt((observer.x + Config.observationRadius + Config.halfExtent) / Config.explorationCellSize));
+            int minY = Mathf.Max(0, Mathf.FloorToInt((observer.y - Config.observationRadius + Config.halfExtent) / Config.explorationCellSize));
+            int maxY = Mathf.Min(columns - 1, Mathf.FloorToInt((observer.y + Config.observationRadius + Config.halfExtent) / Config.explorationCellSize));
+            for (int x = minX; x <= maxX; x++)
+                for (int y = minY; y <= maxY; y++)
+                {
+                    if (!CanSeePoint(observer, ExplorationCellCenter(x, y))) continue;
+                    var known = observer.areaMemory.Find(value => value.cellX == x && value.cellY == y);
+                    if (known == null) observer.areaMemory.Add(new AreaMemory { cellX = x, cellY = y, lastSeenAt = State.time });
+                    else known.lastSeenAt = State.time;
+                }
+            if (observer.areaMemory.Count <= Config.areaMemoryLimit) return;
+            observer.areaMemory.Sort((a, b) => AreaPriority(observer, a).CompareTo(AreaPriority(observer, b)));
+            observer.areaMemory.RemoveRange(0, observer.areaMemory.Count - Config.areaMemoryLimit);
+        }
+
+        private float AreaPriority(IndividualState observer, AreaMemory area)
+        {
+            Vector2 center = ExplorationCellCenter(area.cellX, area.cellY);
+            bool usefulFood = observer.foodMemory.Exists(value => value.mature && value.phase == FoodPhase.Available &&
+                Vector2.Distance(center, new Vector2(value.x, value.y)) <= Config.explorationCellSize);
+            bool threat = observer.perception.Exists(value => value.species != observer.species &&
+                Vector2.Distance(center, new Vector2(value.x, value.y)) <= Config.explorationCellSize);
+            return area.lastSeenAt + (usefulFood ? Config.areaMemorySeconds : 0) + (threat ? Config.areaMemorySeconds : 0);
+        }
+
+        private void RefreshFoodMemory(IndividualState observer)
+        {
+            foreach (var known in observer.foodMemory) known.visible = false;
+            foreach (var food in State.foods)
+            {
+                if (!CanSeePoint(observer, new Vector2(food.x, food.y))) continue;
+                var known = observer.foodMemory.Find(value => value.food == food.food);
+                if (known == null) observer.foodMemory.Add(known = new FoodMemory { food = food.food });
+                known.x = food.x;
+                known.y = food.y;
+                known.amount = food.amount;
+                known.capacity = food.capacity;
+                known.mature = food.mature;
+                known.phase = food.phase;
+                known.visible = true;
+                known.lastSeenAt = State.time;
+            }
+            observer.foodMemory.RemoveAll(value => !value.visible && CanSeePoint(observer, new Vector2(value.x, value.y)));
+            if (observer.foodMemory.Count <= Config.foodMemoryLimit) return;
+            observer.foodMemory.Sort((a, b) => FoodPriority(a).CompareTo(FoodPriority(b)));
+            observer.foodMemory.RemoveRange(0, observer.foodMemory.Count - Config.foodMemoryLimit);
+        }
+
+        private float FoodPriority(FoodMemory food) => food.lastSeenAt +
+            (food.visible ? Config.foodMemorySeconds : 0) +
+            (food.mature && food.phase == FoodPhase.Available && food.amount > 0 ? Config.foodMemorySeconds : 0);
 
         public IEnumerable<float[]> ObserveEntities(IndividualState individual)
         {
@@ -715,9 +896,25 @@ namespace Ecosystem
             foreach (var food in State.foods)
             {
                 var delta = new Vector2(food.x - individual.x, food.y - individual.y);
-                if (delta.sqrMagnitude > Config.observationRadius * Config.observationRadius) continue;
-                yield return new[] { 0f, delta.x / Config.observationRadius, delta.y / Config.observationRadius,
-                    0f, 0f, food.mature && food.phase == FoodPhase.Available ? 1f : 0f, food.capacity > 0 ? food.amount / food.capacity : 0f };
+                if (!CanSeePoint(individual, new Vector2(food.x, food.y))) continue;
+                yield return new[] { 0f, delta.x / (Config.halfExtent * 2), delta.y / (Config.halfExtent * 2),
+                    1f, 0f, food.mature && food.phase == FoodPhase.Available ? 1f : 0f, food.amount / food.capacity };
+            }
+            foreach (var food in individual.foodMemory)
+            {
+                if (food.visible) continue;
+                yield return new[] { 0f, Mathf.Clamp((food.x - individual.x) / (Config.halfExtent * 2), -1f, 1f),
+                    Mathf.Clamp((food.y - individual.y) / (Config.halfExtent * 2), -1f, 1f), 0f,
+                    Mathf.Clamp01((State.time - food.lastSeenAt) / Config.foodMemorySeconds),
+                    food.mature && food.phase == FoodPhase.Available ? 1f : 0f,
+                    food.capacity > 0 ? food.amount / food.capacity : 0f };
+            }
+            foreach (var area in individual.areaMemory)
+            {
+                Vector2 center = ExplorationCellCenter(area.cellX, area.cellY);
+                yield return new[] { -1f, (center.x - individual.x) / (Config.halfExtent * 2),
+                    (center.y - individual.y) / (Config.halfExtent * 2), 0f,
+                    Mathf.Clamp01((State.time - area.lastSeenAt) / Config.areaMemorySeconds), 0f, 0f };
             }
         }
     }
