@@ -7,6 +7,9 @@
     [int]$Steps = 512,
     [ValidateRange(1, 2147483647)][int]$TrainSteps = 2048,
     [string]$ResumeFrom = '',
+    [switch]$NewExperiment,
+    [string]$BackupRoot = '',
+    [string]$HistoryRoot = '',
     [string]$WorldConfig = '',
     [string]$ReloadRun = '',
     [string]$Scenario = '',
@@ -24,6 +27,7 @@ $player = Join-Path $project 'Builds/World.exe'
 $config = Join-Path $root 'training/world.json'
 if ($Mode -eq 'forage') { $config = Join-Path $root 'training/foraging.json' }
 if ($WorldConfig) { $config = (Resolve-Path -LiteralPath $WorldConfig).Path }
+if (($NewExperiment -or $BackupRoot -or $HistoryRoot) -and $Mode -ne 'train') { throw 'NewExperiment、BackupRoot 與 HistoryRoot 僅適用於 train。' }
 if ($ResumeFrom -and $Mode -ne 'train') { throw 'ResumeFrom 僅適用於 train。' }
 if ($Scenario -and $Mode -ne 'forage') { throw 'Scenario 僅適用於 forage。' }
 if ($Scenario) { $Scenario = (Resolve-Path -LiteralPath $Scenario).Path; $Controller = 'scripted' }
@@ -46,52 +50,18 @@ if ($Mode -eq 'bridge') {
     & $Python @arguments
     if ($LASTEXITCODE -ne 0) { throw 'Python 往返驗證失敗。' }
 } elseif ($Mode -eq 'train') {
-    if (-not $WorldConfig) { $config = Join-Path $root 'training/foraging.json' }
-    New-Item -ItemType Directory $output | Out-Null
-    $trainerRunId = $runId
-    if ($ResumeFrom) {
-        $source = (Resolve-Path -LiteralPath $ResumeFrom).Path
-        foreach ($species in @('Flame', 'Frost', 'Moss')) {
-            if (-not (Test-Path -LiteralPath (Join-Path $source "$species/checkpoint.pt"))) {
-                throw "缺少 $species/checkpoint.pt；ResumeFrom 應指向含三物種 checkpoint 的訓練目錄。"
-            }
-        }
-        $resumeCheck = @'
-import sys
-from pathlib import Path
-import torch
-for species in ('Flame', 'Frost', 'Moss'):
-    checkpoint = torch.load(Path(sys.argv[1]) / species / 'checkpoint.pt', weights_only=True)
-    step = int(checkpoint['global_step']['_GlobalSteps__global_step'][0])
-    if int(sys.argv[2]) <= step:
-        raise ValueError(f'TrainSteps must exceed {species} checkpoint step {step}')
-'@
-        & $Python -c $resumeCheck $source $TrainSteps
-        if ($LASTEXITCODE -ne 0) { throw '續訓檢查失敗；TrainSteps 必須大於三物種已保存步數。' }
-        $trainerRunId = Split-Path $source -Leaf
-        Copy-Item -LiteralPath $source -Destination (Join-Path $output $trainerRunId) -Recurse
-    }
-    $trainerConfig = Join-Path $output 'trainer.yaml'
-    $utf8 = [Text.UTF8Encoding]::new($false)
-    $trainerYaml = (Get-Content -Raw (Join-Path $root 'training/toolchain.yaml')) -replace 'max_steps: \d+', "max_steps: $TrainSteps"
-    [IO.File]::WriteAllText($trainerConfig, $trainerYaml, $utf8)
-    $timeScale = if ($Visible) { '1' } else { '20' }
-    $arguments = @('-m', 'mlagents.trainers.learn', $trainerConfig, '--env', $player, '--run-id', $trainerRunId, '--results-dir', $output, '--seed', $Seed, '--torch-device', 'cpu', '--time-scale', $timeScale, '--width', '960', '--height', '720', '--max-lifetime-restarts', '0')
-    if ($ResumeFrom) { $arguments += '--resume' }
-    if (-not $Visible) { $arguments += '--no-graphics' }
-    $arguments += @('--env-args', '--world-log', (Join-Path $output 'world.jsonl'), '--world-seed', $Seed, '--world-config', $config, '--control', 'python')
-    $trainingRecord = @{ seed = $Seed; source = $ResumeFrom; trainerRunId = $trainerRunId; targetSteps = $TrainSteps; worldConfig = (Get-Content -Raw $config | ConvertFrom-Json) } | ConvertTo-Json -Depth 5
-    [IO.File]::WriteAllText((Join-Path $output 'training.json'), $trainingRecord, $utf8)
-    $trainerLog = Join-Path $output 'trainer.log'
-    [IO.File]::WriteAllText($trainerLog, '', $utf8)
-    # PowerShell 5.1 合併 stderr 時會把套件警告當成終止錯誤；訓練日誌由 stdout 保存。
-    & $Python @arguments | ForEach-Object {
-        [IO.File]::AppendAllText($trainerLog, $_.ToString() + [Environment]::NewLine, $utf8)
-        Write-Output $_
-    }
-    if ($LASTEXITCODE -ne 0) { throw '訓練失敗。' }
-    & $Python (Join-Path $root 'training/summarize.py') (Join-Path $output 'world.jsonl') (Join-Path $output 'training-summary.json')
-    if ($LASTEXITCODE -ne 0) { throw '訓練統計整理失敗。' }
+    if ($NewExperiment -and $ResumeFrom) { throw 'NewExperiment 與 ResumeFrom 不可同時使用。' }
+    $arguments = @((Join-Path $root 'training/session.py'), '--player', $player, '--output', $OutputRoot, '--steps', $TrainSteps)
+    if ($WorldConfig) { $arguments += @('--config', $config) }
+    if ($PSBoundParameters.ContainsKey('Seed')) { $arguments += @('--seed', $Seed) }
+    if ($ResumeFrom) { $arguments += @('--resume', $ResumeFrom) }
+    if ($NewExperiment) { $arguments += '--new' }
+    if ($BackupRoot) { $arguments += @('--backup', $BackupRoot) }
+    if ($HistoryRoot) { $arguments += @('--history', $HistoryRoot) }
+    if ($Visible) { $arguments += '--visible' }
+    & $Python @arguments
+    if ($LASTEXITCODE -ne 0) { throw '訓練或保存失敗，請查看上述錯誤。' }
+    exit 0
 } elseif ($Mode -eq 'forage') {
     New-Item -ItemType Directory $output | Out-Null
     if ($ReloadRun) {

@@ -19,6 +19,7 @@ namespace Ecosystem
         private int stepLimit;
         private string runId;
         private string control;
+        private bool resetRequested;
         private readonly List<GameObject> foodViews = new List<GameObject>();
         private int selected;
         private Font font;
@@ -157,6 +158,16 @@ namespace Ecosystem
 
         private void FixedUpdate()
         {
+            if (resetRequested)
+            {
+                resetRequested = false;
+                if (world.State.endReason == "")
+                {
+                    world.State.endReason = "manual_reset";
+                    Record("episode_end");
+                }
+                ResetWorld();
+            }
             // 最後一次 Python 通訊仍須送出觀察，等待關閉時不再推進世界。
             foreach (var agent in agents.Values)
                 agent.RequestDecision();
@@ -322,7 +333,9 @@ namespace Ecosystem
             foreach (var statistics in world.State.statistics)
                 GUI.Label(new Rect(18, 156 + row++ * 24, 570, 26), $"{statistics.species}　出生 {statistics.births}　戰死 {statistics.combat}　飢餓 {statistics.starved}　老死 {statistics.oldAge}　存活 {statistics.incompleteLives}");
             GUI.Label(new Rect(18, 246, 350, 28), world.State.endReason == "all_dead" ? "本輪結束・全體死亡" : world.State.endReason == "time_limit" ? "本輪結束・時間上限" : $"第 {world.State.episode} 輪　上限觸發 {world.State.statistics.Sum(v => v.populationLimitHits)}");
-            if (world.State.endReason != "" && GUI.Button(new Rect(458, 244, 120, 32), "重建世界")) ResetWorld();
+            if ((control == "python" || world.State.endReason != "") &&
+                GUI.Button(new Rect(458, 244, 120, 32), "重建世界")) resetRequested = true;
+            if (control == "python" && GUI.Button(new Rect(608, 8, 140, 32), "保存並結束")) Application.Quit();
         }
 
         private static string SkillName(WorldSkill skill) => skill switch
