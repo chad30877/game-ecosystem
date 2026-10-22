@@ -72,7 +72,7 @@ def compatibility(player: Path, trainer_config):
     }
 
 
-def load_source(path: Path, signature, world_config, target_steps: int):
+def load_source(path: Path, signature, world_config, target_steps):
     # 同時接受執行目錄與原有 trainer 子目錄。
     source = path.resolve(strict=True)
     if not (source / "training.json").is_file():
@@ -95,7 +95,7 @@ def load_source(path: Path, signature, world_config, target_steps: int):
         records = checkpoint_records(trainer)
         if records != manifest["checkpoints"]:
             raise ValueError("checkpoint 與保存紀錄不符，資料可能缺漏或遭修改。")
-        if any(target_steps <= record["step"] for record in records.values()):
+        if target_steps is not None and any(target_steps <= record["step"] for record in records.values()):
             raise ValueError("TrainSteps 必須大於三物種已保存步數。")
         if not manifest["experimentId"] or read_json(source / "world-config.json") != manifest["worldConfig"]:
             raise ValueError("實驗識別或保存的世界配置不完整。")
@@ -124,12 +124,12 @@ def train(args):
     world_config = read_json(args.config) if args.config else None
     source = trainer_source = previous = None
     if args.resume:
-        source, trainer_source, previous = load_source(args.resume, signature, world_config, args.steps)
+        source, trainer_source, previous = load_source(args.resume, signature, world_config, None if args.observe else args.steps)
         world_config = previous["worldConfig"]
     if world_config is None:
         world_config = read_json(ROOT / "training/foraging.json")
     seed = args.seed if args.seed is not None else previous["seed"] if previous else 1
-    run_id = f"train-{datetime.now().strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:8]}"
+    run_id = f"{'observe' if args.observe else 'train'}-{datetime.now().strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:8]}"
     output = args.output.resolve() / run_id
     destinations = [path.resolve() for path in (args.backup, args.history) if path]
     if len(set(destinations)) != len(destinations):
@@ -144,7 +144,9 @@ def train(args):
     manifest = {
         "schemaVersion": 1, "experimentId": previous["experimentId"] if previous else uuid.uuid4().hex,
         "runId": run_id, "trainerRunId": trainer_id, "source": str(source) if source else None,
-        "operation": "resume" if previous else "new", "seed": seed, "targetSteps": args.steps,
+        "operation": "observe" if args.observe else "resume" if previous else "new",
+        "seed": seed, "targetSteps": None if args.observe else args.steps,
+        "worldStepLimit": args.world_steps if args.observe else None,
         "worldConfig": world_config, "compatibility": signature, "status": "running",
         "startedAt": datetime.now(timezone.utc).isoformat(),
         "startingSteps": {name: previous["checkpoints"][name]["step"] if previous else 0 for name in SPECIES},
@@ -160,11 +162,19 @@ def train(args):
                "--width", "960", "--height", "720", "--max-lifetime-restarts", "0"]
     if previous:
         command.append("--resume")
+    if args.observe:
+        command.append("--inference")
+    if args.visible:
+        # 暫停期間不送出新的決策，容許長時間檢視而不觸發預設通訊逾時。
+        command += ["--timeout-wait", "86400"]
     if not args.visible:
         command.append("--no-graphics")
     command += ["--env-args", "--world-log", str(output / "world.jsonl"), "--world-seed", str(seed),
-                "--world-config", str(output / "world-config.json"), "--control", "python"]
-    print(f"{'續訓' if previous else '全新實驗'}：{manifest['experimentId']}\n輸出：{output}", flush=True)
+                "--world-config", str(output / "world-config.json"), "--control", "python",
+                "--policy-mode", "fixed" if args.observe else "training"]
+    if args.observe:
+        command += ["--world-steps", str(args.world_steps)]
+    print(f"{'固定模型觀察' if args.observe else '續訓' if previous else '全新實驗'}：{manifest['experimentId']}\n輸出：{output}", flush=True)
     with (output / "trainer.log").open("w", encoding="utf-8") as log:
         with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                               encoding="utf-8", errors="replace",
@@ -182,7 +192,9 @@ def train(args):
     manifest["finishedAt"] = datetime.now(timezone.utc).isoformat()
     try:
         manifest["checkpoints"] = checkpoint_records(output / trainer_id)
-        manifest["status"] = "completed" if all(record["step"] >= args.steps for record in manifest["checkpoints"].values()) else "stopped"
+        if args.observe and (previous is None or manifest["checkpoints"] != previous["checkpoints"]):
+            raise ValueError("固定觀察期間 checkpoint 意外改變。")
+        manifest["status"] = "completed" if args.observe or all(record["step"] >= args.steps for record in manifest["checkpoints"].values()) else "stopped"
     except ValueError as error:
         manifest["status"] = "failed"
         write_json(output / "training.json", manifest)
@@ -214,6 +226,8 @@ def main():
     parser.add_argument("--config", type=Path)
     parser.add_argument("--seed", type=int)
     parser.add_argument("--steps", type=int, default=2048)
+    parser.add_argument("--observe", action="store_true")
+    parser.add_argument("--world-steps", type=int, default=512)
     operation = parser.add_mutually_exclusive_group()
     operation.add_argument("--resume", type=Path)
     operation.add_argument("--new", action="store_true")
@@ -223,6 +237,8 @@ def main():
     args = parser.parse_args()
     if args.steps <= 0:
         parser.error("訓練步數必須為正數。")
+    if args.observe and (not args.resume or args.world_steps < 0 or (not args.visible and args.world_steps == 0)):
+        parser.error("固定觀察須指定 resume；無畫面須有正數 world-steps。")
     try:
         train(args)
     except (ValueError, OSError, yaml.YAMLError) as error:

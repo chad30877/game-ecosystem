@@ -1,5 +1,5 @@
 ﻿param(
-    [ValidateSet('build', 'manual', 'bridge', 'train', 'forage')][string]$Mode = 'manual',
+    [ValidateSet('build', 'manual', 'bridge', 'train', 'forage', 'observe')][string]$Mode = 'manual',
     [string]$Editor = '',
     [string]$Python = '',
     [string]$OutputRoot = '',
@@ -28,7 +28,7 @@ $config = Join-Path $root 'training/world.json'
 if ($Mode -eq 'forage') { $config = Join-Path $root 'training/foraging.json' }
 if ($WorldConfig) { $config = (Resolve-Path -LiteralPath $WorldConfig).Path }
 if (($NewExperiment -or $BackupRoot -or $HistoryRoot) -and $Mode -ne 'train') { throw 'NewExperiment、BackupRoot 與 HistoryRoot 僅適用於 train。' }
-if ($ResumeFrom -and $Mode -ne 'train') { throw 'ResumeFrom 僅適用於 train。' }
+if ($ResumeFrom -and $Mode -notin @('train', 'observe')) { throw 'ResumeFrom 僅適用於 train 或 observe。' }
 if ($Scenario -and $Mode -ne 'forage') { throw 'Scenario 僅適用於 forage。' }
 if ($Scenario) { $Scenario = (Resolve-Path -LiteralPath $Scenario).Path; $Controller = 'scripted' }
 $runId = '{0}-{1}-{2}' -f $Mode, (Get-Date -Format 'yyyyMMdd-HHmmss'), ([guid]::NewGuid().ToString('N').Substring(0, 8))
@@ -49,9 +49,14 @@ if ($Mode -eq 'bridge') {
     if ($Visible) { $arguments += '--visible' }
     & $Python @arguments
     if ($LASTEXITCODE -ne 0) { throw 'Python 往返驗證失敗。' }
-} elseif ($Mode -eq 'train') {
+} elseif ($Mode -in @('train', 'observe')) {
     if ($NewExperiment -and $ResumeFrom) { throw 'NewExperiment 與 ResumeFrom 不可同時使用。' }
+    if ($Mode -eq 'observe' -and -not $ResumeFrom) { throw 'observe 須以 ResumeFrom 指定已保存模型。' }
     $arguments = @((Join-Path $root 'training/session.py'), '--player', $player, '--output', $OutputRoot, '--steps', $TrainSteps)
+    if ($Mode -eq 'observe') {
+        if (-not $PSBoundParameters.ContainsKey('Steps')) { $Steps = if ($Visible) { 0 } else { 512 } }
+        $arguments += @('--observe', '--world-steps', $Steps)
+    }
     if ($WorldConfig) { $arguments += @('--config', $config) }
     if ($PSBoundParameters.ContainsKey('Seed')) { $arguments += @('--seed', $Seed) }
     if ($ResumeFrom) { $arguments += @('--resume', $ResumeFrom) }

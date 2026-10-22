@@ -545,9 +545,14 @@ namespace Ecosystem
 
         public bool CanSee(IndividualState observer, IndividualState target)
         {
-            Vector2 delta = CombatRules.Position(target) - CombatRules.Position(observer);
+            return target != observer && target.health > 0 && CanSeePoint(observer, CombatRules.Position(target));
+        }
+
+        public bool CanSeePoint(IndividualState observer, Vector2 point)
+        {
+            Vector2 delta = point - CombatRules.Position(observer);
             Vector2 facing = new Vector2(Mathf.Cos(observer.facing * Mathf.Deg2Rad), Mathf.Sin(observer.facing * Mathf.Deg2Rad));
-            return target != observer && target.health > 0 && delta.sqrMagnitude <= Config.observationRadius * Config.observationRadius
+            return delta.sqrMagnitude <= Config.observationRadius * Config.observationRadius
                 && (delta.sqrMagnitude == 0 || Vector2.Angle(facing, delta) <= 60f);
         }
 

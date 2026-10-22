@@ -17,9 +17,10 @@
 ./scripts/world.ps1 -Mode train -Visible
 ./scripts/world.ps1 -Mode train -NewExperiment -Visible
 ./scripts/world.ps1 -Mode train -TrainSteps 4096 -ResumeFrom './artifacts/runs/<首次輸出>'
+./scripts/world.ps1 -Mode observe -ResumeFrom './artifacts/runs/<已保存執行>' -Visible
 ```
 
-`forage -Visible` 點選個體查看健康、能量、年齡與繁殖冷卻；成長期個體較小。每輪結束停留在統計畫面，按「重建世界」開始下一輪，關閉視窗結束。四個大型黃色區域是產地，小型黃色區域是零散食物，亮度與大小反映存量。無畫面 `forage` 預設推進 12,000 步，可用 `-Steps` 指定步數；無畫面及指定正數步數的可見執行均在每輪結束後自動重建，直到指定總步數。兩種模式共用規則與固定步長。
+`forage -Visible` 可按 P 暫停／恢復、切換速度、滾輪縮放；點選個體查看健康、能量、年齡、兩個技能及局部視野，按「全景」返回。成長期個體較小。每輪結束停留在統計畫面，按「重建世界」開始下一輪，關閉視窗結束。四個大型黃色區域是產地，小型黃色區域是零散食物，亮度與大小反映存量。無畫面 `forage` 預設推進 12,000 步，可用 `-Steps` 指定步數；無畫面及指定正數步數的可見執行均在每輪結束後自動重建，直到指定總步數。兩種模式共用規則與固定步長。
 
 ```powershell
 ./scripts/world.ps1 -Mode forage -Visible -Seed 7
@@ -43,6 +44,8 @@
 `manual` 使用方向鍵控制所有個體；`bridge` 讓 Python 分別送出動作，同種個體也可移往不同方向。`-Visible` 顯示場景，省略時無畫面執行。
 
 `train` 預設以每物種 2,048 筆經驗為停止門檻，完成 rollout 批次後才停止，checkpoint 可能略超過門檻。`-NewExperiment` 從零開始，`-ResumeFrom` 指向已保存執行目錄，沿用配置並恢復三物種策略、optimizer 及累計步數；`-TrainSteps` 須大於已保存步數。訓練視窗可「重建世界」保留策略，或「保存並結束」。續訓從新世界開始，原始輸出保留。版本／配置相容性、備份與歷史路徑及容量核對見[實驗保存與續訓](docs/resume-training.md)。
+
+`observe -ResumeFrom` 載入已保存策略，以固定模型控制新世界，不更新模型；可見模式持續到關閉，無畫面預設 512 世界步，可用 `-Steps` 指定。操作、個體視野與驗證紀錄見[即時觀察](docs/observation.md)。
 
 入口以專案根目錄定位 `.tools/unity/6000.0.85f1/Editor/Unity.exe`、`.venv/Scripts/python.exe` 及 `artifacts/runs`，可透過 `-Editor`、`-Python`、`-OutputRoot` 覆寫。每次執行產生獨立輸出目錄，不需要先啟用虛擬環境。
 

@@ -21,8 +21,8 @@ namespace Ecosystem
         private string control;
         private bool resetRequested;
         private readonly List<GameObject> foodViews = new List<GameObject>();
-        private int selected;
-        private Font font;
+        private WorldObserver observer;
+        private string policyMode;
         private WorldScenario scenario;
         private readonly List<GameObject> projectileViews = new List<GameObject>();
         private readonly List<GameObject> areaViews = new List<GameObject>();
@@ -57,7 +57,9 @@ namespace Ecosystem
                 if (scenario == null) throw new ArgumentException("缺少指定動作場景。");
             }
             if (Application.isBatchMode && control != "python") Time.timeScale = 100f;
-            font = Font.CreateDynamicFontFromOSFont("Microsoft JhengHei", 16);
+            policyMode = control == "python" ? Argument("--policy-mode", "training") : control;
+            if (control == "python" && policyMode != "training" && policyMode != "fixed")
+                throw new ArgumentException("未知策略模式。");
             var academy = Academy.Instance;
             academy.AutomaticSteppingEnabled = false;
             if (control == "python" && !academy.IsCommunicatorOn)
@@ -72,7 +74,7 @@ namespace Ecosystem
             output.WriteLine(JsonUtility.ToJson(new RunRecord
             {
                 run = runId, seed = seed, unity = Application.unityVersion,
-                device = SystemInfo.graphicsDeviceName, config = config, control = control, scenario = scenario
+                device = SystemInfo.graphicsDeviceName, config = config, control = control, policyMode = policyMode, scenario = scenario
             }));
             var camera = new GameObject("Camera").AddComponent<Camera>();
             camera.orthographic = true;
@@ -92,6 +94,11 @@ namespace Ecosystem
                     wall.GetComponent<Renderer>().material = Resources.Load<Material>("WorldMaterial");
                 }
             ResetWorld();
+            if (config.foraging && !Application.isBatchMode)
+            {
+                observer = gameObject.AddComponent<WorldObserver>();
+                observer.Initialize(world, camera, policyMode, () => resetRequested = true, () => Application.Quit(), ApplyFocus);
+            }
         }
 
         private void ResetWorld()
@@ -118,7 +125,6 @@ namespace Ecosystem
             foodViews.Clear();
             world.Reset();
             scenario?.Apply(world);
-            selected = 0;
             UpdateFoodViews();
             foreach (var individual in world.State.individuals)
                 CreateAgent(individual);
@@ -158,16 +164,6 @@ namespace Ecosystem
 
         private void FixedUpdate()
         {
-            if (resetRequested)
-            {
-                resetRequested = false;
-                if (world.State.endReason == "")
-                {
-                    world.State.endReason = "manual_reset";
-                    Record("episode_end");
-                }
-                ResetWorld();
-            }
             // 最後一次 Python 通訊仍須送出觀察，等待關閉時不再推進世界。
             foreach (var agent in agents.Values)
                 agent.RequestDecision();
@@ -217,12 +213,13 @@ namespace Ecosystem
                 foreach (string species in World.Species)
                     CreateAgent(world.AddIndividual(species));
             world.RefreshPerception();
+            observer?.CaptureEvents();
             if (world.State.endReason != "")
             {
                 Record("episode_end");
                 if ((control == "python" || !world.Config.foraging || Application.isBatchMode || stepLimit > 0) && (stepLimit <= 0 || totalSteps < stepLimit)) ResetWorld();
             }
-            if (control != "python" && stepLimit > 0 && totalSteps >= stepLimit)
+            if ((control != "python" || policyMode == "fixed") && stepLimit > 0 && totalSteps >= stepLimit)
                 Application.Quit();
         }
 
@@ -307,57 +304,35 @@ namespace Ecosystem
 
         private void Update()
         {
-            if (!world.Config.foraging || !Input.GetMouseButtonDown(0)) return;
-            var point = Camera.main != null ? Camera.main.ScreenToWorldPoint(Input.mousePosition)
-                : FindFirstObjectByType<Camera>().ScreenToWorldPoint(Input.mousePosition);
-            var nearest = world.State.individuals.OrderBy(value => Vector2.Distance(new Vector2(value.x, value.y), point)).FirstOrDefault();
-            if (nearest != null && Vector2.Distance(new Vector2(nearest.x, nearest.y), point) < 1.2f) selected = nearest.individual;
-        }
-
-        private void OnGUI()
-        {
-            if (world == null || !world.Config.foraging) return;
-            GUI.skin.font = font;
-            GUI.skin.label.fontSize = 16;
-            GUI.Box(new Rect(8, 8, 590, 282), "");
-            GUI.Label(new Rect(18, 12, 570, 30), control == "python" ? "Python 策略控制" : control == "rules" ? "規則控制・尚非學習結果" : control == "idle" ? "靜止控制・飢餓核對" : control == "scripted" ? "指定動作・尚非學習結果" : "方向鍵移動／滑鼠瞄準／A攻擊／S/D技能／Q/E轉向／空白採食");
-            GUI.Label(new Rect(18, 42, 350, 28), $"{world.State.time:F1} 秒　炎角 {world.State.individuals.Count(v => v.species == "Flame")}　霜羽 {world.State.individuals.Count(v => v.species == "Frost")}　苔靈 {world.State.individuals.Count(v => v.species == "Moss")}");
-            var individual = world.State.individuals.FirstOrDefault(value => value.individual == selected);
-            GUI.Label(new Rect(18, 72, 520, 28), individual == null ? "點選個體" : $"#{individual.individual} {individual.species}　健康 {individual.health:F1}　能量 {individual.energy:F1}");
-            if (individual != null)
+            if (resetRequested)
             {
-                GUI.Label(new Rect(18, 100, 570, 28), $"年齡 {individual.age:F1}　{(individual.age < world.Config.maturityAge ? "成長期" : "成年")}　繁殖 {individual.reproductionCooldown:F1}");
-                GUI.Label(new Rect(18, 128, 570, 28), $"攻擊 {individual.attackCooldown:F1}　{SkillName(individual.loadout[0])} {individual.skillCooldowns[0]:F1}／{SkillName(individual.loadout[1])} {individual.skillCooldowns[1]:F1}　{ActiveStatus(individual)}");
+                resetRequested = false;
+                if (world.State.endReason == "")
+                {
+                    world.State.endReason = "manual_reset";
+                    Record("episode_end");
+                }
+                ResetWorld();
             }
-            int row = 0;
-            foreach (var statistics in world.State.statistics)
-                GUI.Label(new Rect(18, 156 + row++ * 24, 570, 26), $"{statistics.species}　出生 {statistics.births}　戰死 {statistics.combat}　飢餓 {statistics.starved}　老死 {statistics.oldAge}　存活 {statistics.incompleteLives}");
-            GUI.Label(new Rect(18, 246, 350, 28), world.State.endReason == "all_dead" ? "本輪結束・全體死亡" : world.State.endReason == "time_limit" ? "本輪結束・時間上限" : $"第 {world.State.episode} 輪　上限觸發 {world.State.statistics.Sum(v => v.populationLimitHits)}");
-            if ((control == "python" || world.State.endReason != "") &&
-                GUI.Button(new Rect(458, 244, 120, 32), "重建世界")) resetRequested = true;
-            if (control == "python" && GUI.Button(new Rect(608, 8, 140, 32), "保存並結束")) Application.Quit();
         }
 
-        private static string SkillName(WorldSkill skill) => skill switch
+        private void ApplyFocus(IndividualState selected)
         {
-            WorldSkill.Charge => "烈焰衝鋒", WorldSkill.HotStrike => "熾熱猛擊", WorldSkill.Shield => "防禦姿態",
-            WorldSkill.IntimidatingRoar => "威嚇咆哮", WorldSkill.FrostbindArrow => "霜縛箭", WorldSkill.PiercingIceArrow => "穿透冰矢",
-            WorldSkill.ColdMistDash => "寒霧遁行", WorldSkill.FrostTrap => "冰霜陷阱", WorldSkill.Cultivate => "培育",
-            WorldSkill.Sow => "播種", WorldSkill.EntanglingRoots => "根鬚纏繞", WorldSkill.SporeSmoke => "孢子煙幕", _ => ""
-        };
-
-        private static string ActiveStatus(IndividualState individual)
-        {
-            var statuses = new List<string>();
-            if (individual.rootRemaining > 0) statuses.Add($"定身 {individual.rootRemaining:F1}");
-            if (individual.poisonStacks > 0) statuses.Add($"中毒 {individual.poisonStacks}");
-            if (individual.dashRemaining > 0) statuses.Add("遁行");
-            if (individual.shieldRemaining > 0) statuses.Add($"防禦 {individual.shieldRemaining:F1}");
-            if (individual.cultivateRemaining > 0) statuses.Add($"培育 {individual.cultivateRemaining:F1}");
-            if (individual.windupRemaining > 0) statuses.Add($"前搖 {individual.windupRemaining:F1}");
-            if (individual.chargeRemaining > 0) statuses.Add("衝鋒");
-            if (individual.slowRemaining > 0) statuses.Add($"減速 {individual.slowRemaining:F1}");
-            return string.Join("　", statuses);
+            foreach (var agent in agents.Values)
+                foreach (var renderer in agent.GetComponentsInChildren<Renderer>())
+                    renderer.forceRenderingOff = selected != null && agent.Individual != selected && !world.CanSee(selected, agent.Individual);
+            for (int i = 0; i < foodViews.Count; i++)
+            {
+                var food = world.State.foods[i];
+                foodViews[i].GetComponent<Renderer>().forceRenderingOff = selected != null &&
+                    Vector2.Distance(CombatRules.Position(selected), new Vector2(food.x, food.y)) > world.Config.observationRadius;
+            }
+            for (int i = 0; i < areaViews.Count; i++)
+                areaViews[i].GetComponent<Renderer>().forceRenderingOff = selected != null && i < world.State.areas.Count &&
+                    !world.CanSeePoint(selected, new Vector2(world.State.areas[i].x, world.State.areas[i].y));
+            for (int i = 0; i < projectileViews.Count; i++)
+                projectileViews[i].GetComponent<Renderer>().forceRenderingOff = selected != null && i < world.State.projectiles.Count &&
+                    !world.CanSeePoint(selected, new Vector2(world.State.projectiles[i].x, world.State.projectiles[i].y));
         }
 
         private void Record(string kind, IndividualState individual = null, int unityObject = 0) => output.WriteLine(JsonUtility.ToJson(new StepRecord
@@ -374,6 +349,7 @@ namespace Ecosystem
             public string unity;
             public string device;
             public string control;
+            public string policyMode;
             public string rules = "skills-v1";
             public WorldConfig config;
             public WorldScenario scenario;
