@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-Hant">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>學習成效對照</title>
+<style>
+body{font:16px system-ui;margin:32px auto;padding:0 20px;max-width:1100px;color:#202830;background:#fafafa}select{font:inherit;padding:8px}section{background:white;padding:20px;margin:16px 0;border:1px solid #ddd;border-radius:8px}svg{width:100%;height:auto}table{border-collapse:collapse;width:100%;font-size:14px}td,th{padding:8px;border-bottom:1px solid #ddd;text-align:right}td:first-child,th:first-child{text-align:left}h1{font-size:26px}h2{font-size:19px}p{line-height:1.6}a{color:#245da0}
+</style>
+<h1>學習成效對照</h1>
+<p><strong>學習效果未驗證</strong> · <a href="evaluation.md">結果摘要</a> · <a href="evaluation.json">完整資料</a></p>
+<label>比較條件 <select id="condition"></select></label>
+<p>族群數量：每條線為一組固定種子；滑到資料點可看時間與數量。配置統計以種子為單位呈現 mean ± sd。</p>
+<div id="charts"></div>
+<section><h2>技能配置</h2><div style="overflow:auto"><table><thead><tr><th>物種／配置</th><th>完整／未完成</th><th>完成生命年齡</th><th>觀測存活秒數</th><th>出生</th><th>採食能量</th><th>造成傷害</th><th>承受傷害</th></tr></thead><tbody id="configurations"></tbody></table></div></section>
+<script>
+const result=__RESULT__;
+const condition=document.querySelector('#condition');
+for(const name of Object.keys(result.cases)){const option=document.createElement('option');option.value=name;option.textContent=name;condition.append(option)}
+const colors=['#3c65a9','#ba5738','#428b53','#9564a8','#bb8d21','#248d9b','#944c66','#7c8246','#6b6b6b','#b6569e'];
+const fmt=value=>value.mean===null?'—':`${value.mean.toFixed(2)} ± ${(value.sd||0).toFixed(2)}`;
+function render(){
+ const runs=result.cases[condition.value], charts=document.querySelector('#charts');charts.replaceChildren();
+ for(const species of ['Flame','Frost','Moss']){
+  const section=document.createElement('section'), heading=document.createElement('h2');heading.textContent=species;section.append(heading);
+  const ns='http://www.w3.org/2000/svg', svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 1000 260');svg.setAttribute('role','img');svg.setAttribute('aria-label',`${species} 族群曲線`);
+  const horizon=result.worldConfig.episodeSteps*result.worldConfig.stepSeconds, maximum=Math.max(1,...runs.flatMap(run=>run.population.map(point=>point.counts[species])));
+  const x=time=>50+time/horizon*920,y=count=>215-count/maximum*175;
+  function element(tag,attributes,text){const item=document.createElementNS(ns,tag);for(const [key,value] of Object.entries(attributes))item.setAttribute(key,value);if(text!==undefined)item.textContent=text;svg.append(item);return item}
+  element('path',{d:'M50 35 V215 H970',fill:'none',stroke:'#888'});
+  for(let i=0;i<=4;i++){const time=horizon*i/4,count=maximum*i/4;element('text',{x:x(time),y:240,'text-anchor':'middle','font-size':12},`${time.toFixed(1)}s`);element('text',{x:42,y:y(count)+4,'text-anchor':'end','font-size':12},count.toFixed(0));}
+  runs.forEach((run,index)=>{
+   const points=run.population.slice();
+   if(points.at(-1).time<horizon)points.push({time:horizon,counts:points.at(-1).counts});
+   element('polyline',{points:points.map(point=>`${x(point.time)},${y(point.counts[species])}`).join(' '),fill:'none',stroke:colors[index],'stroke-width':1.8});
+   for(const point of run.population){const dot=element('circle',{cx:x(point.time),cy:y(point.counts[species]),r:3,fill:colors[index]});const title=document.createElementNS(ns,'title');title.textContent=`種子 ${run.seed} · ${point.time.toFixed(2)}s · ${point.counts[species]} 隻`;dot.append(title)}
+   element('text',{x:55+index*91,y:18,fill:colors[index],'font-size':12},`種子 ${run.seed}`);
+  });section.append(svg);charts.append(section);
+ }
+ const body=document.querySelector('#configurations');body.replaceChildren();
+ for(const [key,value] of Object.entries(result.aggregates[condition.value].configurations)){
+  const row=document.createElement('tr');for(const text of [key,`${value.completedLives} / ${value.incompleteLives}`,fmt(value.meanCompletedAge),fmt(value.meanObservedSeconds),fmt(value.births),fmt(value.foodEnergy),fmt(value.damageDealt),fmt(value.damageTaken)]){const cell=document.createElement('td');cell.textContent=text;row.append(cell)}body.append(row);
+ }
+}
+condition.addEventListener('change',render);render();
+</script>
+</html>

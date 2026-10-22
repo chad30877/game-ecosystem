@@ -295,6 +295,8 @@ namespace Ecosystem
             effectRandom = new System.Random(seed ^ 0x43f214);
         }
 
+        internal void ReadSnapshot(WorldState snapshot) => State = snapshot;
+
         public WorldState Reset()
         {
             State = new WorldState { episode = ++episode };

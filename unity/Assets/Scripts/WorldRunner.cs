@@ -13,6 +13,16 @@ namespace Ecosystem
     public sealed class WorldRunner : MonoBehaviour
     {
         private World world;
+        private WorldReplay replay;
+        private float replayClock;
+        private string replaySeek;
+        private readonly Dictionary<int, WorldIndividualView> views = new Dictionary<int, WorldIndividualView>();
+        private StreamWriter recording;
+        private HashSet<int> recordEpisodes;
+        private bool summaryLog;
+        private HashSet<string> rulesSpecies;
+        private bool singleEpisode;
+        private readonly System.Diagnostics.Stopwatch elapsed = System.Diagnostics.Stopwatch.StartNew();
         private readonly Dictionary<int, WorldAgent> agents = new Dictionary<int, WorldAgent>();
         private StreamWriter output;
         private long totalSteps;
@@ -39,14 +49,26 @@ namespace Ecosystem
 
         private void Awake()
         {
+            try { InitializeWorld(); }
+            catch (Exception error) { Debug.LogException(error); Application.Quit(1); }
+        }
+
+        private void InitializeWorld()
+        {
             Application.runInBackground = true;
+            string replayPath = Argument("--replay", "");
+            if (replayPath != "") replay = new WorldReplay(replayPath);
             string configPath = Argument("--world-config", "");
-            var config = configPath == "" ? new WorldConfig()
+            var config = replay != null ? replay.Header.config : configPath == "" ? new WorldConfig()
                 : JsonUtility.FromJson<WorldConfig>(File.ReadAllText(configPath));
-            int seed = int.Parse(Argument("--world-seed", "1"));
+            int seed = replay != null ? replay.Header.seed : int.Parse(Argument("--world-seed", "1"));
             world = new World(config, seed);
-            control = Argument("--control", "manual");
-            if (control != "manual" && control != "python" && control != "rules" && control != "idle" && control != "scripted")
+            control = replay != null ? "replay" : Argument("--control", "manual");
+            replaySeek = Argument("--replay-seek", "");
+            summaryLog = Argument("--summary-log", "false") == "true";
+            singleEpisode = Argument("--single-episode", "false") == "true";
+            rulesSpecies = new HashSet<string>(Argument("--rules-species", "").Split(','));
+            if (control != "manual" && control != "python" && control != "rules" && control != "idle" && control != "scripted" && control != "replay")
                 throw new ArgumentException("未知控制模式。");
             if ((control == "rules" || control == "idle") && !config.foraging)
                 throw new ArgumentException("規則控制須使用覓食配置。");
@@ -60,10 +82,13 @@ namespace Ecosystem
             policyMode = control == "python" ? Argument("--policy-mode", "training") : control;
             if (control == "python" && policyMode != "training" && policyMode != "fixed")
                 throw new ArgumentException("未知策略模式。");
-            var academy = Academy.Instance;
-            academy.AutomaticSteppingEnabled = false;
-            if (control == "python" && !academy.IsCommunicatorOn)
-                throw new InvalidOperationException("Python 控制模式未連接訓練器。");
+            if (replay == null)
+            {
+                var academy = Academy.Instance;
+                academy.AutomaticSteppingEnabled = false;
+                if (control == "python" && !academy.IsCommunicatorOn)
+                    throw new InvalidOperationException("Python 控制模式未連接訓練器。");
+            }
             Time.fixedDeltaTime = config.stepSeconds;
             stepLimit = int.Parse(Argument("--world-steps", "0"));
             runId = Guid.NewGuid().ToString("N");
@@ -71,11 +96,21 @@ namespace Ecosystem
             Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(logPath)));
             output = new StreamWriter(new FileStream(logPath, FileMode.CreateNew, FileAccess.Write, FileShare.Read));
             output.AutoFlush = true;
-            output.WriteLine(JsonUtility.ToJson(new RunRecord
+            string recordingPath = Argument("--record-log", "");
+            if (recordingPath != "")
+            {
+                recordEpisodes = new HashSet<int>(Argument("--record-episodes", "1").Split(',').Select(int.Parse));
+                if (recordEpisodes.Any(value => value <= 0)) throw new ArgumentException("記錄輪次須為正數。");
+                recording = new StreamWriter(new FileStream(recordingPath, FileMode.CreateNew, FileAccess.Write, FileShare.Read));
+                recording.AutoFlush = true;
+            }
+            string runRecord = JsonUtility.ToJson(new RunRecord
             {
                 run = runId, seed = seed, unity = Application.unityVersion,
                 device = SystemInfo.graphicsDeviceName, config = config, control = control, policyMode = policyMode, scenario = scenario
-            }));
+            });
+            output.WriteLine(runRecord);
+            recording?.WriteLine(runRecord);
             var camera = new GameObject("Camera").AddComponent<Camera>();
             camera.orthographic = true;
             camera.orthographicSize = config.halfExtent + 1f;
@@ -93,11 +128,14 @@ namespace Ecosystem
                         : new Vector3(config.halfExtent * 2, 0.05f, 0.05f);
                     wall.GetComponent<Renderer>().material = Resources.Load<Material>("WorldMaterial");
                 }
-            ResetWorld();
+            if (replay == null) ResetWorld();
+            else ApplySnapshot(0, true);
             if (config.foraging && !Application.isBatchMode)
             {
                 observer = gameObject.AddComponent<WorldObserver>();
-                observer.Initialize(world, camera, policyMode, () => resetRequested = true, () => Application.Quit(), ApplyFocus);
+                observer.Initialize(world, camera, policyMode,
+                    () => { if (replay == null) resetRequested = true; else SeekReplay(0); },
+                    () => Application.Quit(), ApplyFocus, replay, SeekReplay);
             }
         }
 
@@ -110,6 +148,7 @@ namespace Ecosystem
                 Destroy(agent.gameObject);
             }
             agents.Clear();
+            views.Clear();
             ClearProjectileViews();
             foreach (var view in areaViews)
             {
@@ -131,7 +170,7 @@ namespace Ecosystem
             Record("reset");
         }
 
-        private void CreateAgent(IndividualState individual)
+        private WorldIndividualView CreateView(IndividualState individual)
         {
             var body = GameObject.CreatePrimitive(individual.species == "Flame" ? PrimitiveType.Cube : individual.species == "Frost" ? PrimitiveType.Sphere : PrimitiveType.Cylinder);
             body.SetActive(false);
@@ -140,6 +179,19 @@ namespace Ecosystem
             body.transform.localScale = Vector3.one * (world.Config.foraging ? 0.65f : 0.4f);
             var material = new Material(Resources.Load<Material>("WorldMaterial"));
             body.GetComponent<Renderer>().sharedMaterial = material;
+            var view = body.AddComponent<WorldIndividualView>();
+            view.World = world;
+            view.Individual = individual;
+            views.Add(individual.individual, view);
+            body.SetActive(true);
+            view.UpdateView(true);
+            return view;
+        }
+
+        private void CreateAgent(IndividualState individual)
+        {
+            var body = CreateView(individual).gameObject;
+            body.SetActive(false);
             var behavior = body.AddComponent<BehaviorParameters>();
             behavior.BehaviorName = individual.species;
             behavior.BrainParameters.VectorObservationSize = 11;
@@ -157,13 +209,14 @@ namespace Ecosystem
             agent.World = world;
             agent.Individual = individual;
             agents.Add(individual.individual, agent);
-            agent.UpdateView();
+            views[individual.individual].UpdateView();
             body.SetActive(true);
             Record("agent_joined", individual, agent.GetInstanceID());
         }
 
         private void FixedUpdate()
         {
+            if (replay != null) return;
             // 最後一次 Python 通訊仍須送出觀察，等待關閉時不再推進世界。
             foreach (var agent in agents.Values)
                 agent.RequestDecision();
@@ -172,14 +225,14 @@ namespace Ecosystem
                 return;
             if (world.State.endReason != "") return;
             world.Step(agents.ToDictionary(pair => pair.Key, pair =>
-                control == "rules" ? ForagingController.Decide(world, pair.Value.Individual)
+                control == "rules" || rulesSpecies.Contains(pair.Value.Individual.species) ? ForagingController.Decide(world, pair.Value.Individual)
                 : control == "scripted" ? scenario.Decide(pair.Key, world.State.step + 1)
                 : control == "idle" ? new WorldAction(Vector2.zero) : pair.Value.Action));
             totalSteps++;
             foreach (var agent in agents.Values)
             {
                 if (agent.Individual.health > 0) agent.AddReward(world.Config.trainingSurvivalReward);
-                agent.UpdateView();
+                views[agent.Individual.individual].UpdateView();
             }
             UpdateFoodViews();
             foreach (var birth in world.State.events.Where(value => value.kind == "born"))
@@ -195,6 +248,7 @@ namespace Ecosystem
                 agent.gameObject.SetActive(false);
                 Destroy(agent.gameObject);
                 agents.Remove(id);
+                views.Remove(id);
             }
             foreach (var individual in world.State.individuals.Where(value => !agents.ContainsKey(value.individual)))
                 CreateAgent(individual);
@@ -217,6 +271,12 @@ namespace Ecosystem
             if (world.State.endReason != "")
             {
                 Record("episode_end");
+                if (singleEpisode)
+                {
+                    output.WriteLine("{\"kind\":\"episode_complete\"}");
+                    Application.Quit();
+                    return;
+                }
                 if ((control == "python" || !world.Config.foraging || Application.isBatchMode || stepLimit > 0) && (stepLimit <= 0 || totalSteps < stepLimit)) ResetWorld();
             }
             if ((control != "python" || policyMode == "fixed") && stepLimit > 0 && totalSteps >= stepLimit)
@@ -237,6 +297,8 @@ namespace Ecosystem
             }
             for (int i = 0; i < foodViews.Count; i++)
             {
+                foodViews[i].SetActive(i < world.State.foods.Count);
+                if (i >= world.State.foods.Count) continue;
                 var food = world.State.foods[i];
                 float ratio = food.amount / food.capacity;
                 float size = !food.mature ? 0.4f : food.patch ? 2.6f : 0.9f;
@@ -302,8 +364,53 @@ namespace Ecosystem
             }
         }
 
+        private void ApplySnapshot(int index, bool clearTrail)
+        {
+            world.ReadSnapshot(replay.Read(index));
+            foreach (int id in views.Keys.Where(id => !world.State.individuals.Any(value => value.individual == id)).ToArray())
+            {
+                views[id].gameObject.SetActive(false);
+                Destroy(views[id].gameObject);
+                views.Remove(id);
+            }
+            foreach (var individual in world.State.individuals)
+            {
+                if (!views.TryGetValue(individual.individual, out var view)) view = CreateView(individual);
+                view.Individual = individual;
+                view.UpdateView(clearTrail);
+            }
+            UpdateFoodViews();
+            UpdateAreaViews();
+            UpdateProjectileViews();
+            totalSteps = index;
+            observer?.CaptureEvents();
+        }
+
+        private void SeekReplay(int index)
+        {
+            replayClock = index * world.Config.stepSeconds;
+            observer?.ClearFeedback();
+            ApplySnapshot(index, true);
+            Record("snapshot");
+        }
+
         private void Update()
         {
+            if (replay != null)
+            {
+                if (replaySeek != "")
+                {
+                    foreach (string token in replaySeek.Split(',')) SeekReplay(token == "last" ? replay.Count - 1 : int.Parse(token));
+                    replaySeek = "";
+                    Application.Quit();
+                    return;
+                }
+                replayClock = Mathf.Min(replayClock + Time.deltaTime, (replay.Count - 1) * world.Config.stepSeconds);
+                int index = Mathf.Min(replay.Count - 1, Mathf.FloorToInt(replayClock / world.Config.stepSeconds));
+                if (index != replay.Index) ApplySnapshot(index, false);
+                if (index == replay.Count - 1) observer?.Pause();
+                return;
+            }
             if (resetRequested)
             {
                 resetRequested = false;
@@ -318,10 +425,10 @@ namespace Ecosystem
 
         private void ApplyFocus(IndividualState selected)
         {
-            foreach (var agent in agents.Values)
-                foreach (var renderer in agent.GetComponentsInChildren<Renderer>())
-                    renderer.forceRenderingOff = selected != null && agent.Individual != selected && !world.CanSee(selected, agent.Individual);
-            for (int i = 0; i < foodViews.Count; i++)
+            foreach (var view in views.Values)
+                foreach (var renderer in view.GetComponentsInChildren<Renderer>())
+                    renderer.forceRenderingOff = selected != null && view.Individual != selected && !world.CanSee(selected, view.Individual);
+            for (int i = 0; i < world.State.foods.Count; i++)
             {
                 var food = world.State.foods[i];
                 foodViews[i].GetComponent<Renderer>().forceRenderingOff = selected != null &&
@@ -335,10 +442,52 @@ namespace Ecosystem
                     !world.CanSeePoint(selected, new Vector2(world.State.projectiles[i].x, world.State.projectiles[i].y));
         }
 
-        private void Record(string kind, IndividualState individual = null, int unityObject = 0) => output.WriteLine(JsonUtility.ToJson(new StepRecord
-        { run = runId, kind = kind, totalSteps = totalSteps, state = world.State, individual = individual, unityObject = unityObject }));
+        private void Record(string kind, IndividualState individual = null, int unityObject = 0)
+        {
+            string line = null;
+            if (!summaryLog || kind != "step" || (recording != null && recordEpisodes.Contains(world.State.episode)))
+                line = JsonUtility.ToJson(new StepRecord
+                { run = runId, kind = kind, totalSteps = totalSteps, state = world.State, individual = individual, unityObject = unityObject });
+            if (summaryLog && kind == "step")
+            {
+                if (world.State.events.Count > 0 || world.State.step % 50 == 0 || world.State.endReason != "")
+                    output.WriteLine(JsonUtility.ToJson(new SampleRecord { kind = "sample", totalSteps = totalSteps,
+                        step = world.State.step, time = world.State.time, events = world.State.events,
+                        statistics = world.State.statistics, foodAmount = world.State.foods.Sum(value => value.amount) }));
+            }
+            else output.WriteLine(line);
+            if (recording != null && recordEpisodes.Contains(world.State.episode)) recording.WriteLine(line);
+        }
 
-        private void OnApplicationQuit() => output?.Dispose();
+        private void OnApplicationQuit()
+        {
+            if (output != null)
+                output.WriteLine(JsonUtility.ToJson(new ResourceRecord { elapsedSeconds = elapsed.Elapsed.TotalSeconds,
+                    peakWorkingSetBytes = System.Diagnostics.Process.GetCurrentProcess().PeakWorkingSet64 }));
+            output?.Dispose();
+            recording?.Dispose();
+            replay?.Dispose();
+        }
+
+        [Serializable]
+        private sealed class ResourceRecord
+        {
+            public string kind = "resources";
+            public double elapsedSeconds;
+            public long peakWorkingSetBytes;
+        }
+
+        [Serializable]
+        private sealed class SampleRecord
+        {
+            public string kind;
+            public long totalSteps;
+            public int step;
+            public float time;
+            public List<WorldEvent> events;
+            public List<SpeciesStatistics> statistics;
+            public float foodAmount;
+        }
 
         [Serializable]
         private sealed class RunRecord

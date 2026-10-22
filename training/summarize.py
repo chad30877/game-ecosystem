@@ -3,6 +3,8 @@ import argparse
 import json
 from pathlib import Path
 
+from metrics import accumulate
+
 
 def summarize(world_log: Path):
     rounds = []
@@ -36,18 +38,7 @@ def summarize(world_log: Path):
                         metrics, age = individuals[individual["individual"]]
                         metrics["survivalSeconds"] += max(0, individual["age"] - age)
                         individuals[individual["individual"]] = (metrics, individual["age"])
-                for event in state["events"]:
-                    actor = event["parent"] if event["kind"] == "born" else event["individual"]
-                    if actor in individual_metrics:
-                        metrics = individual_metrics[actor]
-                        if event["kind"] == "ate":
-                            metrics["foodEnergy"] += event["amount"]
-                        elif event["kind"] == "born":
-                            metrics["births"] += 1
-                        elif event["rawAmount"] > 0 and event["kind"] != "shield_blocked":
-                            metrics["damageDealt"] += event["amount"]
-                    if event["rawAmount"] > 0 and event["kind"] != "shield_blocked" and event["target"] in individual_metrics:
-                        individual_metrics[event["target"]]["damageTaken"] += event["amount"]
+                accumulate(state["events"], individual_metrics)
             if record["kind"] == "agent_died":
                 individual = record["individual"]
                 metrics, age = individuals.pop(individual["individual"])

@@ -12,12 +12,16 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import threading
+import time
 import uuid
 
 import torch
 import yaml
 
 from summarize import summarize
+from recording import pack
+from resources import peak_memory, unity_child
 
 
 SPECIES = ("Flame", "Frost", "Moss")
@@ -156,7 +160,8 @@ def train(args):
     for settings in trainer_template["behaviors"].values():
         settings["max_steps"] = args.steps
     (output / "trainer.yaml").write_text(yaml.safe_dump(trainer_template), encoding="utf-8")
-    command = [sys.executable, "-m", "mlagents.trainers.learn", str(output / "trainer.yaml"),
+    launcher = "import os, runpy; print(f'WORLD_TRAINER_PID={os.getpid()}', flush=True); runpy.run_module('mlagents.trainers.learn', run_name='__main__')"
+    command = [sys.executable, "-c", launcher, str(output / "trainer.yaml"),
                "--env", str(player), "--run-id", trainer_id, "--results-dir", str(output),
                "--seed", str(seed), "--torch-device", "cpu", "--time-scale", "1" if args.visible else "20",
                "--width", "960", "--height", "720", "--max-lifetime-restarts", "0"]
@@ -174,14 +179,32 @@ def train(args):
                 "--policy-mode", "fixed" if args.observe else "training"]
     if args.observe:
         command += ["--world-steps", str(args.world_steps)]
+    if args.record_episodes:
+        command += ["--record-episodes", args.record_episodes, "--record-log", str(output / "record-source.jsonl"), "--summary-log", "true"]
     print(f"{'固定模型觀察' if args.observe else '續訓' if previous else '全新實驗'}：{manifest['experimentId']}\n輸出：{output}", flush=True)
+    wall_started = time.perf_counter()
+    trainer_peak = [0]
+    unity_peak = [0]
+    trainer_pid: list[int | None] = [None]
     with (output / "trainer.log").open("w", encoding="utf-8") as log:
         with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                               encoding="utf-8", errors="replace",
                               env={**os.environ, "PYTHONUNBUFFERED": "1", "PYTHONIOENCODING": "utf-8"}) as process:
             assert process.stdout is not None
+            stopped = threading.Event()
+            def sample_memory():
+                while not stopped.wait(0.2):
+                    value = peak_memory(trainer_pid[0]) if trainer_pid[0] is not None else None
+                    if value is not None: trainer_peak[0] = max(trainer_peak[0], value)
+                    world_pid = unity_child(trainer_pid[0]) if trainer_pid[0] is not None else None
+                    world_memory = peak_memory(world_pid) if world_pid is not None else None
+                    if world_memory is not None: unity_peak[0] = max(unity_peak[0], world_memory)
+            sampler = threading.Thread(target=sample_memory, daemon=True)
+            sampler.start()
             try:
                 for line in process.stdout:
+                    if line.startswith("WORLD_TRAINER_PID="):
+                        trainer_pid[0] = int(line.strip().split("=", 1)[1])
                     print(line, end="", flush=True)
                     log.write(line)
                     log.flush()
@@ -189,6 +212,11 @@ def train(args):
                 # Ctrl+C 同時送至 trainer；等待其 finally 寫完模型。
                 process.wait()
             exit_code = process.wait()
+            stopped.set()
+            sampler.join()
+    manifest["resources"] = {"wallSeconds": time.perf_counter() - wall_started,
+                             "unityPeakWorkingSetBytes": unity_peak[0] or None,
+                             "trainerPeakWorkingSetBytes": trainer_peak[0] or None}
     manifest["finishedAt"] = datetime.now(timezone.utc).isoformat()
     try:
         manifest["checkpoints"] = checkpoint_records(output / trainer_id)
@@ -207,6 +235,12 @@ def train(args):
         write_json(output / "training-summary.json", summarize(output / "world.jsonl"))
     if exit_code:
         raise ValueError(f"訓練失敗（{exit_code}），請查看 {output / 'trainer.log'}。已保留可讀取的 checkpoint。")
+    if args.record_episodes:
+        manifest["recordings"] = []
+        for episode in sorted(set(map(int, args.record_episodes.split(",")))):
+            manifest["recordings"].append(pack(output / "record-source.jsonl", output / f"episode-{episode}.replay.jsonl", episode,
+                                                {"experimentId": manifest["experimentId"], "checkpoints": manifest["checkpoints"], "compatibility": signature}))
+        write_json(output / "training.json", manifest)
     copies = {}
     for label, destination in (("backup", args.backup), ("history", args.history)):
         if destination:
@@ -226,6 +260,7 @@ def main():
     parser.add_argument("--config", type=Path)
     parser.add_argument("--seed", type=int)
     parser.add_argument("--steps", type=int, default=2048)
+    parser.add_argument("--record-episodes", default="")
     parser.add_argument("--observe", action="store_true")
     parser.add_argument("--world-steps", type=int, default=512)
     operation = parser.add_mutually_exclusive_group()
@@ -235,6 +270,8 @@ def main():
     parser.add_argument("--history", type=Path)
     parser.add_argument("--visible", action="store_true")
     args = parser.parse_args()
+    if args.record_episodes and (not args.observe or any(not value.isdigit() or int(value) <= 0 for value in args.record_episodes.split(","))):
+        parser.error("record-episodes 僅適用固定觀察，須為逗號分隔的正整數。")
     if args.steps <= 0:
         parser.error("訓練步數必須為正數。")
     if args.observe and (not args.resume or args.world_steps < 0 or (not args.visible and args.world_steps == 0)):

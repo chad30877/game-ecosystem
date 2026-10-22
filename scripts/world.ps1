@@ -1,5 +1,5 @@
 ﻿param(
-    [ValidateSet('build', 'manual', 'bridge', 'train', 'forage', 'observe')][string]$Mode = 'manual',
+    [ValidateSet('build', 'manual', 'bridge', 'train', 'forage', 'observe', 'replay', 'evaluate')][string]$Mode = 'manual',
     [string]$Editor = '',
     [string]$Python = '',
     [string]$OutputRoot = '',
@@ -7,6 +7,9 @@
     [int]$Steps = 512,
     [ValidateRange(1, 2147483647)][int]$TrainSteps = 2048,
     [string]$ResumeFrom = '',
+    [string]$ReplayFrom = '',
+    [string]$SeekFrames = '',
+    [string]$RecordEpisodes = '',
     [switch]$NewExperiment,
     [string]$BackupRoot = '',
     [string]$HistoryRoot = '',
@@ -28,7 +31,10 @@ $config = Join-Path $root 'training/world.json'
 if ($Mode -eq 'forage') { $config = Join-Path $root 'training/foraging.json' }
 if ($WorldConfig) { $config = (Resolve-Path -LiteralPath $WorldConfig).Path }
 if (($NewExperiment -or $BackupRoot -or $HistoryRoot) -and $Mode -ne 'train') { throw 'NewExperiment、BackupRoot 與 HistoryRoot 僅適用於 train。' }
-if ($ResumeFrom -and $Mode -notin @('train', 'observe')) { throw 'ResumeFrom 僅適用於 train 或 observe。' }
+if ($ResumeFrom -and $Mode -notin @('train', 'observe', 'evaluate')) { throw 'ResumeFrom 僅適用於 train、observe 或 evaluate。' }
+if ($RecordEpisodes -and $Mode -notin @('forage', 'observe')) { throw 'RecordEpisodes 僅適用於 forage 或 observe。' }
+if ($RecordEpisodes -and $RecordEpisodes -notmatch '^[1-9][0-9]*(,[1-9][0-9]*)*$') { throw 'RecordEpisodes 須為逗號分隔的正整數。' }
+if (($ReplayFrom -or $SeekFrames) -and $Mode -ne 'replay') { throw 'ReplayFrom 與 SeekFrames 僅適用於 replay。' }
 if ($Scenario -and $Mode -ne 'forage') { throw 'Scenario 僅適用於 forage。' }
 if ($Scenario) { $Scenario = (Resolve-Path -LiteralPath $Scenario).Path; $Controller = 'scripted' }
 $runId = '{0}-{1}-{2}' -f $Mode, (Get-Date -Format 'yyyyMMdd-HHmmss'), ([guid]::NewGuid().ToString('N').Substring(0, 8))
@@ -44,7 +50,26 @@ if ($Mode -eq 'build') {
     exit 0
 }
 if (-not (Test-Path $player)) { throw '請先執行 -Mode build。' }
-if ($Mode -eq 'bridge') {
+if ($Mode -eq 'replay') {
+    if (-not $ReplayFrom) { throw 'replay 須指定 ReplayFrom。' }
+    $ReplayFrom = (Resolve-Path -LiteralPath $ReplayFrom).Path
+    & $Python (Join-Path $root 'training/recording.py') $ReplayFrom | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw '回放驗證失敗。' }
+    New-Item -ItemType Directory $output | Out-Null
+    $arguments = @('--replay', ('"{0}"' -f $ReplayFrom), '--world-log', ('"{0}"' -f (Join-Path $output 'world.jsonl')), '-logFile', ('"{0}"' -f (Join-Path $output 'player.log')))
+    if (-not $Visible -and -not $SeekFrames) { $SeekFrames = '0,last,0' }
+    if ($SeekFrames) { $arguments += @('--replay-seek', $SeekFrames) }
+    if (-not $Visible) { $arguments += @('-batchmode', '-nographics') }
+    $launch = @{ FilePath = $player; ArgumentList = $arguments; Wait = $true; PassThru = $true }
+    if (-not $Visible) { $launch.WindowStyle = 'Hidden' }
+    $process = Start-Process @launch
+    if ($process.ExitCode -ne 0) { throw '歷史回放失敗。' }
+} elseif ($Mode -eq 'evaluate') {
+    if (-not $ResumeFrom) { throw 'evaluate 須以 ResumeFrom 指定已保存策略。' }
+    & $Python (Join-Path $root 'training/evaluate.py') --player $player --trained $ResumeFrom --output $OutputRoot
+    if ($LASTEXITCODE -ne 0) { throw '固定條件評估失敗，請查看輸出。' }
+    exit 0
+} elseif ($Mode -eq 'bridge') {
     $arguments = @((Join-Path $root 'training/bridge.py'), '--env', $player, '--config', $config, '--output', $output, '--seed', $Seed, '--steps', $Steps)
     if ($Visible) { $arguments += '--visible' }
     & $Python @arguments
@@ -59,6 +84,7 @@ if ($Mode -eq 'bridge') {
     }
     if ($WorldConfig) { $arguments += @('--config', $config) }
     if ($PSBoundParameters.ContainsKey('Seed')) { $arguments += @('--seed', $Seed) }
+    if ($RecordEpisodes) { $arguments += @('--record-episodes', $RecordEpisodes) }
     if ($ResumeFrom) { $arguments += @('--resume', $ResumeFrom) }
     if ($NewExperiment) { $arguments += '--new' }
     if ($BackupRoot) { $arguments += @('--backup', $BackupRoot) }
@@ -84,6 +110,7 @@ if ($Mode -eq 'bridge') {
     }
     if (-not $PSBoundParameters.ContainsKey('Steps')) { $Steps = if ($Visible) { 0 } else { 12000 } }
     $arguments = @('--control', $Controller, '--world-seed', $Seed,  '--world-config', ('"{0}"' -f $config), '--world-log', ('"{0}"' -f (Join-Path $output 'world.jsonl')), '--world-steps' , $Steps)
+    if ($RecordEpisodes) { $arguments += @('--record-episodes', $RecordEpisodes, '--record-log', ('"{0}"' -f (Join-Path $output 'record-source.jsonl')), '--summary-log', 'true') }
     if ($Controller -eq 'scripted') {
         if (-not $Scenario) { throw 'scripted 控制須提供 Scenario。' }
         $arguments += @('--world-scenario', ('"{0}"' -f $Scenario))
@@ -96,6 +123,12 @@ if ($Mode -eq 'bridge') {
     if (-not $Visible) { $launch.WindowStyle = 'Hidden' }
     $process = Start-Process @launch
     if ($process.ExitCode -ne 0) { throw '覓食世界執行失敗。' }
+    if ($RecordEpisodes) {
+        foreach ($episode in $RecordEpisodes.Split(',')) {
+            & $Python (Join-Path $root 'training/recording.py') (Join-Path $output 'record-source.jsonl') --output (Join-Path $output "episode-$episode.replay.jsonl") --episode $episode
+            if ($LASTEXITCODE -ne 0) { throw "第 $episode 輪回放封裝失敗，原始記錄已保留。" }
+        }
+    }
 } else {
     New-Item -ItemType Directory $output | Out-Null
     & $player --control manual --world-seed $Seed --world-config $config --world-log (Join-Path $output 'world.jsonl')

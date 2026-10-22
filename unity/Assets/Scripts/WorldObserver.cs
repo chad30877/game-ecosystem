@@ -8,6 +8,8 @@ namespace Ecosystem
     public sealed class WorldObserver : MonoBehaviour
     {
         private World world;
+        private WorldReplay replay;
+        private Action<int> seek;
         private Camera worldCamera;
         private string mode;
         private Action rebuild;
@@ -29,9 +31,11 @@ namespace Ecosystem
         private Rect inspector;
         private Vector2 scroll;
 
-        public void Initialize(World source, Camera camera, string controlMode, Action onRebuild, Action onQuit, Action<IndividualState> onFocus)
+        public void Initialize(World source, Camera camera, string controlMode, Action onRebuild, Action onQuit, Action<IndividualState> onFocus, WorldReplay history = null, Action<int> onSeek = null)
         {
             world = source;
+            replay = history;
+            seek = onSeek;
             worldCamera = camera;
             mode = controlMode;
             rebuild = onRebuild;
@@ -55,6 +59,9 @@ namespace Ecosystem
         }
 
         private IndividualState Selection => world.State.individuals.Find(value => value.individual == selected);
+
+        public void Pause() => SetPaused(true);
+        public void ClearFeedback() { feedback = notice = ""; feedbackUntil = noticeUntil = 0; }
 
         private void SetPaused(bool value)
         {
@@ -145,7 +152,7 @@ namespace Ecosystem
             GUI.skin.font = font;
             GUI.skin.label.fontSize = 16;
             GUI.skin.label.wordWrap = true;
-            toolbar = new Rect(8, 8, Screen.width - 16, 100);
+            toolbar = new Rect(8, 8, Screen.width - 16, replay == null ? 100 : 140);
             GUILayout.BeginArea(toolbar, GUI.skin.box);
             GUILayout.BeginHorizontal();
             GUILayout.Label(ModeName(), GUILayout.Width(180));
@@ -169,15 +176,23 @@ namespace Ecosystem
                 worldCamera.orthographicSize = world.Config.halfExtent + 1;
                 selected = 0;
             }
-            if (GUILayout.Button("重建世界", GUILayout.Width(88))) rebuild();
+            if (GUILayout.Button(replay == null ? "重建世界" : "回到開頭", GUILayout.Width(88))) rebuild();
             if (GUILayout.Button(mode == "training" ? "保存並結束" : "結束", GUILayout.Width(100))) quit();
             GUILayout.EndHorizontal();
             string end = world.State.endReason == "all_dead" ? "全體死亡" : world.State.endReason == "time_limit" ? "時間上限" : "";
             GUILayout.Label(end != "" ? $"本輪結束・{end}" : Time.unscaledTime < noticeUntil ? notice : selected == 0 ? "點選個體　滾輪縮放" : "個體視野・點選空白或全景返回");
+            if (replay != null)
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.Label($"{replay.Index + 1} / {replay.Count}　{replay.Bytes / 1048576f:F1} MB", GUILayout.Width(230));
+                int index = Mathf.RoundToInt(GUILayout.HorizontalSlider(replay.Index, 0, replay.Count - 1));
+                if (index != replay.Index) seek(index);
+                GUILayout.EndHorizontal();
+            }
             GUILayout.EndArea();
             var individual = Selection;
             if (individual == null) return;
-            inspector = new Rect(Screen.width - Mathf.Min(360, Screen.width - 16) - 8, 116, Mathf.Min(360, Screen.width - 16), Screen.height - 124);
+            inspector = new Rect(Screen.width - Mathf.Min(360, Screen.width - 16) - 8, toolbar.yMax + 8, Mathf.Min(360, Screen.width - 16), Screen.height - toolbar.yMax - 16);
             GUILayout.BeginArea(inspector, GUI.skin.box);
             scroll = GUILayout.BeginScrollView(scroll);
             GUILayout.Label($"#{individual.individual}　{SpeciesName(individual.species)}");
@@ -241,7 +256,7 @@ namespace Ecosystem
 
         private string ModeName() => mode switch
         {
-            "training" => "學習更新", "fixed" => "固定模型・不更新", "rules" => "規則控制", "idle" => "靜止控制",
+            "replay" => "歷史回放・唯讀", "training" => "學習更新", "fixed" => "固定模型・不更新", "rules" => "規則控制", "idle" => "靜止控制",
             "scripted" => "指定動作", _ => "手動控制"
         };
 
