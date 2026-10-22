@@ -504,7 +504,7 @@ namespace Ecosystem
             public string device;
             public string control;
             public string policyMode;
-            public string rules = "perception-v3";
+            public string rules = "perception-v4";
             public WorldConfig config;
             public WorldScenario scenario;
         }

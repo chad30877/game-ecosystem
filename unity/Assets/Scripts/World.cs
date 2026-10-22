@@ -33,6 +33,14 @@ namespace Ecosystem
     public enum FoodPhase { Available, Resting, Recovering }
     public enum FoodGrowthType { Small, Large }
 
+    public static class ScanReasons
+    {
+        public const string Energy = "energy";
+        public const string Escape = "escape";
+        public const string Threat = "threat";
+        public const string StaleDirection = "stale_direction";
+    }
+
     [Serializable]
     public sealed class WorldConfig
     {
@@ -185,6 +193,7 @@ namespace Ecosystem
         public List<MovementBiasState> movementBiases = new List<MovementBiasState>();
         public List<AreaMemory> areaMemory = new List<AreaMemory>();
         public List<FoodMemory> foodMemory = new List<FoodMemory>();
+        public List<FoodMemory> visibleFoods = new List<FoodMemory>();
         public int explorationTargetX = -1;
         public int explorationTargetY = -1;
         public float[] directionLastSeenAt = new float[8];
@@ -609,9 +618,9 @@ namespace Ecosystem
             }
             var threat = individual.perception.Find(value => value.species != individual.species &&
                 Vector2.Distance(CombatRules.Position(individual), new Vector2(value.x, value.y)) <= Config.scanThreatRadius);
-            string reason = individual.energy <= Config.scanEnergyThreshold ? "energy"
-                : individual.dashRemaining > 0 ? "escape"
-                : threat != null ? "threat" : "";
+            string reason = individual.energy <= Config.scanEnergyThreshold ? ScanReasons.Energy
+                : individual.dashRemaining > 0 ? ScanReasons.Escape
+                : threat != null ? ScanReasons.Threat : "";
             if (reason != "")
             {
                 individual.scanDeferred = true;
@@ -628,7 +637,7 @@ namespace Ecosystem
             if (Mathf.Abs(delta) < 1f) return 0;
             individual.actualTurn = delta > 0 ? 1 : -1;
             individual.scanIntervened = true;
-            individual.scanReason = "stale_direction";
+            individual.scanReason = ScanReasons.StaleDirection;
             return individual.actualTurn;
         }
 
@@ -778,6 +787,7 @@ namespace Ecosystem
                 {
                     individual.areaMemory.Clear();
                     individual.foodMemory.Clear();
+                    individual.visibleFoods.Clear();
                     Array.Clear(individual.directionLastSeenAt, 0, individual.directionLastSeenAt.Length);
                     individual.explorationTargetX = individual.explorationTargetY = -1;
                     individual.scanTargetSector = -1;
@@ -862,6 +872,7 @@ namespace Ecosystem
 
         private void RefreshFoodMemory(IndividualState observer)
         {
+            observer.visibleFoods.Clear();
             foreach (var known in observer.foodMemory) known.visible = false;
             foreach (var food in State.foods)
             {
@@ -876,6 +887,7 @@ namespace Ecosystem
                 known.phase = food.phase;
                 known.visible = true;
                 known.lastSeenAt = State.time;
+                observer.visibleFoods.Add(known);
             }
             observer.foodMemory.RemoveAll(value => !value.visible && CanSeePoint(observer, new Vector2(value.x, value.y)));
             if (observer.foodMemory.Count <= Config.foodMemoryLimit) return;

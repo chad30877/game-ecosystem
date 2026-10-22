@@ -216,7 +216,7 @@ namespace Ecosystem
             if (individual.scanIntervened) GUILayout.Label($"掃視　{individual.rawTurn} → {individual.actualTurn}");
             else if (individual.scanDeferred) GUILayout.Label($"掃視暫緩　{ScanReason(individual.scanReason)}　{individual.scanDeferredSeconds:F1}s");
             GUILayout.Label($"可見 {individual.perception.Count(value => value.visible)}　警戒記憶 {individual.perception.Count(value => !value.visible)}　區域 {individual.areaMemory.Count}");
-            foreach (var food in individual.foodMemory)
+            foreach (var food in individual.visibleFoods.Concat(individual.foodMemory.Where(value => !value.visible)))
                 GUILayout.Label($"食物 ({food.x:F1}, {food.y:F1})　{(food.visible ? "可見" : world.State.time - food.lastSeenAt >= world.Config.foodMemorySeconds ? "舊情報" : "記憶")}　{(food.mature && food.phase == FoodPhase.Available ? "可採" : food.phase == FoodPhase.Resting ? "休養" : "成長中")}　{food.amount:F1}");
             foreach (var entity in individual.perception.Where(value => !value.visible))
                 GUILayout.Label($"{SpeciesName(entity.species)} 最後位置 ({entity.x:F1}, {entity.y:F1})　{entity.age:F1}s 前");
@@ -271,7 +271,10 @@ namespace Ecosystem
         };
 
         private static string DeathName(string cause) => cause == "old_age" ? "老死" : cause == "starved" ? "飢餓" : "戰鬥";
-        private static string ScanReason(string reason) => reason == "energy" ? "能量不足" : reason == "escape" ? "撤退中" : "近迫威脅";
+        private static string ScanReason(string reason) => reason switch
+        {
+            ScanReasons.Energy => "能量不足", ScanReasons.Escape => "撤退中", ScanReasons.Threat => "近迫威脅", _ => reason
+        };
         private static string SpeciesName(string species) => species == "Flame" ? "炎角獸" : species == "Frost" ? "霜羽獸" : "苔靈";
         private static string EffectName(string kind) => kind switch
         {

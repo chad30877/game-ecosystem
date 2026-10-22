@@ -51,7 +51,7 @@ namespace Ecosystem
                     case WorldSkill.EntanglingRoots: if (distance <= c.rootsRange) return slot; break;
                     case WorldSkill.SporeSmoke: if (distance <= c.smokeRadius) return slot; break;
                     case WorldSkill.Cultivate:
-                        if (individual.foodMemory.Exists(food => food.visible && food.mature && food.phase != FoodPhase.Resting && food.amount < food.capacity &&
+                        if (individual.visibleFoods.Exists(food => food.mature && food.phase != FoodPhase.Resting && food.amount < food.capacity &&
                             Vector2.Distance(position, new Vector2(food.x, food.y)) <= c.cultivateRange)) return slot;
                         break;
                     case WorldSkill.Sow:
@@ -78,7 +78,7 @@ namespace Ecosystem
             var position = new Vector2(individual.x, individual.y);
             FoodMemory target = null;
             float best = float.PositiveInfinity;
-            foreach (var food in individual.foodMemory)
+            foreach (var food in individual.visibleFoods.Concat(individual.foodMemory.Where(value => !value.visible)))
             {
                 float distance = Vector2.Distance(position, new Vector2(food.x, food.y));
                 float age = world.State.time - food.lastSeenAt;
@@ -105,7 +105,9 @@ namespace Ecosystem
             int columns = Mathf.CeilToInt(config.halfExtent * 2 / config.explorationCellSize);
             bool targetKnown = individual.areaMemory.Exists(value => value.cellX == individual.explorationTargetX &&
                 value.cellY == individual.explorationTargetY && world.State.time - value.lastSeenAt < config.areaMemorySeconds);
-            if (individual.explorationTargetX < 0 || targetKnown)
+            bool targetReached = individual.explorationTargetX >= 0 &&
+                Vector2.Distance(position, world.ExplorationCellCenter(individual.explorationTargetX, individual.explorationTargetY)) < config.forageRadius;
+            if (individual.explorationTargetX < 0 || targetKnown || targetReached)
             {
                 float best = float.PositiveInfinity;
                 individual.explorationTargetX = individual.explorationTargetY = -1;
