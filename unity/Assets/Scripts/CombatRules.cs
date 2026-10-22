@@ -240,13 +240,20 @@ namespace Ecosystem
             {
                 if (individual.health <= 0 || state.time >= individual.cultivateUntil) continue;
                 var food = state.foods.Find(value => value.food == individual.cultivatingFood);
-                if (food == null || !food.mature || cultivatedFoods.Contains(food.food) || Vector2.Distance(Position(individual), new Vector2(food.x, food.y)) > config.combat.cultivateRange) continue;
+                if (food == null || !food.mature || food.phase == FoodPhase.Resting || cultivatedFoods.Contains(food.food) || Vector2.Distance(Position(individual), new Vector2(food.x, food.y)) > config.combat.cultivateRange) continue;
                 float grown = Mathf.Min(food.capacity - food.amount, config.combat.cultivateRate *
                     Mathf.Min(config.stepSeconds, individual.cultivateUntil - state.time));
                 if (grown <= 0) continue;
                 cultivatedFoods.Add(food.food);
                 food.amount += grown;
                 state.events.Add(new WorldEvent { kind = "cultivated", individual = individual.individual, food = food.food, amount = grown });
+                float threshold = food.capacity * (food.growthType == FoodGrowthType.Large
+                    ? config.largeFood.recoveryFraction : config.smallFood.recoveryFraction);
+                if (food.phase == FoodPhase.Recovering && food.amount >= threshold)
+                {
+                    food.phase = FoodPhase.Available;
+                    state.events.Add(new WorldEvent { kind = "food_available", food = food.food, x = food.x, y = food.y });
+                }
             }
         }
 

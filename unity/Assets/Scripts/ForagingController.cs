@@ -51,7 +51,7 @@ namespace Ecosystem
                     case WorldSkill.EntanglingRoots: if (distance <= c.rootsRange) return slot; break;
                     case WorldSkill.SporeSmoke: if (distance <= c.smokeRadius) return slot; break;
                     case WorldSkill.Cultivate:
-                        if (world.State.foods.Exists(food => food.mature && food.amount < food.capacity &&
+                        if (world.State.foods.Exists(food => food.mature && food.phase != FoodPhase.Resting && food.amount < food.capacity &&
                             Vector2.Distance(position, new Vector2(food.x, food.y)) <= Mathf.Min(c.cultivateRange, world.Config.observationRadius))) return slot;
                         break;
                     case WorldSkill.Sow:
@@ -81,7 +81,7 @@ namespace Ecosystem
             foreach (var food in world.State.foods)
             {
                 float distance = Vector2.Distance(position, new Vector2(food.x, food.y));
-                if (food.mature && food.amount > 0.01f && distance <= nearest)
+                if (food.mature && food.phase == FoodPhase.Available && food.amount > 0.01f && distance <= nearest)
                 {
                     nearest = distance;
                     target = food;

@@ -5,6 +5,27 @@ using UnityEngine;
 namespace Ecosystem
 {
     [Serializable]
+    public sealed class FoodGrowthConfig
+    {
+        public float capacity;
+        public float growthRate;
+        public float restSeconds;
+        public float lifetimeSeconds;
+        public float recoveryFraction = 0.25f;
+
+        public void Validate()
+        {
+            if (!float.IsFinite(capacity) || capacity <= 0 || !float.IsFinite(growthRate) || growthRate <= 0 ||
+                !float.IsFinite(restSeconds) || restSeconds <= 0 || !float.IsFinite(lifetimeSeconds) || lifetimeSeconds <= 0 ||
+                !float.IsFinite(recoveryFraction) || recoveryFraction <= 0 || recoveryFraction > 1)
+                throw new ArgumentException("食物生長類型參數無效。");
+        }
+    }
+
+    public enum FoodPhase { Available, Resting, Recovering }
+    public enum FoodGrowthType { Small, Large }
+
+    [Serializable]
     public sealed class WorldConfig
     {
         public float halfExtent = 5f;
@@ -16,10 +37,15 @@ namespace Ecosystem
         public int removeStep = 64;
         public int addStep = 96;
         public bool foraging;
-        public float foodCapacity = 30f;
-        public float foodInitial = 20f;
-        public float foodRegeneration = 4f;
+        public FoodGrowthConfig smallFood = new FoodGrowthConfig { capacity = 15f, growthRate = 0.75f, restSeconds = 10f, lifetimeSeconds = 120f };
+        public FoodGrowthConfig largeFood = new FoodGrowthConfig { capacity = 30f, growthRate = 1.5f, restSeconds = 25f, lifetimeSeconds = 240f };
+        public float foodInitialFraction = 0.67f;
         public int foodSourceLimit = 64;
+        public int naturalFoodLimit = 16;
+        public float naturalSpawnInterval = 10f;
+        public int naturalSpawnBatch = 2;
+        public float naturalFoodSpacing = 1f;
+        public float newFoodFraction = 0.05f;
         public float forageRadius = 0.7f;
         public float forageRate = 12f;
         public float initialEnergy = 60f;
@@ -39,15 +65,22 @@ namespace Ecosystem
 
         public void Validate()
         {
+            if (foraging)
+            {
+                (smallFood ?? throw new ArgumentException("缺少小型生長類型。")).Validate();
+                (largeFood ?? throw new ArgumentException("缺少大型生長類型。")).Validate();
+            }
             if (!float.IsFinite(halfExtent) || halfExtent <= 0 ||
                 !float.IsFinite(speed) || speed <= 0 ||
                 !float.IsFinite(stepSeconds) || stepSeconds <= 0 ||
                 !float.IsFinite(observationRadius) || observationRadius <= 0 || episodeSteps <= 0 ||
                 individualsPerSpecies < 1 || (!foraging && (individualsPerSpecies < 2 || removeStep <= 0 || addStep <= removeStep || addStep >= episodeSteps)))
                 throw new ArgumentException("世界配置須為有限正數、每物種至少兩隻，且 0 < removeStep < addStep < episodeSteps。");
-            if (foraging && (!float.IsFinite(foodCapacity) || foodCapacity <= 0 ||
-                foodSourceLimit < 16 || !float.IsFinite(foodInitial) || foodInitial < 0 || foodInitial > foodCapacity ||
-                !float.IsFinite(foodRegeneration) || foodRegeneration < 0 ||
+            if (foraging && (foodSourceLimit < 1 || naturalFoodLimit < 0 || naturalFoodLimit > foodSourceLimit ||
+                !float.IsFinite(naturalSpawnInterval) || naturalSpawnInterval <= 0 || naturalSpawnBatch <= 0 ||
+                !float.IsFinite(naturalFoodSpacing) || naturalFoodSpacing <= 0 || naturalFoodSpacing > halfExtent * 2 ||
+                !float.IsFinite(newFoodFraction) || newFoodFraction < 0 || newFoodFraction >= smallFood.recoveryFraction ||
+                !float.IsFinite(foodInitialFraction) || foodInitialFraction < 0 || foodInitialFraction > 1 ||
                 !float.IsFinite(forageRadius) || forageRadius <= 0 ||
                 !float.IsFinite(forageRate) || forageRate <= 0 ||
                 !float.IsFinite(initialEnergy) || initialEnergy < 0 || initialEnergy > 100 ||
@@ -156,6 +189,11 @@ namespace Ecosystem
         public float y;
         public float amount;
         public float capacity;
+        public FoodGrowthType growthType;
+        public FoodPhase phase;
+        public float restUntil;
+        public float bornAt;
+        public bool natural;
         public bool mature = true;
         public float matureAt;
     }
@@ -237,6 +275,7 @@ namespace Ecosystem
         public List<ProjectileState> projectiles = new List<ProjectileState>();
         public int nextProjectile;
         public int nextFood;
+        public float nextNaturalSpawnAt;
         public int nextArea;
         public List<AreaState> areas = new List<AreaState>();
     }
@@ -311,22 +350,17 @@ namespace Ecosystem
                     AddIndividual(species, balancedLoadout: true);
             if (Config.foraging)
             {
-                for (int i = 0; i < 16; i++)
+                for (int i = 0; i < Mathf.Min(4, Config.naturalFoodLimit); i++)
                 {
-                    bool patch = i < 4;
-                    float scale = patch ? 1f : 0.25f;
-                    State.foods.Add(new FoodState
-                    {
-                        food = i + 1, patch = patch,
-                        x = patch ? (i % 2 == 0 ? -1 : 1) * Config.halfExtent * 0.45f
-                            : (float)(random.NextDouble() * 2 - 1) * Config.halfExtent * 0.9f,
-                        y = patch ? (i < 2 ? -1 : 1) * Config.halfExtent * 0.45f
-                            : (float)(random.NextDouble() * 2 - 1) * Config.halfExtent * 0.9f,
-                        capacity = Config.foodCapacity * scale, amount = Config.foodInitial * scale
-                    });
+                    var position = new Vector2((i % 2 == 0 ? -1 : 1) * Config.halfExtent * 0.45f,
+                        (i < 2 ? -1 : 1) * Config.halfExtent * 0.45f);
+                    if (!State.foods.Exists(value => Vector2.Distance(position, new Vector2(value.x, value.y)) < Config.naturalFoodSpacing))
+                        AddNaturalFood(position, FoodGrowthType.Large, true, 0);
                 }
+                for (int i = 4; i < Config.naturalFoodLimit && State.foods.Count < Config.foodSourceLimit; i++)
+                    TryAddNaturalFood(initial: true, time: 0);
+                State.nextNaturalSpawnAt = Config.naturalSpawnInterval;
             }
-            State.nextFood = State.foods.Count;
             UpdateIncompleteLives();
             RefreshPerception();
             return State;
@@ -380,15 +414,7 @@ namespace Ecosystem
                     throw new ArgumentException("每隻個體都必須取得有限數值的動作。");
             State.events.Clear();
             float time = (State.step + 1) * Config.stepSeconds;
-            foreach (var food in State.foods)
-            {
-                if (!food.mature && time >= food.matureAt)
-                {
-                    food.mature = true;
-                    State.events.Add(new WorldEvent { kind = "food_matured", food = food.food, x = food.x, y = food.y });
-                }
-                if (food.mature) food.amount = Mathf.Min(food.capacity, food.amount + Config.foodRegeneration * Config.stepSeconds * (food.patch ? 1f : 0.25f));
-            }
+            AdvanceFood(time);
             if (Config.foraging)
             {
                 CombatRules.BeginStep(Config, State, actions);
@@ -423,13 +449,20 @@ namespace Ecosystem
                 individual.energy = Mathf.Max(0, individual.energy - Config.idleCost * Config.stepSeconds - Config.movementCost * distance);
                 if (individual.health > 0 && actions[individual.individual].forage)
                     foreach (var food in State.foods)
-                        if (food.mature && Vector2.Distance(CombatRules.Position(individual), new Vector2(food.x, food.y)) <= Config.forageRadius)
+                        if (food.mature && food.phase == FoodPhase.Available && Vector2.Distance(CombatRules.Position(individual), new Vector2(food.x, food.y)) <= Config.forageRadius)
                         {
                             float eaten = Mathf.Min(food.amount, Config.forageRate * Config.stepSeconds, 100f - individual.energy);
                             if (eaten <= 0) continue;
                             food.amount -= eaten;
                             individual.energy += eaten;
                             State.events.Add(new WorldEvent { kind = "ate", individual = individual.individual, food = food.food, amount = eaten });
+                            if (food.amount <= 0.00001f)
+                            {
+                                food.amount = 0;
+                                food.phase = FoodPhase.Resting;
+                                food.restUntil = time + Growth(food).restSeconds;
+                                State.events.Add(new WorldEvent { kind = "food_depleted", food = food.food, x = food.x, y = food.y });
+                            }
                             break;
                         }
                 if (individual.health > 0 && individual.energy <= 0)
@@ -491,6 +524,78 @@ namespace Ecosystem
         }
 
         private SpeciesStatistics Statistics(string species) => State.statistics.Find(value => value.species == species);
+
+        private FoodGrowthConfig Growth(FoodState food) => food.growthType == FoodGrowthType.Large ? Config.largeFood : Config.smallFood;
+
+        private void AdvanceFood(float time)
+        {
+            for (int i = State.foods.Count - 1; i >= 0; i--)
+            {
+                var expired = State.foods[i];
+                if (time < expired.bornAt + Growth(expired).lifetimeSeconds) continue;
+                State.foods.RemoveAt(i);
+                foreach (var individual in State.individuals)
+                    if (individual.cultivatingFood == expired.food)
+                    {
+                        individual.cultivatingFood = 0;
+                        individual.cultivateUntil = 0;
+                        individual.cultivateRemaining = 0;
+                    }
+                State.events.Add(new WorldEvent { kind = "food_expired", food = expired.food, x = expired.x, y = expired.y });
+            }
+            foreach (var food in State.foods)
+            {
+                if (!food.mature && time >= food.matureAt)
+                {
+                    food.mature = true;
+                    State.events.Add(new WorldEvent { kind = "food_matured", food = food.food, x = food.x, y = food.y });
+                }
+                if (!food.mature || food.phase == FoodPhase.Resting && time < food.restUntil) continue;
+                if (food.phase == FoodPhase.Resting)
+                {
+                    food.phase = FoodPhase.Recovering;
+                    State.events.Add(new WorldEvent { kind = "food_recovering", food = food.food, x = food.x, y = food.y });
+                }
+                food.amount = Mathf.Min(food.capacity, food.amount + Growth(food).growthRate * Config.stepSeconds);
+                if (food.phase == FoodPhase.Recovering && food.amount >= food.capacity * Growth(food).recoveryFraction)
+                {
+                    food.phase = FoodPhase.Available;
+                    State.events.Add(new WorldEvent { kind = "food_available", food = food.food, x = food.x, y = food.y });
+                }
+            }
+            if (Config.foraging && time >= State.nextNaturalSpawnAt)
+            {
+                State.nextNaturalSpawnAt = time + Config.naturalSpawnInterval;
+                int missing = Config.naturalFoodLimit - State.foods.FindAll(value => value.natural).Count;
+                for (int i = 0; i < Mathf.Min(missing, Config.naturalSpawnBatch) && State.foods.Count < Config.foodSourceLimit; i++)
+                    TryAddNaturalFood(initial: false, time: time);
+            }
+        }
+
+        private bool TryAddNaturalFood(bool initial, float time)
+        {
+            for (int attempt = 0; attempt < 32; attempt++)
+            {
+                var point = new Vector2((float)(random.NextDouble() * 2 - 1) * Config.halfExtent * 0.9f,
+                    (float)(random.NextDouble() * 2 - 1) * Config.halfExtent * 0.9f);
+                if (State.foods.Exists(value => Vector2.Distance(point, new Vector2(value.x, value.y)) < Config.naturalFoodSpacing)) continue;
+                AddNaturalFood(point, FoodGrowthType.Small, initial, time);
+                return true;
+            }
+            return false;
+        }
+
+        private void AddNaturalFood(Vector2 position, FoodGrowthType type, bool initial, float time)
+        {
+            var growth = type == FoodGrowthType.Large ? Config.largeFood : Config.smallFood;
+            var food = new FoodState { food = ++State.nextFood, natural = true, patch = type == FoodGrowthType.Large,
+                growthType = type, x = position.x, y = position.y, capacity = growth.capacity,
+                amount = growth.capacity * (initial ? Config.foodInitialFraction : Config.newFoodFraction),
+                phase = initial && Config.foodInitialFraction >= growth.recoveryFraction ? FoodPhase.Available : FoodPhase.Recovering,
+                bornAt = time };
+            State.foods.Add(food);
+            if (!initial) State.events.Add(new WorldEvent { kind = "food_spawned", food = food.food, x = food.x, y = food.y });
+        }
 
         private void UpdateIncompleteLives()
         {
@@ -607,7 +712,7 @@ namespace Ecosystem
                 var delta = new Vector2(food.x - individual.x, food.y - individual.y);
                 if (delta.sqrMagnitude > Config.observationRadius * Config.observationRadius) continue;
                 yield return new[] { 0f, delta.x / Config.observationRadius, delta.y / Config.observationRadius,
-                    0f, 0f, food.mature ? 1f : 0f, food.capacity > 0 ? food.amount / food.capacity : 0f };
+                    0f, 0f, food.mature && food.phase == FoodPhase.Available ? 1f : 0f, food.capacity > 0 ? food.amount / food.capacity : 0f };
             }
         }
     }

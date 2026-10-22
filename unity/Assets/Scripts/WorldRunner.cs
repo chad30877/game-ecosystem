@@ -301,9 +301,13 @@ namespace Ecosystem
                 if (i >= world.State.foods.Count) continue;
                 var food = world.State.foods[i];
                 float ratio = food.amount / food.capacity;
-                float size = !food.mature ? 0.4f : food.patch ? 2.6f : 0.9f;
+                float size = !food.mature ? 0.4f : food.patch ? 2.6f : food.natural ? 0.9f : 0.7f;
+                foodViews[i].transform.position = new Vector3(food.x, food.y, 0.3f);
                 foodViews[i].transform.localScale = new Vector3(size * (0.3f + ratio * 0.7f), 0.03f, size * (0.3f + ratio * 0.7f));
-                foodViews[i].GetComponent<Renderer>().sharedMaterial.color = !food.mature ? new Color(0.45f, 0.3f, 0.15f) : Color.Lerp(new Color(0.15f, 0.18f, 0.12f), new Color(0.95f, 0.8f, 0.25f), ratio);
+                foodViews[i].GetComponent<Renderer>().sharedMaterial.color = !food.mature ? new Color(0.45f, 0.3f, 0.15f)
+                    : food.phase == FoodPhase.Resting ? new Color(0.22f, 0.18f, 0.16f)
+                    : food.phase == FoodPhase.Recovering ? (food.natural ? new Color(0.38f, 0.55f, 0.24f) : new Color(0.22f, 0.52f, 0.52f))
+                    : Color.Lerp(new Color(0.15f, 0.18f, 0.12f), food.natural ? new Color(0.95f, 0.8f, 0.25f) : new Color(0.25f, 0.9f, 0.8f), ratio);
             }
         }
 
@@ -499,7 +503,7 @@ namespace Ecosystem
             public string device;
             public string control;
             public string policyMode;
-            public string rules = "skills-v1";
+            public string rules = "resources-v2";
             public WorldConfig config;
             public WorldScenario scenario;
         }

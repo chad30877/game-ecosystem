@@ -98,7 +98,7 @@ if ($Mode -eq 'replay') {
     if ($ReloadRun) {
         if ($WorldConfig -or $Scenario -or $PSBoundParameters.ContainsKey('Seed') -or $PSBoundParameters.ContainsKey('Controller')) { throw 'ReloadRun 不可同時指定 WorldConfig、Scenario、Seed 或 Controller。' }
         $record = Get-Content -LiteralPath $ReloadRun -TotalCount 1 | ConvertFrom-Json
-        if ($record.kind -ne 'run' -or $record.rules -ne 'skills-v1' -or -not $record.config.foraging) { throw '不是相容的執行紀錄（須為 skills-v1）。' }
+        if ($record.kind -ne 'run' -or $record.rules -ne 'resources-v2' -or -not $record.config.foraging) { throw '不是相容的執行紀錄（須為 resources-v2）。' }
         $Seed = [int]$record.seed
         $Controller = $record.control
         $config = Join-Path $output 'world-config.json'

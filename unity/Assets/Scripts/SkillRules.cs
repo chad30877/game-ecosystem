@@ -90,7 +90,9 @@ namespace Ecosystem
                             Vector2.Distance(new Vector2(value.x, value.y), action.aim) <= value.radius) ||
                         !Spend(state, individual, slot, energy, c.sowCooldown, "sow")) return false;
                     var seed = new FoodState { food = ++state.nextFood, x = action.aim.x, y = action.aim.y,
-                        capacity = config.foodCapacity * 0.25f, mature = false, matureAt = state.time + c.sowMaturity };
+                        growthType = FoodGrowthType.Small, capacity = config.smallFood.capacity,
+                        phase = FoodPhase.Recovering, mature = false, matureAt = state.time + c.sowMaturity,
+                        bornAt = state.time };
                     state.foods.Add(seed);
                     state.events[state.events.Count - 1].food = seed.food;
                     state.events[state.events.Count - 1].x = seed.x;
@@ -112,7 +114,7 @@ namespace Ecosystem
                     foreach (var food in state.foods)
                     {
                         float distance = Vector2.Distance(CombatRules.Position(individual), new Vector2(food.x, food.y));
-                        if (distance > nearest || !food.mature || food.amount >= food.capacity) continue;
+                        if (distance > nearest || !food.mature || food.phase == FoodPhase.Resting || food.amount >= food.capacity) continue;
                         nearest = distance;
                         foodTarget = food;
                     }
