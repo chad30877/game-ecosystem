@@ -16,6 +16,7 @@
     [string]$WorldConfig = '',
     [string]$ReloadRun = '',
     [string]$Scenario = '',
+    [string]$RulesSpecies = '',
     [switch]$Visible,
     [ValidateSet('rules', 'idle', 'manual', 'scripted')][string]$Controller = 'rules'
 )
@@ -35,6 +36,7 @@ if ($ResumeFrom -and $Mode -notin @('train', 'observe', 'evaluate')) { throw 'Re
 if ($RecordEpisodes -and $Mode -notin @('forage', 'observe')) { throw 'RecordEpisodes 僅適用於 forage 或 observe。' }
 if ($RecordEpisodes -and $RecordEpisodes -notmatch '^[1-9][0-9]*(,[1-9][0-9]*)*$') { throw 'RecordEpisodes 須為逗號分隔的正整數。' }
 if (($ReplayFrom -or $SeekFrames) -and $Mode -ne 'replay') { throw 'ReplayFrom 與 SeekFrames 僅適用於 replay。' }
+if ($RulesSpecies -and ($Mode -ne 'forage' -or @($RulesSpecies.Split(',') | Where-Object { $_ -notin @('Flame', 'Frost', 'Moss') }).Count -gt 0)) { throw 'RulesSpecies 僅適用 forage 且須為逗號分隔的有效物種。' }
 if ($Scenario -and $Mode -ne 'forage') { throw 'Scenario 僅適用於 forage。' }
 if ($Scenario) { $Scenario = (Resolve-Path -LiteralPath $Scenario).Path; if (-not $PSBoundParameters.ContainsKey('Controller')) { $Controller = 'scripted' } }
 $runId = '{0}-{1}-{2}' -f $Mode, (Get-Date -Format 'yyyyMMdd-HHmmss'), ([guid]::NewGuid().ToString('N').Substring(0, 8))
@@ -96,11 +98,12 @@ if ($Mode -eq 'replay') {
 } elseif ($Mode -eq 'forage') {
     New-Item -ItemType Directory $output | Out-Null
     if ($ReloadRun) {
-        if ($WorldConfig -or $Scenario -or $PSBoundParameters.ContainsKey('Seed') -or $PSBoundParameters.ContainsKey('Controller')) { throw 'ReloadRun 不可同時指定 WorldConfig、Scenario、Seed 或 Controller。' }
+        if ($WorldConfig -or $Scenario -or $RulesSpecies -or $PSBoundParameters.ContainsKey('Seed') -or $PSBoundParameters.ContainsKey('Controller')) { throw 'ReloadRun 不可同時指定 WorldConfig、Scenario、Seed 或 Controller。' }
         $record = Get-Content -LiteralPath $ReloadRun -TotalCount 1 | ConvertFrom-Json
-        if ($record.kind -ne 'run' -or $record.rules -ne 'survival-v8' -or -not $record.config.foraging) { throw '不是相容的執行紀錄（須為 survival-v8）。' }
+        if ($record.kind -ne 'run' -or $record.rules -ne 'survival-v9' -or -not $record.config.foraging) { throw '不是相容的執行紀錄（須為 survival-v9）。' }
         $Seed = [int]$record.seed
         $Controller = $record.control
+        $RulesSpecies = @($record.rulesSpecies | Where-Object { $_ }) -join ","
         $config = Join-Path $output 'world-config.json'
         [IO.File]::WriteAllText($config, ($record.config | ConvertTo-Json -Depth 5), [Text.UTF8Encoding]::new($false))
         if ($Controller -eq 'scripted') {
@@ -111,6 +114,7 @@ if ($Mode -eq 'replay') {
     if (-not $PSBoundParameters.ContainsKey('Steps')) { $Steps = if ($Visible) { 0 } else { 12000 } }
     $arguments = @('--control', $Controller, '--world-seed', $Seed,  '--world-config', ('"{0}"' -f $config), '--world-log', ('"{0}"' -f (Join-Path $output 'world.jsonl')), '--world-steps' , $Steps)
     if ($RecordEpisodes) { $arguments += @('--record-episodes', $RecordEpisodes, '--record-log', ('"{0}"' -f (Join-Path $output 'record-source.jsonl')), '--summary-log', 'true') }
+    if ($RulesSpecies) { $arguments += @('--rules-species', $RulesSpecies) }
     if ($Controller -eq 'scripted' -and -not $Scenario) { throw 'scripted 控制須提供 Scenario。' }
     if ($Scenario) { $arguments += @('--world-scenario', ('"{0}"' -f $Scenario)) }
     if (-not $Visible) {

@@ -18,12 +18,14 @@ def pack(source: Path, destination: Path, episode: int, model=None):
     complete = False
     with source.open(encoding="utf-8-sig") as log, temporary.open("xb") as output:
         run = json.loads(next(log))
-        if run.get("kind") != "run" or run.get("rules") != "survival-v8" or not run["config"]["foraging"]:
+        if run.get("kind") != "run" or run.get("rules") != "survival-v9" or not run["config"]["foraging"]:
             raise ValueError("記錄缺少相容的世界設定。")
         header = {"kind": "replay", "schemaVersion": 1, "rules": run["rules"],
                   "config": run["config"], "seed": run["seed"], "episode": episode,
                   "sourceRun": run["run"], "control": run["control"],
-                  "policyMode": run.get("policyMode"), "model": model}
+                  "policyMode": run.get("policyMode"), "model": model,
+                  "scenario": run.get("scenario"), "rulesSpecies": run.get("rulesSpecies", []),
+                  "resourceOrder": ["health", "stamina", "mana", "satiety"]}
         def write(value):
             data = encode(value)
             output.write(data)
@@ -64,7 +66,7 @@ def validate(path: Path):
     with path.open("rb") as source:
         raw = next(source)
         header = json.loads(raw)
-        if header.get("kind") != "replay" or header.get("schemaVersion") != 1 or header.get("rules") != "survival-v8":
+        if header.get("kind") != "replay" or header.get("schemaVersion") != 1 or header.get("rules") != "survival-v9":
             raise ValueError("不相容的回放版本。")
         digest.update(raw)
         for raw in source:

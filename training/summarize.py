@@ -13,6 +13,7 @@ def summarize(world_log: Path):
     individual_metrics = {}
     last_state = None
     world_steps = 0
+    life_records = {}
     with world_log.open(encoding="utf-8-sig") as source:
         for line in source:
             record = json.loads(line)
@@ -20,6 +21,17 @@ def summarize(world_log: Path):
                 continue
             state = record["state"]
             last_state = state
+            for individual in state.get("individuals", []):
+                if "ledger" in individual:
+                    life_records[individual["individual"]] = {"individual": individual["individual"], "species": individual["species"],
+                        "initialAdult": individual["initialAdult"], "observedSeconds": individual["observedSeconds"],
+                        "age": individual["age"], "loadout": individual["loadout"], "censored": True, "ledger": individual["ledger"],
+                        "categories": {key: individual[key] for key in ("basalSpent", "activityStaminaSpent", "skillManaSpent", "reproductionSpent", "foodReceived", "automaticRecovered", "nutritionRecovered", "nutritionSpent", "combatDamageTaken", "starvationDamageTaken", "agingHealthLost")}}
+            for death in state.get("deaths", []):
+                life_records[death["individual"]] = {**life_records.get(death["individual"], {}), **death, "censored": False}
+                if "ledger" in death:
+                    life_records[death["individual"]]["categories"] = {key: death[key] for key in ("basalSpent", "activityStaminaSpent", "skillManaSpent", "reproductionSpent", "foodReceived", "automaticRecovered", "nutritionRecovered", "nutritionSpent", "agingHealthLost")}
+                    life_records[death["individual"]]["categories"].update(combatDamageTaken=death["combatDamage"], starvationDamageTaken=death["starvationDamage"])
             world_steps = max(world_steps, record["totalSteps"])
             if record["kind"] == "agent_joined":
                 individual = record["individual"]
@@ -30,19 +42,19 @@ def summarize(world_log: Path):
                     "damageDealt": 0.0, "damageTaken": 0.0, "deaths": 0,
                     "incompleteLives": 0})
                 metrics["individuals"] += 1
-                individuals[individual["individual"]] = (metrics, individual["age"])
+                individuals[individual["individual"]] = (metrics, state["time"])
                 individual_metrics[individual["individual"]] = metrics
             if record["kind"] == "step":
                 for individual in state["individuals"]:
                     if individual["individual"] in individuals:
                         metrics, age = individuals[individual["individual"]]
-                        metrics["survivalSeconds"] += max(0, individual["age"] - age)
-                        individuals[individual["individual"]] = (metrics, individual["age"])
+                        metrics["survivalSeconds"] += max(0, state["time"] - age)
+                        individuals[individual["individual"]] = (metrics, state["time"])
                 accumulate(state["events"], individual_metrics)
             if record["kind"] == "agent_died":
                 individual = record["individual"]
                 metrics, age = individuals.pop(individual["individual"])
-                metrics["survivalSeconds"] += max(0, individual["age"] - age)
+                metrics["survivalSeconds"] += max(0, state["time"] - age)
                 metrics["deaths"] += 1
             if record["kind"] == "episode_end":
                 rounds.append({"episode": state["episode"], "steps": state["step"],
@@ -53,7 +65,16 @@ def summarize(world_log: Path):
                 individual_metrics.clear()
     for metrics, _ in individuals.values():
         metrics["incompleteLives"] += 1
-    return {"worldSteps": world_steps, "completedRounds": len(rounds), "rounds": rounds,
+    for metrics in configurations.values():
+        metrics["survivalSeconds"] = sum(life["observedSeconds"] for life in life_records.values()
+            if life["species"] == metrics["species"] and sorted(life.get("loadout", [])) == metrics["loadout"])
+        metrics["foodSatiety"] = sum(life.get("categories", {}).get("foodReceived", 0) for life in life_records.values()
+            if life["species"] == metrics["species"] and sorted(life.get("loadout", [])) == metrics["loadout"])
+    completed = [life["observedSeconds"] for life in life_records.values() if not life["censored"]]
+    return {"resourceOrder": ["health", "stamina", "mana", "satiety"], "lives": list(life_records.values()),
+            "completedLives": len(completed), "censoredLives": sum(life["censored"] for life in life_records.values()),
+            "meanCompletedObservedSeconds": sum(completed) / len(completed) if completed else None,
+            "worldSteps": world_steps, "completedRounds": len(rounds), "rounds": rounds,
             "lastEpisode": None if last_state is None else {
                 "episode": last_state["episode"], "steps": last_state["step"],
                 "reason": last_state["endReason"], "species": last_state["statistics"]},

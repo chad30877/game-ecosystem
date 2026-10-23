@@ -84,6 +84,7 @@ namespace Ecosystem
                     if (commands[j].slot == command.slot && command.fromStep <= commands[j].toStep && command.toStep >= commands[j].fromStep)
                         throw new ArgumentException("同一個體的指定動作區間不可重疊。");
             }
+            foreach (var individual in world.State.individuals) World.CaptureResourceBaseline(individual, world.State.time, true);
             world.RefreshPerception(clearMemory: true);
             slots = new Dictionary<int, int>();
             for (int i = 0; i < count; i++) slots.Add(world.State.individuals[i].individual, i + 1);
