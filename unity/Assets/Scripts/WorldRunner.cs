@@ -111,7 +111,7 @@ namespace Ecosystem
             string runRecord = JsonUtility.ToJson(new RunRecord
             {
                 run = runId, seed = seed, unity = Application.unityVersion,
-                device = SystemInfo.graphicsDeviceName, config = config, control = control, policyMode = policyMode, scenario = scenario
+                device = SystemInfo.graphicsDeviceName, config = config, control = control, policyMode = policyMode, scenario = scenario, rulesSpecies = rulesSpecies.ToArray()
             });
             output.WriteLine(runRecord);
             recording?.WriteLine(runRecord);
@@ -202,7 +202,7 @@ namespace Ecosystem
             behavior.BrainParameters.ActionSpec = new ActionSpec(4, new[] { 3, 3, 2, 2, 2 });
             var entities = body.AddComponent<BufferSensorComponent>();
             entities.SensorName = "Entities";
-            entities.ObservableSize = 7;
+            entities.ObservableSize = 10;
             // 張量預留人口、五秒警戒記憶、可見食物與有限探索記憶；當前可見生物不截斷。
             entities.MaxNumObservables = world.Config.foraging
                 ? checked(Mathf.Max(world.Config.populationLimit, world.Config.individualsPerSpecies * 3) *
@@ -547,7 +547,8 @@ namespace Ecosystem
             public string device;
             public string control;
             public string policyMode;
-            public string rules = "survival-v7";
+            public string rules = "survival-v8";
+            public string[] rulesSpecies;
             public WorldConfig config;
             public WorldScenario scenario;
         }
