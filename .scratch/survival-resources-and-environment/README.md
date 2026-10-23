@@ -1,6 +1,6 @@
 # 生存資源與 Environment 任務索引
 
-[正式規格](spec.md)已由使用者確認並發佈為 ready-for-agent。01–05 已完成並標記 resolved，06／07 尚未啟動；逐張任務是狀態與依賴的維護來源。ready-for-agent 表示內容就緒，所有前置 resolved 後才能開始。
+[正式規格](spec.md)已由使用者確認並發佈為 ready-for-agent。01–06 已完成並標記 resolved，07 尚未啟動；逐張任務是狀態與依賴的維護來源。ready-for-agent 表示內容就緒，所有前置 resolved 後才能開始。
 
 已依 to-spec 與 to-tickets 原地整理：規格補齊問題、解法、53項使用情境、實作決策、驗證決策與範圍；沿用既有七張拆分及依賴，每張補齊可獨立觀察的完整交付路徑。
 

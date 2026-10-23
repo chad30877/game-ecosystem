@@ -12,7 +12,7 @@
   "scanFreshnessSeconds": 8.0,
   "scanThreatRadius": 2.5,
   "scanEnergyThreshold": 12.0,
-  "episodeSteps": 30001,
+  "episodeSteps": 30000,
   "individualsPerSpecies": 1,
   "smallFood": {
     "capacity": 15.0,
