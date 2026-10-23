@@ -27,10 +27,15 @@ namespace Ecosystem
                 individual.x = placement.x;
                 individual.y = placement.y;
                 individual.facing = Mathf.Repeat(placement.facing, 360f);
-                if (placement.setEnergy)
+                if (placement.setSatiety)
                 {
-                    if (!float.IsFinite(placement.energy) || placement.energy < 0 || placement.energy > 100) throw new ArgumentException("場景能量無效。");
-                    individual.energy = placement.energy;
+                    if (!float.IsFinite(placement.satiety) || placement.satiety < 0 || placement.satiety > 100) throw new ArgumentException("場景能量無效。");
+                    individual.satiety = placement.satiety;
+                }
+                if (placement.setVitals)
+                {
+                    if (!float.IsFinite(placement.health) || placement.health <= 0 || placement.health > CombatRules.MaxHealth(individual.species) || !float.IsFinite(placement.stamina) || placement.stamina < 0 || placement.stamina > 100 || !float.IsFinite(placement.mana) || placement.mana < 0 || placement.mana > 100) throw new ArgumentException("場景資源無效。");
+                    individual.health = placement.health; individual.stamina = placement.stamina; individual.mana = placement.mana;
                 }
                 if (placement.loadout != null && placement.loadout.Length > 0)
                 {
@@ -90,7 +95,7 @@ namespace Ecosystem
         }
 
         [Serializable]
-        public sealed class Placement { public int slot; public float x; public float y; public float facing; public bool setEnergy; public float energy; public string[] loadout; }
+        public sealed class Placement { public int slot; public float x; public float y; public float facing; public bool setSatiety; public float satiety; public bool setVitals; public float health, stamina, mana; public string[] loadout; }
         [Serializable]
         public sealed class FoodPlacement
         {

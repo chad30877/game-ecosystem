@@ -69,7 +69,7 @@ def main():
                     observations_by_rank = {obs.ndim: obs for obs in decisions.obs}
                     observation = observations_by_rank[2]
                     entities = observations_by_rank[3]
-                    if observation.shape != (expected, 11) or entities.shape[2] != 7 or not all(np.isfinite(obs).all() for obs in decisions.obs):
+                    if observation.shape != (expected, 19) or entities.shape[2] != 7 or not all(np.isfinite(obs).all() for obs in decisions.obs):
                         raise RuntimeError("局部觀察格式不符")
                     observations += len(decisions)
                     connection.write(json.dumps({"step": step, "behavior": behavior,

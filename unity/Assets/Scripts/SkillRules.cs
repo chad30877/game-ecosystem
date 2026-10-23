@@ -138,8 +138,8 @@ namespace Ecosystem
 
         private static bool Spend(WorldState state, IndividualState individual, int slot, float energy, float cooldown, string kind)
         {
-            if (individual.energy < energy) return false;
-            individual.energy -= energy;
+            if (individual.mana < energy) return false;
+            individual.mana -= energy;
             individual.skillReadyAt = individual.skillReadyTimes[slot] = state.time + cooldown;
             individual.skillUsedThisStep = true;
             individual.lastSkill = individual.loadout[slot];

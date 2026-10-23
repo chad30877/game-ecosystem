@@ -12,7 +12,7 @@ namespace Ecosystem
                 .OrderBy(value => Vector2.Distance(CombatRules.Position(individual), new Vector2(value.x, value.y))).FirstOrDefault();
             Vector2 aim = enemy == null ? CombatRules.Position(individual) : new Vector2(enemy.x, enemy.y);
             int skillSlot = ChooseSkill(world, individual, enemy, ref aim);
-            if (enemy != null && individual.energy >= 20 && individual.species != "Moss")
+            if (enemy != null && individual.satiety >= 20 && individual.species != "Moss")
             {
                 var delta = new Vector2(enemy.x, enemy.y) - CombatRules.Position(individual);
                 float range = delta.magnitude;
@@ -55,7 +55,7 @@ namespace Ecosystem
                             Vector2.Distance(position, new Vector2(food.x, food.y)) <= c.cultivateRange)) return slot;
                         break;
                     case WorldSkill.Sow:
-                        if (individual.energy >= 30)
+                        if (individual.satiety >= 30)
                         {
                             aim = position + new Vector2(Mathf.Cos(individual.facing * Mathf.Deg2Rad), Mathf.Sin(individual.facing * Mathf.Deg2Rad)) * (c.sowRange * 0.7f);
                             return slot;

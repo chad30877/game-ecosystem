@@ -198,7 +198,7 @@ namespace Ecosystem
             body.SetActive(false);
             var behavior = body.AddComponent<BehaviorParameters>();
             behavior.BehaviorName = individual.species;
-            behavior.BrainParameters.VectorObservationSize = 11;
+            behavior.BrainParameters.VectorObservationSize = 19;
             behavior.BrainParameters.ActionSpec = new ActionSpec(4, new[] { 3, 3, 2, 2 });
             var entities = body.AddComponent<BufferSensorComponent>();
             entities.SensorName = "Entities";
@@ -481,7 +481,7 @@ namespace Ecosystem
                     individuals = world.State.individuals.Select(value => new IndividualMetricRecord
                     {
                         individual = value.individual, species = value.species, x = value.x, y = value.y,
-                        energy = value.energy, exploredCells = value.rewardedCells.Count,
+                        satiety = value.satiety, exploredCells = value.rewardedCells.Count,
                         rawTurn = value.rawTurn, actualTurn = value.actualTurn, scanIntervened = value.scanIntervened
                     }).ToList() }));
             if (recording != null && recordEpisodes.Contains(world.State.episode)) recording.WriteLine(line);
@@ -531,7 +531,7 @@ namespace Ecosystem
         {
             public int individual;
             public string species;
-            public float x, y, energy;
+            public float x, y, satiety;
             public int exploredCells;
             public int rawTurn, actualTurn;
             public bool scanIntervened;
@@ -547,7 +547,7 @@ namespace Ecosystem
             public string device;
             public string control;
             public string policyMode;
-            public string rules = "perception-v5";
+            public string rules = "survival-v6";
             public WorldConfig config;
             public WorldScenario scenario;
         }

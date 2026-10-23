@@ -149,9 +149,9 @@ namespace Ecosystem
                 SkillRules.TryCast(config, state, individual, action);
                 Vector2 direction = AimDirection(individual, action);
                 if (individual.species == "Frost" && action.attack && !individual.windupActiveThisStep && !individual.dashActiveThisStep && !individual.skillUsedThisStep && direction.sqrMagnitude > 0 &&
-                    state.time >= individual.attackReadyAt && individual.energy >= config.combat.iceEnergy)
+                    state.time >= individual.attackReadyAt && individual.mana >= config.combat.iceEnergy)
                 {
-                    individual.energy -= config.combat.iceEnergy;
+                    individual.mana -= config.combat.iceEnergy;
                     individual.attackReadyAt = state.time + config.combat.iceCooldown;
                     individual.windupSkill = WorldSkill.None;
                     individual.windupUntil = state.time + config.combat.iceWindup;
@@ -200,8 +200,8 @@ namespace Ecosystem
             {
                 var action = actions[individual.individual];
                 if (individual.health <= 0 || individual.species != "Flame" || individual.chargeActiveThisStep || individual.skillUsedThisStep || !action.attack ||
-                    AimDirection(individual, action).sqrMagnitude == 0 || state.time < individual.attackReadyAt || individual.energy < config.combat.meleeEnergy) continue;
-                individual.energy -= config.combat.meleeEnergy;
+                    AimDirection(individual, action).sqrMagnitude == 0 || state.time < individual.attackReadyAt || individual.mana < config.combat.meleeEnergy) continue;
+                individual.mana -= config.combat.meleeEnergy;
                 individual.attackReadyAt = state.time + config.combat.meleeCooldown;
                 individual.lastCombatAt = state.time;
                 state.events.Add(new WorldEvent { kind = "melee", individual = individual.individual, amount = config.combat.meleeEnergy });
@@ -308,12 +308,7 @@ namespace Ecosystem
             individual.slowRemaining = Mathf.Max(0, individual.slowUntil - time);
             individual.shieldRemaining = Mathf.Max(0, individual.shieldUntil - time);
             individual.cultivateRemaining = Mathf.Max(0, individual.cultivateUntil - time);
-            if (individual.health <= 0 || individual.energy < config.combat.recoveryEnergy ||
-                time - individual.lastCombatAt < config.combat.recoveryDelay) return;
-            float recovered = Mathf.Min(config.combat.recoveryRate * config.stepSeconds, MaxHealth(individual.species) - individual.health);
-            if (recovered <= 0) return;
-            individual.health += recovered;
-            state.events.Add(new WorldEvent { kind = "healed", individual = individual.individual, amount = recovered });
+
         }
     }
 }
