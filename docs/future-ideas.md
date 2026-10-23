@@ -12,6 +12,13 @@
 - 背景：[資源動態化與主動探索訪談](design/dynamic-resources-and-exploration.md)。
 - 最新決定：[生存資源與 Environment 訪談](design/survival-resources-and-environment.md)確認維持延後，本輪不納入幼體能力差異與親代保護。
 
+### 同一個體內的規則接管
+
+- 想法：PPO 控制個體時，可由規則在生存危機下接管部分決策。
+- 範圍：本輪先沿用按物種分配規則控制與 PPO，個體內接管維持延後。
+- 待釐清：接管與交還控制的條件、訓練及評估的一致性，以及如何區分規則保底與模型學習的效果。
+- 背景：[生存資源與 Environment 訪談](design/survival-resources-and-environment.md)。
+
 ## 維護方式
 
 - 新構想以簡短條目記錄意圖與待釐清問題，保留使用者尚未決定的選項。
