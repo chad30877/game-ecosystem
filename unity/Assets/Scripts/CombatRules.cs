@@ -147,7 +147,7 @@ namespace Ecosystem
                     state.events.Add(new WorldEvent { kind = "ice_fired", skill = individual.windupSkill, individual = individual.individual, x = individual.x, y = individual.y });
                 }
                 SkillRules.TryCast(config, state, individual, action);
-                if (individual.skillUsedThisStep && (individual.lastSkill == WorldSkill.Charge || individual.lastSkill == WorldSkill.ColdMistDash || individual.lastSkill == WorldSkill.HotStrike))
+                if (individual.skillUsedThisStep && SkillRules.IsStrenuous(individual.lastSkill))
                     individual.lastStrenuousAt = state.time + config.stepSeconds;
                 Vector2 direction = AimDirection(individual, action);
                 if (individual.species == "Frost" && action.attack && !individual.windupActiveThisStep && !individual.dashActiveThisStep && !individual.skillUsedThisStep && direction.sqrMagnitude > 0 &&

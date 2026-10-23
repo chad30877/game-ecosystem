@@ -106,7 +106,7 @@ if ($Mode -eq 'replay') {
         $RulesSpecies = @($record.rulesSpecies | Where-Object { $_ }) -join ","
         $config = Join-Path $output 'world-config.json'
         [IO.File]::WriteAllText($config, ($record.config | ConvertTo-Json -Depth 5), [Text.UTF8Encoding]::new($false))
-        if ($Controller -eq 'scripted') {
+        if ($null -ne $record.scenario) {
             $Scenario = Join-Path $output 'scenario.json'
             [IO.File]::WriteAllText($Scenario, ($record.scenario | ConvertTo-Json -Depth 8), [Text.UTF8Encoding]::new($false))
         }
