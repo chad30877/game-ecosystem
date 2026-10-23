@@ -6,7 +6,7 @@
 
 **Blocked by:** [06：三物種單體基本生存驗收](06-basic-survival-validation.md)
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 [正式規格](../spec.md)為實作依據。開始前讀取前置完成紀錄與本任務討論；前置全部 resolved 才能開始，開始改 claimed，全部驗收通過才改 resolved。
 
@@ -30,3 +30,4 @@
 ## 完成紀錄
 
 尚未開始。完成時記錄變更、實際配置／命令、證據路徑、檢查結果、限制與繁體中文 Git commit。
+
