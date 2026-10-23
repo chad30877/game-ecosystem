@@ -10,6 +10,7 @@
 - 範圍：本期資源動態化、探索與掃視維持既有幼體戰力。
 - 待釐清：哪些能力隨成長改變，以及對幼體覓食、撤退、成活率與親代保護的影響；尚未決定加入親代保護。
 - 背景：[資源動態化與主動探索訪談](design/dynamic-resources-and-exploration.md)。
+- 最新決定：[生存資源與 Environment 訪談](design/survival-resources-and-environment.md)確認維持延後，本輪不納入幼體能力差異與親代保護。
 
 ## 維護方式
 
