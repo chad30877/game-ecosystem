@@ -2,7 +2,7 @@
 
 [正式規格](spec.md)已由使用者確認並發佈為 ready-for-agent。七張任務尚未開始；逐張任務是狀態與依賴的維護來源。ready-for-agent 表示內容就緒，所有前置 resolved 後才能開始。
 
-本輪以 Environment 與規則式 AI 為主，PPO 訓練及混合控制實驗延後。舊[資源動態化與主動探索](../dynamic-resources-and-exploration/README.md)的 01–06 為已交付基礎；舊 07 學習成效驗收仍未完成，不是本輪前置，也不由本輪結果替代。
+本輪以 Environment 與規則式 AI 為主，PPO 訓練及混合控制實驗延後。舊[資源動態化與主動探索](../dynamic-resources-and-exploration/README.md)的 01–06 為已交付基礎；舊 07 學習成效驗收已延後為 deferred，保留未完成狀態與證據，不是本輪前置，也不由本輪結果替代。
 
 | 編號 | 任務 | 前置 | 可獨立驗證的結果 |
 | --- | --- | --- | --- |
