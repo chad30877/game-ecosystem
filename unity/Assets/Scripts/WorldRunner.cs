@@ -20,6 +20,7 @@ namespace Ecosystem
         private StreamWriter recording;
         private HashSet<int> recordEpisodes;
         private bool summaryLog;
+        private bool metricsLog;
         private HashSet<string> rulesSpecies;
         private bool singleEpisode;
         private readonly System.Diagnostics.Stopwatch elapsed = System.Diagnostics.Stopwatch.StartNew();
@@ -66,18 +67,21 @@ namespace Ecosystem
             control = replay != null ? "replay" : Argument("--control", "manual");
             replaySeek = Argument("--replay-seek", "");
             summaryLog = Argument("--summary-log", "false") == "true";
+            metricsLog = Argument("--metrics-log", "false") == "true";
             singleEpisode = Argument("--single-episode", "false") == "true";
             rulesSpecies = new HashSet<string>(Argument("--rules-species", "").Split(','));
             if (control != "manual" && control != "python" && control != "rules" && control != "idle" && control != "scripted" && control != "replay")
                 throw new ArgumentException("未知控制模式。");
             if ((control == "rules" || control == "idle") && !config.foraging)
                 throw new ArgumentException("規則控制須使用覓食配置。");
-            if (control == "scripted")
+            string scenarioPath = Argument("--world-scenario", "");
+            if (scenarioPath != "")
             {
                 if (!config.foraging) throw new ArgumentException("指定動作須使用覓食配置。");
-                scenario = JsonUtility.FromJson<WorldScenario>(File.ReadAllText(Argument("--world-scenario", "")));
+                scenario = JsonUtility.FromJson<WorldScenario>(File.ReadAllText(scenarioPath));
                 if (scenario == null) throw new ArgumentException("缺少指定動作場景。");
             }
+            if (control == "scripted" && scenario == null) throw new ArgumentException("指定動作須提供場景。");
             if (Application.isBatchMode && control != "python") Time.timeScale = 100f;
             policyMode = control == "python" ? Argument("--policy-mode", "training") : control;
             if (control == "python" && policyMode != "training" && policyMode != "fixed")
@@ -232,19 +236,25 @@ namespace Ecosystem
             totalSteps++;
             foreach (var agent in agents.Values)
             {
-                if (agent.Individual.health > 0) agent.AddReward(world.Config.trainingSurvivalReward);
+                if (agent.Individual.health > 0)
+                    world.State.rewards.Find(value => value.individual == agent.Individual.individual).survival = world.Config.trainingSurvivalReward;
                 views[agent.Individual.individual].UpdateView();
             }
             UpdateFoodViews();
             foreach (var birth in world.State.events.Where(value => value.kind == "born"))
-                if (agents.TryGetValue(birth.parent, out var parent)) parent.AddReward(world.Config.trainingBirthReward);
+                world.State.rewards.Find(value => value.individual == birth.parent).birth += world.Config.trainingBirthReward;
+            foreach (var death in world.State.events.Where(value => value.kind == "starved" || value.kind == "old_age" || value.kind == "combat"))
+                world.State.rewards.Add(new RewardRecord { individual = death.individual, death = world.Config.trainingDeathPenalty });
+            foreach (var reward in world.State.rewards)
+                if (agents.TryGetValue(reward.individual, out var rewarded)) rewarded.AddReward(reward.Total);
+            foreach (var individual in world.State.individuals.Where(value => agents.ContainsKey(value.individual)))
+                individual.explorationRewardPending = 0;
             Record("step");
             UpdateProjectileViews();
             UpdateAreaViews();
             foreach (int id in agents.Keys.Where(id => !world.State.individuals.Any(value => value.individual == id)).ToArray())
             {
                 var agent = agents[id];
-                agent.AddReward(world.Config.trainingDeathPenalty);
                 Record("agent_died", agent.Individual, agent.GetInstanceID());
                 agent.gameObject.SetActive(false);
                 Destroy(agent.gameObject);
@@ -252,7 +262,11 @@ namespace Ecosystem
                 views.Remove(id);
             }
             foreach (var individual in world.State.individuals.Where(value => !agents.ContainsKey(value.individual)))
+            {
                 CreateAgent(individual);
+                agents[individual.individual].AddReward(individual.explorationRewardPending);
+                individual.explorationRewardPending = 0;
+            }
             if (!world.Config.foraging && world.State.step == world.Config.removeStep)
                 foreach (string species in World.Species)
                 {
@@ -458,9 +472,18 @@ namespace Ecosystem
                 if (world.State.events.Count > 0 || world.State.step % 50 == 0 || world.State.endReason != "")
                     output.WriteLine(JsonUtility.ToJson(new SampleRecord { kind = "sample", totalSteps = totalSteps,
                         step = world.State.step, time = world.State.time, events = world.State.events,
-                        statistics = world.State.statistics, foodAmount = world.State.foods.Sum(value => value.amount) }));
+                        rewards = world.State.rewards, statistics = world.State.statistics,
+                        foodAmount = world.State.foods.Sum(value => value.amount) }));
             }
             else output.WriteLine(line);
+            if (metricsLog && kind == "step")
+                output.WriteLine(JsonUtility.ToJson(new MetricRecord { step = world.State.step,
+                    individuals = world.State.individuals.Select(value => new IndividualMetricRecord
+                    {
+                        individual = value.individual, species = value.species, x = value.x, y = value.y,
+                        energy = value.energy, exploredCells = value.rewardedCells.Count,
+                        rawTurn = value.rawTurn, actualTurn = value.actualTurn, scanIntervened = value.scanIntervened
+                    }).ToList() }));
             if (recording != null && recordEpisodes.Contains(world.State.episode)) recording.WriteLine(line);
         }
 
@@ -490,8 +513,28 @@ namespace Ecosystem
             public int step;
             public float time;
             public List<WorldEvent> events;
+            public List<RewardRecord> rewards;
             public List<SpeciesStatistics> statistics;
             public float foodAmount;
+        }
+
+        [Serializable]
+        private sealed class MetricRecord
+        {
+            public string kind = "metric";
+            public int step;
+            public List<IndividualMetricRecord> individuals;
+        }
+
+        [Serializable]
+        private sealed class IndividualMetricRecord
+        {
+            public int individual;
+            public string species;
+            public float x, y, energy;
+            public int exploredCells;
+            public int rawTurn, actualTurn;
+            public bool scanIntervened;
         }
 
         [Serializable]
@@ -504,7 +547,7 @@ namespace Ecosystem
             public string device;
             public string control;
             public string policyMode;
-            public string rules = "perception-v4";
+            public string rules = "perception-v5";
             public WorldConfig config;
             public WorldScenario scenario;
         }

@@ -8,12 +8,13 @@ namespace Ecosystem
     public sealed class WorldScenario
     {
         public Placement[] placements = Array.Empty<Placement>();
+        public FoodPlacement[] foods = Array.Empty<FoodPlacement>();
         public Command[] commands = Array.Empty<Command>();
         [NonSerialized] private Dictionary<int, int> slots;
 
         public void Apply(World world)
         {
-            if (placements == null || commands == null) throw new ArgumentException("場景配置不可為 null。");
+            if (placements == null || foods == null || commands == null) throw new ArgumentException("場景配置不可為 null。");
             int count = world.State.individuals.Count;
             var placed = new HashSet<int>();
             foreach (var placement in placements)
@@ -26,6 +27,11 @@ namespace Ecosystem
                 individual.x = placement.x;
                 individual.y = placement.y;
                 individual.facing = Mathf.Repeat(placement.facing, 360f);
+                if (placement.setEnergy)
+                {
+                    if (!float.IsFinite(placement.energy) || placement.energy < 0 || placement.energy > 100) throw new ArgumentException("場景能量無效。");
+                    individual.energy = placement.energy;
+                }
                 if (placement.loadout != null && placement.loadout.Length > 0)
                 {
                     if (placement.loadout.Length != 2) throw new ArgumentException("配置須恰有兩個技能。");
@@ -36,6 +42,25 @@ namespace Ecosystem
                     if (skills[0] == skills[1]) throw new ArgumentException("配置技能不可重複。");
                     individual.loadout = skills;
                 }
+            }
+            var placedFoods = new HashSet<int>();
+            foreach (var placement in foods)
+            {
+                var food = world.State.foods.Find(value => value.food == placement.food);
+                if (food == null || !placedFoods.Add(placement.food) ||
+                    (placement.setAmount && (!float.IsFinite(placement.amount) || placement.amount < 0 || placement.amount > food.capacity)) ||
+                    (placement.setElapsedAge && (!float.IsFinite(placement.elapsedAge) || placement.elapsedAge < 0)))
+                    throw new ArgumentException("場景食物設定無效。");
+                if (placement.relocate)
+                {
+                    if (!float.IsFinite(placement.x) || !float.IsFinite(placement.y) ||
+                        Mathf.Abs(placement.x) > world.Config.halfExtent || Mathf.Abs(placement.y) > world.Config.halfExtent)
+                        throw new ArgumentException("場景食物位置超出邊界。");
+                    food.x = placement.x;
+                    food.y = placement.y;
+                }
+                if (placement.setAmount) food.amount = placement.amount;
+                if (placement.setElapsedAge) food.bornAt = -placement.elapsedAge;
             }
             for (int i = 0; i < commands.Length; i++)
             {
@@ -65,7 +90,18 @@ namespace Ecosystem
         }
 
         [Serializable]
-        public sealed class Placement { public int slot; public float x; public float y; public float facing; public string[] loadout; }
+        public sealed class Placement { public int slot; public float x; public float y; public float facing; public bool setEnergy; public float energy; public string[] loadout; }
+        [Serializable]
+        public sealed class FoodPlacement
+        {
+            public int food;
+            public bool relocate;
+            public float x, y;
+            public bool setAmount;
+            public float amount;
+            public bool setElapsedAge;
+            public float elapsedAge;
+        }
         [Serializable]
         public sealed class Command
         {

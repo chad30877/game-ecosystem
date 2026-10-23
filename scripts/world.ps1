@@ -36,7 +36,7 @@ if ($RecordEpisodes -and $Mode -notin @('forage', 'observe')) { throw 'RecordEpi
 if ($RecordEpisodes -and $RecordEpisodes -notmatch '^[1-9][0-9]*(,[1-9][0-9]*)*$') { throw 'RecordEpisodes 須為逗號分隔的正整數。' }
 if (($ReplayFrom -or $SeekFrames) -and $Mode -ne 'replay') { throw 'ReplayFrom 與 SeekFrames 僅適用於 replay。' }
 if ($Scenario -and $Mode -ne 'forage') { throw 'Scenario 僅適用於 forage。' }
-if ($Scenario) { $Scenario = (Resolve-Path -LiteralPath $Scenario).Path; $Controller = 'scripted' }
+if ($Scenario) { $Scenario = (Resolve-Path -LiteralPath $Scenario).Path; if (-not $PSBoundParameters.ContainsKey('Controller')) { $Controller = 'scripted' } }
 $runId = '{0}-{1}-{2}' -f $Mode, (Get-Date -Format 'yyyyMMdd-HHmmss'), ([guid]::NewGuid().ToString('N').Substring(0, 8))
 $output = Join-Path $OutputRoot $runId
 New-Item -ItemType Directory -Force $OutputRoot | Out-Null
@@ -98,7 +98,7 @@ if ($Mode -eq 'replay') {
     if ($ReloadRun) {
         if ($WorldConfig -or $Scenario -or $PSBoundParameters.ContainsKey('Seed') -or $PSBoundParameters.ContainsKey('Controller')) { throw 'ReloadRun 不可同時指定 WorldConfig、Scenario、Seed 或 Controller。' }
         $record = Get-Content -LiteralPath $ReloadRun -TotalCount 1 | ConvertFrom-Json
-        if ($record.kind -ne 'run' -or $record.rules -ne 'perception-v4' -or -not $record.config.foraging) { throw '不是相容的執行紀錄（須為 perception-v4）。' }
+        if ($record.kind -ne 'run' -or $record.rules -ne 'perception-v5' -or -not $record.config.foraging) { throw '不是相容的執行紀錄（須為 perception-v5）。' }
         $Seed = [int]$record.seed
         $Controller = $record.control
         $config = Join-Path $output 'world-config.json'
@@ -111,10 +111,8 @@ if ($Mode -eq 'replay') {
     if (-not $PSBoundParameters.ContainsKey('Steps')) { $Steps = if ($Visible) { 0 } else { 12000 } }
     $arguments = @('--control', $Controller, '--world-seed', $Seed,  '--world-config', ('"{0}"' -f $config), '--world-log', ('"{0}"' -f (Join-Path $output 'world.jsonl')), '--world-steps' , $Steps)
     if ($RecordEpisodes) { $arguments += @('--record-episodes', $RecordEpisodes, '--record-log', ('"{0}"' -f (Join-Path $output 'record-source.jsonl')), '--summary-log', 'true') }
-    if ($Controller -eq 'scripted') {
-        if (-not $Scenario) { throw 'scripted 控制須提供 Scenario。' }
-        $arguments += @('--world-scenario', ('"{0}"' -f $Scenario))
-    }
+    if ($Controller -eq 'scripted' -and -not $Scenario) { throw 'scripted 控制須提供 Scenario。' }
+    if ($Scenario) { $arguments += @('--world-scenario', ('"{0}"' -f $Scenario)) }
     if (-not $Visible) {
         if ($Steps -le 0) { throw '無畫面執行須指定正數 Steps。' }
         $arguments += @('-batchmode', '-nographics')

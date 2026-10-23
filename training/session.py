@@ -68,8 +68,8 @@ def checkpoint_records(trainer: Path):
 
 def compatibility(player: Path, trainer_config):
     return {
-        "modelVersion": "perception-v4",
-        "rulesVersion": "perception-v4",
+        "modelVersion": "perception-v5",
+        "rulesVersion": "perception-v5",
         "worldAssembly": file_record(player.parent / "World_Data/Managed/Assembly-CSharp.dll")["sha256"],
         "packages": {name: version(name) for name in ("mlagents", "mlagents-envs", "torch")},
         "trainer": trainer_config,
@@ -99,6 +99,9 @@ def load_source(path: Path, signature, world_config, target_steps):
         records = checkpoint_records(trainer)
         if records != manifest["checkpoints"]:
             raise ValueError("checkpoint 與保存紀錄不符，資料可能缺漏或遭修改。")
+        initial = {species: file_record(source / "initial-policies" / f"{species}.pt") for species in SPECIES}
+        if initial != manifest["initialPolicies"]:
+            raise ValueError("初始權重與保存紀錄不符。")
         if target_steps is not None and any(target_steps <= record["step"] for record in records.values()):
             raise ValueError("TrainSteps 必須大於三物種已保存步數。")
         if not manifest["experimentId"] or read_json(source / "world-config.json") != manifest["worldConfig"]:
@@ -121,6 +124,67 @@ def copy_output(output: Path, destination_root: Path):
     return {"path": str(destination), "bytes": required}
 
 
+def observe_fixed(player, output, trainer, world_config, seed, args):
+    from mlagents.trainers.policy.torch_policy import TorchPolicy
+    from mlagents.trainers.settings import NetworkSettings
+    from mlagents.trainers.torch_entities.networks import SimpleActor
+    from mlagents_envs.environment import UnityEnvironment
+    from mlagents_envs.exception import UnityCommunicationException, UnityCommunicatorStoppedException, UnityEnvironmentException
+    from mlagents_envs.side_channel.engine_configuration_channel import EngineConfigurationChannel
+
+    torch.set_num_threads(1)
+    channel = EngineConfigurationChannel()
+    channel.set_configuration_parameters(time_scale=1 if args.visible else 20, width=960, height=720)
+    additional = ["--world-log", str(output / "world.jsonl"), "--world-seed", str(seed),
+                  "--world-config", str(output / "world-config.json"), "--control", "python", "--policy-mode", "fixed"]
+    if args.world_steps:
+        additional += ["--world-steps", str(args.world_steps)]
+    if args.record_episodes:
+        additional += ["--record-episodes", args.record_episodes, "--record-log", str(output / "record-source.jsonl")]
+    env = UnityEnvironment(file_name=str(player), seed=seed, no_graphics=not args.visible,
+                           side_channels=[channel], log_folder=str(output), additional_args=additional)
+    started = time.perf_counter()
+    unity_peak = 0
+    steps = 0
+    try:
+        env.reset()
+        specs = {name.split("?")[0]: (name, spec) for name, spec in env.behavior_specs.items()}
+        if set(specs) != set(SPECIES):
+            raise ValueError("固定觀察缺少三物種 behavior。")
+        policies = {}
+        for species in SPECIES:
+            settings = yaml.safe_load((ROOT / "training/toolchain.yaml").read_text(encoding="utf-8"))["behaviors"][species]["network_settings"]
+            policy = TorchPolicy(0, specs[species][1], NetworkSettings(**settings), SimpleActor,
+                                 {"conditional_sigma": False, "tanh_squash": False})
+            policy.actor.load_state_dict(torch.load(trainer / species / "checkpoint.pt", map_location="cpu", weights_only=True)["Policy"])
+            policy.actor.eval()
+            policies[species] = policy
+        while True:
+            for species in SPECIES:
+                behavior = specs[species][0]
+                decisions, _ = env.get_steps(behavior)
+                if len(decisions):
+                    env.set_actions(behavior, policies[species].get_action(decisions).action)
+            try:
+                env.step()
+            except (UnityCommunicationException, UnityCommunicatorStoppedException, UnityEnvironmentException):
+                break
+            steps += 1
+            if steps % 50 == 0 and env._process is not None:
+                unity_peak = max(unity_peak, peak_memory(env._process.pid) or 0)
+    finally:
+        env.close()
+    world_steps = 0
+    with (output / "world.jsonl").open(encoding="utf-8-sig") as log:
+        for line in log:
+            world_steps = max(world_steps, json.loads(line).get("totalSteps", 0))
+    if args.world_steps and world_steps != args.world_steps:
+        raise ValueError(f"固定觀察在 {world_steps} 步停止，預期 {args.world_steps} 步。")
+    return {"wallSeconds": time.perf_counter() - started,
+            "trainerPeakWorkingSetBytes": None, "unityPeakWorkingSetBytes": unity_peak or None,
+            "worldSteps": world_steps}
+
+
 def train(args):
     player = args.player.resolve(strict=True)
     trainer_template = yaml.safe_load((ROOT / "training/toolchain.yaml").read_text(encoding="utf-8"))
@@ -132,6 +196,11 @@ def train(args):
         world_config = previous["worldConfig"]
     if world_config is None:
         world_config = read_json(ROOT / "training/foraging.json")
+    if args.observe and args.record_episodes:
+        last_episode = max(map(int, args.record_episodes.split(",")))
+        required_steps = last_episode * world_config["episodeSteps"]
+        if args.world_steps < required_steps:
+            raise ValueError(f"錄製第 {last_episode} 輪須設定 --world-steps 至少 {required_steps}，才能封裝完整回放。")
     seed = args.seed if args.seed is not None else previous["seed"] if previous else 1
     run_id = f"{'observe' if args.observe else 'train'}-{datetime.now().strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:8]}"
     output = args.output.resolve() / run_id
@@ -144,6 +213,9 @@ def train(args):
     trainer_id = previous["trainerRunId"] if previous else run_id
     if trainer_source:
         shutil.copytree(trainer_source, output / trainer_id)
+        shutil.copytree(source / "initial-policies", output / "initial-policies")
+    else:
+        (output / "initial-policies").mkdir()
     write_json(output / "world-config.json", world_config)
     manifest = {
         "schemaVersion": 1, "experimentId": previous["experimentId"] if previous else uuid.uuid4().hex,
@@ -160,8 +232,29 @@ def train(args):
     for settings in trainer_template["behaviors"].values():
         settings["max_steps"] = args.steps
     (output / "trainer.yaml").write_text(yaml.safe_dump(trainer_template), encoding="utf-8")
-    launcher = "import os, runpy; print(f'WORLD_TRAINER_PID={os.getpid()}', flush=True); runpy.run_module('mlagents.trainers.learn', run_name='__main__')"
-    command = [sys.executable, "-c", launcher, str(output / "trainer.yaml"),
+    if args.observe:
+        try:
+            manifest["resources"] = observe_fixed(player, output, output / trainer_id, world_config, seed, args)
+            manifest["checkpoints"] = checkpoint_records(output / trainer_id)
+            manifest["initialPolicies"] = {species: file_record(output / "initial-policies" / f"{species}.pt") for species in SPECIES}
+            if manifest["checkpoints"] != previous["checkpoints"] or manifest["initialPolicies"] != previous["initialPolicies"]:
+                raise ValueError("固定觀察意外改變模型權重。")
+            manifest["checkpointBytes"] = sum(record["bytes"] for record in manifest["checkpoints"].values())
+            manifest["status"] = "completed"
+            manifest["finishedAt"] = datetime.now(timezone.utc).isoformat()
+            if args.record_episodes:
+                manifest["recordings"] = [pack(output / "record-source.jsonl", output / f"episode-{episode}.replay.jsonl", episode,
+                                               {"experimentId": manifest["experimentId"], "checkpoints": manifest["checkpoints"], "compatibility": signature})
+                                          for episode in sorted(set(map(int, args.record_episodes.split(","))))]
+            write_json(output / "training.json", manifest)
+            write_json(output / "training-summary.json", summarize(output / "world.jsonl"))
+            print(json.dumps({"output": str(output), "status": manifest["status"], "checkpoints": manifest["checkpoints"]}, ensure_ascii=False), flush=True)
+            return
+        except Exception:
+            manifest["status"] = "failed"
+            write_json(output / "training.json", manifest)
+            raise
+    command = [sys.executable, str(ROOT / "training/trainer_capture.py"), str(output / "trainer.yaml"),
                "--env", str(player), "--run-id", trainer_id, "--results-dir", str(output),
                "--seed", str(seed), "--torch-device", "cpu", "--time-scale", "1" if args.visible else "20",
                "--width", "960", "--height", "720", "--max-lifetime-restarts", "0"]
@@ -189,7 +282,8 @@ def train(args):
     with (output / "trainer.log").open("w", encoding="utf-8") as log:
         with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                               encoding="utf-8", errors="replace",
-                              env={**os.environ, "PYTHONUNBUFFERED": "1", "PYTHONIOENCODING": "utf-8"}) as process:
+                              env={**os.environ, "PYTHONUNBUFFERED": "1", "PYTHONIOENCODING": "utf-8",
+                                   "WORLD_INITIAL_CAPTURE_DIR": str(output / "initial-policies") if not previous else ""}) as process:
             assert process.stdout is not None
             stopped = threading.Event()
             def sample_memory():
@@ -220,10 +314,13 @@ def train(args):
     manifest["finishedAt"] = datetime.now(timezone.utc).isoformat()
     try:
         manifest["checkpoints"] = checkpoint_records(output / trainer_id)
+        manifest["initialPolicies"] = {species: file_record(output / "initial-policies" / f"{species}.pt") for species in SPECIES}
+        if previous and manifest["initialPolicies"] != previous["initialPolicies"]:
+            raise ValueError("續訓或固定觀察意外改變初始權重。")
         if args.observe and (previous is None or manifest["checkpoints"] != previous["checkpoints"]):
             raise ValueError("固定觀察期間 checkpoint 意外改變。")
         manifest["status"] = "completed" if args.observe or all(record["step"] >= args.steps for record in manifest["checkpoints"].values()) else "stopped"
-    except ValueError as error:
+    except (ValueError, OSError) as error:
         manifest["status"] = "failed"
         write_json(output / "training.json", manifest)
         raise ValueError(f"{error}；請查看 {output / 'trainer.log'}。") from error

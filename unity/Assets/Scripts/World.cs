@@ -86,6 +86,8 @@ namespace Ecosystem
         public float trainingSurvivalReward;
         public float trainingBirthReward;
         public float trainingDeathPenalty;
+        public float explorationRewardPerCell = 0.0001f;
+        public float explorationRewardLimit = 0.02f;
         public CombatConfig combat = new CombatConfig();
 
         public void Validate()
@@ -128,7 +130,9 @@ namespace Ecosystem
                 !float.IsFinite(reproductionCooldown) || reproductionCooldown <= 0 ||
                 populationLimit < (long)individualsPerSpecies * 3))
                 throw new ArgumentException("成長期、壽命、繁殖或人口上限參數無效。");
-            if (!float.IsFinite(trainingSurvivalReward) || !float.IsFinite(trainingBirthReward) || !float.IsFinite(trainingDeathPenalty))
+            if (!float.IsFinite(trainingSurvivalReward) || !float.IsFinite(trainingBirthReward) || !float.IsFinite(trainingDeathPenalty) ||
+                !float.IsFinite(explorationRewardPerCell) || explorationRewardPerCell < 0 ||
+                !float.IsFinite(explorationRewardLimit) || explorationRewardLimit < 0)
                 throw new ArgumentException("訓練獎勵必須是有限數值。");
             if (foraging) (combat ?? throw new ArgumentException("缺少戰鬥配置。")).Validate();
         }
@@ -194,6 +198,9 @@ namespace Ecosystem
         public List<AreaMemory> areaMemory = new List<AreaMemory>();
         public List<FoodMemory> foodMemory = new List<FoodMemory>();
         public List<FoodMemory> visibleFoods = new List<FoodMemory>();
+        public List<int> rewardedCells = new List<int>();
+        public float explorationRewardTotal;
+        public float explorationRewardPending;
         public int explorationTargetX = -1;
         public int explorationTargetY = -1;
         public float[] directionLastSeenAt = new float[8];
@@ -285,6 +292,17 @@ namespace Ecosystem
     }
 
     [Serializable]
+    public sealed class RewardRecord
+    {
+        public int individual;
+        public float survival;
+        public float birth;
+        public float death;
+        public float exploration;
+        public float Total => survival + birth + death + exploration;
+    }
+
+    [Serializable]
     public sealed class DeathRecord
     {
         public int individual;
@@ -333,6 +351,7 @@ namespace Ecosystem
     {
         public List<FoodState> foods = new List<FoodState>();
         public List<WorldEvent> events = new List<WorldEvent>();
+        public List<RewardRecord> rewards = new List<RewardRecord>();
         public int episode;
         public int step;
         public float time;
@@ -430,7 +449,7 @@ namespace Ecosystem
                 State.nextNaturalSpawnAt = Config.naturalSpawnInterval;
             }
             UpdateIncompleteLives();
-            RefreshPerception();
+            RefreshPerception(awardExploration: true);
             return State;
         }
 
@@ -481,6 +500,7 @@ namespace Ecosystem
                     !float.IsFinite(action.aim.x) || !float.IsFinite(action.aim.y) || (action.turn < -1 || action.turn > 1) || action.skillSlot < -1 || action.skillSlot > 1 || !Enum.IsDefined(typeof(WorldSkill), action.skill))
                     throw new ArgumentException("每隻個體都必須取得有限數值的動作。");
             State.events.Clear();
+            State.rewards.Clear();
             float time = (State.step + 1) * Config.stepSeconds;
             AdvanceFood(time);
             if (Config.foraging)
@@ -586,7 +606,10 @@ namespace Ecosystem
             }
             State.step++;
             State.time = State.step * Config.stepSeconds;
-            RefreshPerception();
+            RefreshPerception(awardExploration: true);
+            foreach (var individual in State.individuals)
+                State.rewards.Add(new RewardRecord { individual = individual.individual,
+                    exploration = individual.explorationRewardPending });
             State.endReason = State.individuals.Count == 0 ? "all_dead" : State.step >= Config.episodeSteps ? "time_limit" : "";
             return State;
         }
@@ -778,7 +801,7 @@ namespace Ecosystem
                 && (delta.sqrMagnitude == 0 || Vector2.Angle(facing, delta) <= 60f);
         }
 
-        public void RefreshPerception(bool clearMemory = false)
+        public void RefreshPerception(bool clearMemory = false, bool awardExploration = false)
         {
             if (clearMemory)
             {
@@ -788,6 +811,8 @@ namespace Ecosystem
                     individual.areaMemory.Clear();
                     individual.foodMemory.Clear();
                     individual.visibleFoods.Clear();
+                    individual.rewardedCells.Clear();
+                    individual.explorationRewardTotal = individual.explorationRewardPending = 0;
                     Array.Clear(individual.directionLastSeenAt, 0, individual.directionLastSeenAt.Length);
                     individual.explorationTargetX = individual.explorationTargetY = -1;
                     individual.scanTargetSector = -1;
@@ -825,7 +850,7 @@ namespace Ecosystem
                 if (Config.foraging)
                 {
                     RefreshFoodMemory(observer);
-                    RefreshAreaMemory(observer);
+                    RefreshAreaMemory(observer, awardExploration);
                     for (int sector = 0; sector < observer.directionLastSeenAt.Length; sector++)
                         if (Mathf.Abs(Mathf.DeltaAngle(observer.facing, sector * 45f)) <= 60f)
                             observer.directionLastSeenAt[sector] = State.time;
@@ -840,7 +865,7 @@ namespace Ecosystem
             Mathf.Min(Config.halfExtent, -Config.halfExtent + (x + 0.5f) * Config.explorationCellSize),
             Mathf.Min(Config.halfExtent, -Config.halfExtent + (y + 0.5f) * Config.explorationCellSize));
 
-        private void RefreshAreaMemory(IndividualState observer)
+        private void RefreshAreaMemory(IndividualState observer, bool awardExploration)
         {
             int columns = Mathf.CeilToInt(Config.halfExtent * 2 / Config.explorationCellSize);
             int minX = Mathf.Max(0, Mathf.FloorToInt((observer.x - Config.observationRadius + Config.halfExtent) / Config.explorationCellSize));
@@ -851,6 +876,21 @@ namespace Ecosystem
                 for (int y = minY; y <= maxY; y++)
                 {
                     if (!CanSeePoint(observer, ExplorationCellCenter(x, y))) continue;
+                    if (awardExploration)
+                    {
+                        int cell = x * columns + y;
+                        if (!observer.rewardedCells.Contains(cell))
+                        {
+                            observer.rewardedCells.Add(cell);
+                            float amount = Mathf.Min(Config.explorationRewardPerCell,
+                                Config.explorationRewardLimit - observer.explorationRewardTotal);
+                            if (amount > 0)
+                            {
+                                observer.explorationRewardTotal += amount;
+                                observer.explorationRewardPending += amount;
+                            }
+                        }
+                    }
                     var known = observer.areaMemory.Find(value => value.cellX == x && value.cellY == y);
                     if (known == null) observer.areaMemory.Add(new AreaMemory { cellX = x, cellY = y, lastSeenAt = State.time });
                     else known.lastSeenAt = State.time;

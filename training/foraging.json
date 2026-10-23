@@ -37,5 +37,7 @@
   "populationLimit": 120,
   "trainingSurvivalReward": 0.001,
   "trainingBirthReward": 1.0,
-  "trainingDeathPenalty": -1.0
+  "trainingDeathPenalty": -1.0,
+  "explorationRewardPerCell": 0.0001,
+  "explorationRewardLimit": 0.02
 }

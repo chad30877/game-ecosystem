@@ -215,7 +215,10 @@ namespace Ecosystem
             GUILayout.Label($"朝向 {individual.facing:F0}°　視野 120° / {world.Config.observationRadius:g}");
             if (individual.scanIntervened) GUILayout.Label($"掃視　{individual.rawTurn} → {individual.actualTurn}");
             else if (individual.scanDeferred) GUILayout.Label($"掃視暫緩　{ScanReason(individual.scanReason)}　{individual.scanDeferredSeconds:F1}s");
+            else if (individual.rawTurn != 0) GUILayout.Label($"主動轉向　{individual.rawTurn}");
             GUILayout.Label($"可見 {individual.perception.Count(value => value.visible)}　警戒記憶 {individual.perception.Count(value => !value.visible)}　區域 {individual.areaMemory.Count}");
+            var reward = world.State.rewards.Find(value => value.individual == selected);
+            if (reward != null) GUILayout.Label($"探索 {individual.rewardedCells.Count} 格　累計 {individual.explorationRewardTotal:F4}　此步 {reward.exploration:F4}");
             foreach (var food in individual.visibleFoods.Concat(individual.foodMemory.Where(value => !value.visible)))
                 GUILayout.Label($"食物 ({food.x:F1}, {food.y:F1})　{(food.visible ? "可見" : world.State.time - food.lastSeenAt >= world.Config.foodMemorySeconds ? "舊情報" : "記憶")}　{(food.mature && food.phase == FoodPhase.Available ? "可採" : food.phase == FoodPhase.Resting ? "休養" : "成長中")}　{food.amount:F1}");
             foreach (var entity in individual.perception.Where(value => !value.visible))
