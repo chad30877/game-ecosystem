@@ -5,6 +5,9 @@ namespace Ecosystem
 {
     public static class SkillRules
     {
+        public static bool IsStrenuous(WorldSkill skill) =>
+            skill == WorldSkill.Charge || skill == WorldSkill.ColdMistDash || skill == WorldSkill.HotStrike;
+
         public static float ManaCost(CombatConfig config, WorldSkill skill) => skill switch
         {
             WorldSkill.Charge => config.chargeMana, WorldSkill.HotStrike => config.hotStrikeMana,
@@ -141,7 +144,8 @@ namespace Ecosystem
             if (individual.mana < mana) return false;
             individual.mana -= mana; individual.skillManaSpent += mana;
             var skill = individual.loadout[slot];
-            if (skill == WorldSkill.Charge || skill == WorldSkill.ColdMistDash || skill == WorldSkill.HotStrike)
+            // 施放入口先記錄開始時刻；世界步進另將本步活動結算至步末。
+            if (IsStrenuous(skill))
                 individual.lastStrenuousAt = state.time;
             if (skill == WorldSkill.Charge || skill == WorldSkill.HotStrike || skill == WorldSkill.IntimidatingRoar || skill == WorldSkill.FrostbindArrow || skill == WorldSkill.PiercingIceArrow || skill == WorldSkill.EntanglingRoots || skill == WorldSkill.SporeSmoke || skill == WorldSkill.FrostTrap)
                 individual.lastCombatAt = state.time;

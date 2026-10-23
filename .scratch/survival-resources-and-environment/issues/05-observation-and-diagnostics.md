@@ -49,3 +49,12 @@
 結果：規則模式202個frame包含3起始成年觀測3秒／年齡4秒、3新生觀測4秒，完整平均3.5秒；截止下一輪6個體均標未完成。混合案例最後死因飢餓，仍保留10戰鬥及110飢餓傷害、32筆歷史；停用老化時生命年齡30而觀測45.84秒。恢復案例活動支出6、技能10、進食2.16、自動及營養恢復三項均非零。全部資源帳最大殘差0.000872，兩組各6次前後seek完整state逐值相等。改成v8的副本拒絕，原始回放hash未改。
 
 人工操作：依 `docs/survival-resources.md` 開啟可見規則世界／回放，點選個體核對收支與恢復；按「死亡」選取摘要，再點歷史樣本或拖曳回放，跨越出生、死亡後返回核對。此次生產入口與seek驗證為無畫面執行，未宣稱完成視覺人工操作。完整每步快照較大（混合2502 frame約30.5MB），保留全部事件及原始來源；死亡摘要最多32筆。06／07仍未啟動。
+
+
+### 最終審查修正
+
+2026-10-23：修正 `ReloadRun` 原先只為 scripted 還原場景而遺失 rules layout 的問題。現在只要執行標頭有非 null 場景就還原，scripted 缺場景仍拒絕。以03的 Flame 單體配置、layout、種子19，先重現初始狀態不同，再核對修正後初始與10步共13份完整 state 相等；證據主工作區 `artifacts/survival-review/` 的 `before-results.json`、`reload-results.json`、原始及重載紀錄。
+
+另抽出 `SkillRules.IsStrenuous` 共用衝鋒、冷霧衝刺、炙熱猛擊的身體活動分類；保留施放開始時間及世界步末更新兩處時間語意。以三技能正式指定動作180步核對重構前後所有狀態。人工方式：以 `-Controller rules -Scenario training/scenarios/survival-isolation/layout.json` 啟動單體，再以 `-ReloadRun '<原始world.jsonl>'` 啟動，確認個體與四個食物位置及資源起始相同。
+
+修正驗證結果：Unity build成功、PowerShell語法解析及git diff --check通過。三技能均實際施放，180步共185份完整state與重構前逐值相等，包含lastStrenuousAt；結果見physical-results.json。未新增測試檔。
