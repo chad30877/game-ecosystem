@@ -2,7 +2,7 @@
 
 目前支援三物種各四招技能池及完整生態 PPO 訓練。個體出生攜帶兩招，依局部食物、120° 視野與短期警戒記憶行動；同種共用策略，訓練可見／無畫面跨輪延續。規則展示與學習訓練分開，尚未證明學習品質改善。設定與證據見[戰術學習](docs/tactical-learning.md)。
 
-本期規劃見[資源動態化與主動探索任務](.scratch/dynamic-resources-and-exploration/README.md)；尚未排入的想法見[後續構想](docs/future-ideas.md)。
+本期規劃見[生存資源與 Environment 任務](.scratch/survival-resources-and-environment/README.md)，規格已發佈、尚未實作，PPO 實驗延後。既有工作見[資源動態化與主動探索任務](.scratch/dynamic-resources-and-exploration/README.md)；尚未排入的想法見[後續構想](docs/future-ideas.md)。
 
 ## 執行
 
