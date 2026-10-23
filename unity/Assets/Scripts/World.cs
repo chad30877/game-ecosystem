@@ -57,6 +57,9 @@ namespace Ecosystem
         public float scanFreshnessSeconds = 8f;
         public float scanThreatRadius = 2.5f;
         public float scanEnergyThreshold = 12f;
+        public float aiWeakHealth = 0.45f, aiRetreatHealth = 0.25f, aiCombatLoss = 0.2f;
+        public float aiRunStart = 60f, aiRunStop = 20f, aiUrgentSatiety = 45f;
+        public float aiTargetMargin = 1f;
         public int episodeSteps = 256;
         public int individualsPerSpecies = 2;
         public int removeStep = 64;
@@ -143,6 +146,10 @@ namespace Ecosystem
                 !float.IsFinite(explorationRewardPerCell) || explorationRewardPerCell < 0 ||
                 !float.IsFinite(explorationRewardLimit) || explorationRewardLimit < 0)
                 throw new ArgumentException("訓練獎勵必須是有限數值。");
+            if (aiRetreatHealth < 0 || aiWeakHealth <= aiRetreatHealth || aiWeakHealth > 1 || aiCombatLoss <= 0 || aiCombatLoss > 1 || aiRunStop < 0 || aiRunStart <= aiRunStop || aiRunStart > 100 || aiUrgentSatiety < 0 || aiUrgentSatiety > 100 || aiTargetMargin < 0)
+                throw new ArgumentException("規則決策門檻無效。");
+            foreach (float value in new[] { aiWeakHealth, aiRetreatHealth, aiCombatLoss, aiRunStart, aiRunStop, aiUrgentSatiety, aiTargetMargin })
+                if (!float.IsFinite(value)) throw new ArgumentException("規則決策門檻須為有限值。");
             foreach (float value in new[] { initialSatiety, initialStamina, initialMana })
                 if (!float.IsFinite(value) || value < 0 || value > 100) throw new ArgumentException("資源初值無效。");
             if (!float.IsFinite(initialHealthFraction) || initialHealthFraction <= 0 || initialHealthFraction > 1 || nutritionStart <= 0 || nutritionStop <= nutritionStart || nutritionStop > 1 || nutritionReserve > 100)
@@ -167,6 +174,11 @@ namespace Ecosystem
         public bool[] nutritionActive = new bool[3];
         public string[] recoveryStatus = new string[3];
         public bool running;
+        public bool feeding;
+        public float fedSourceX, fedSourceY, fedAmount;
+        public bool hasFoodTarget, runPreferred;
+        public float foodTargetX, foodTargetY, contestHealth, retreatUntil, retreatX, retreatY;
+        public string decisionReason = "";
         public float activityStaminaSpent, skillManaSpent, reproductionSpent;
         public float basalSpent, foodReceived, nutritionSpent;
         public float[] automaticRecovered = new float[3], nutritionRecovered = new float[3];
@@ -275,6 +287,8 @@ namespace Ecosystem
         public bool visible;
         public float velocityX, velocityY;
         public float age;
+        public bool feeding;
+        public float sourceX, sourceY;
     }
 
     [Serializable]
@@ -562,6 +576,12 @@ namespace Ecosystem
                     !float.IsFinite(action.movement.x) || !float.IsFinite(action.movement.y) ||
                     !float.IsFinite(action.aim.x) || !float.IsFinite(action.aim.y) || (action.turn < -1 || action.turn > 1) || action.skillSlot < -1 || action.skillSlot > 1 || !Enum.IsDefined(typeof(WorldSkill), action.skill))
                     throw new ArgumentException("每隻個體都必須取得有限數值的動作。");
+            foreach (var individual in State.individuals)
+            {
+                individual.feeding = false;
+                individual.fedAmount = 0;
+                individual.fedSourceX = individual.fedSourceY = 0;
+            }
             State.events.Clear();
             State.rewards.Clear();
             float time = (State.step + 1) * Config.stepSeconds;
@@ -607,6 +627,8 @@ namespace Ecosystem
                             if (eaten <= 0) continue;
                             food.amount -= eaten;
                             individual.satiety += eaten; individual.foodReceived += eaten;
+                            individual.feeding = true; individual.fedAmount = eaten;
+                            individual.fedSourceX = food.x; individual.fedSourceY = food.y;
                             State.events.Add(new WorldEvent { kind = "ate", individual = individual.individual, food = food.food, amount = eaten });
                             if (food.amount <= 0.00001f)
                             {
@@ -905,7 +927,10 @@ namespace Ecosystem
                     if (!CanSee(observer, target)) continue;
                     visible.Add(target.individual);
                     observer.perception.Add(new EntityObservation { species = target.species, x = target.x, y = target.y,
-                        visible = true, velocityX = target.velocityX, velocityY = target.velocityY });
+                        visible = true, velocityX = target.velocityX, velocityY = target.velocityY,
+                        feeding = target.feeding && CanSeePoint(observer, new Vector2(target.fedSourceX, target.fedSourceY)),
+                        sourceX = target.feeding && CanSeePoint(observer, new Vector2(target.fedSourceX, target.fedSourceY)) ? target.fedSourceX : 0,
+                        sourceY = target.feeding && CanSeePoint(observer, new Vector2(target.fedSourceX, target.fedSourceY)) ? target.fedSourceY : 0 });
                     if (target.species != observer.species)
                         memory[target.individual] = new EnemySighting { species = target.species, position = CombatRules.Position(target), lastSeenAt = State.time };
                 }
@@ -1018,13 +1043,16 @@ namespace Ecosystem
             foreach (var entity in individual.perception)
                 yield return new[] { (SpeciesIndex(entity.species) + 1) / 3f,
                     (entity.x - individual.x) / Config.observationRadius, (entity.y - individual.y) / Config.observationRadius,
-                    entity.velocityX / 4f, entity.velocityY / 4f, entity.visible ? 1f : 0f, entity.age / 5f };
+                    entity.velocityX / 4f, entity.velocityY / 4f, entity.visible ? 1f : 0f, entity.age / 5f,
+                    entity.visible && entity.feeding ? 1f : 0f,
+                    entity.visible && entity.feeding ? (entity.sourceX - individual.x) / (Config.halfExtent * 2) : 0f,
+                    entity.visible && entity.feeding ? (entity.sourceY - individual.y) / (Config.halfExtent * 2) : 0f };
             foreach (var food in State.foods)
             {
                 var delta = new Vector2(food.x - individual.x, food.y - individual.y);
                 if (!CanSeePoint(individual, new Vector2(food.x, food.y))) continue;
                 yield return new[] { 0f, delta.x / (Config.halfExtent * 2), delta.y / (Config.halfExtent * 2),
-                    1f, 0f, food.mature && food.phase == FoodPhase.Available ? 1f : 0f, food.amount / food.capacity };
+                    1f, 0f, food.mature && food.phase == FoodPhase.Available ? 1f : 0f, food.amount / food.capacity, 0f, 0f, 0f };
             }
             foreach (var food in individual.foodMemory)
             {
@@ -1033,14 +1061,14 @@ namespace Ecosystem
                     Mathf.Clamp((food.y - individual.y) / (Config.halfExtent * 2), -1f, 1f), 0f,
                     Mathf.Clamp01((State.time - food.lastSeenAt) / Config.foodMemorySeconds),
                     food.mature && food.phase == FoodPhase.Available ? 1f : 0f,
-                    food.capacity > 0 ? food.amount / food.capacity : 0f };
+                    food.capacity > 0 ? food.amount / food.capacity : 0f, 0f, 0f, 0f };
             }
             foreach (var area in individual.areaMemory)
             {
                 Vector2 center = ExplorationCellCenter(area.cellX, area.cellY);
                 yield return new[] { -1f, (center.x - individual.x) / (Config.halfExtent * 2),
                     (center.y - individual.y) / (Config.halfExtent * 2), 0f,
-                    Mathf.Clamp01((State.time - area.lastSeenAt) / Config.areaMemorySeconds), 0f, 0f };
+                    Mathf.Clamp01((State.time - area.lastSeenAt) / Config.areaMemorySeconds), 0f, 0f, 0f, 0f, 0f };
             }
         }
     }

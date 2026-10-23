@@ -6,7 +6,7 @@
 
 **Blocked by:** [02：走跑、技能與繁殖成本拆分](02-activity-and-reproduction.md)
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 [正式規格](../spec.md)為實作依據。開始前讀取前置完成紀錄與本任務討論；前置全部 resolved 才能開始，開始改 claimed，全部驗收通過才改 resolved。
 

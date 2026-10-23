@@ -39,7 +39,7 @@ namespace Ecosystem
                 using var hash = SHA256.Create();
                 string line = reader.ReadLine() ?? throw new InvalidDataException("回放是空檔案。");
                 Header = JsonUtility.FromJson<Record>(line);
-                if (Header.kind != "replay" || Header.schemaVersion != 1 || Header.rules != "survival-v7" || Header.config == null || !Header.config.foraging)
+                if (Header.kind != "replay" || Header.schemaVersion != 1 || Header.rules != "survival-v8" || Header.config == null || !Header.config.foraging)
                     throw new InvalidDataException("回放版本或世界設定不相容。");
                 Header.config.Validate();
                 long position = 0;
