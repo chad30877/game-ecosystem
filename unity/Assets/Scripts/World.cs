@@ -73,10 +73,15 @@ namespace Ecosystem
         public float newFoodFraction = 0.05f;
         public float forageRadius = 0.7f;
         public float forageRate = 12f;
-        public float initialEnergy = 60f;
+        public float initialSatiety = 60f;
+        public float initialStamina = 100f, initialMana = 100f, initialHealthFraction = 1f;
+        public float healthRecoveryDelay = 5f, healthRecoveryFraction = 0.01f;
+        public float staminaRecoveryDelay = 1f, staminaRecoveryRate = 10f, manaRecoveryRate = 2f;
+        public float nutritionStart = 0.3f, nutritionStop = 0.6f, nutritionReserve = 30f, nutritionBudget = 0.5f;
+        public float nutritionHealthFraction = 0.01f, nutritionStamina = 4f, nutritionMana = 4f;
         public float idleCost = 0.5f;
         public float movementCost = 1.2f;
-        public float starvationDamage = 6f;
+        public float starvationDamage = 0.02f;
         public float maturityAge = 30f;
         public float lifespan = 240f;
         public float reproductionEnergy = 80f;
@@ -118,7 +123,7 @@ namespace Ecosystem
                 !float.IsFinite(foodInitialFraction) || foodInitialFraction < 0 || foodInitialFraction > 1 ||
                 !float.IsFinite(forageRadius) || forageRadius <= 0 ||
                 !float.IsFinite(forageRate) || forageRate <= 0 ||
-                !float.IsFinite(initialEnergy) || initialEnergy < 0 || initialEnergy > 100 ||
+                !float.IsFinite(initialSatiety) || initialSatiety < 0 || initialSatiety > 100 ||
                 !float.IsFinite(idleCost) || idleCost < 0 ||
                 !float.IsFinite(movementCost) || movementCost < 0 ||
                 !float.IsFinite(starvationDamage) || starvationDamage <= 0))
@@ -134,6 +139,12 @@ namespace Ecosystem
                 !float.IsFinite(explorationRewardPerCell) || explorationRewardPerCell < 0 ||
                 !float.IsFinite(explorationRewardLimit) || explorationRewardLimit < 0)
                 throw new ArgumentException("訓練獎勵必須是有限數值。");
+            foreach (float value in new[] { initialSatiety, initialStamina, initialMana })
+                if (!float.IsFinite(value) || value < 0 || value > 100) throw new ArgumentException("資源初值無效。");
+            if (!float.IsFinite(initialHealthFraction) || initialHealthFraction <= 0 || initialHealthFraction > 1 || nutritionStart <= 0 || nutritionStop <= nutritionStart || nutritionStop > 1 || nutritionReserve > 100)
+                throw new ArgumentException("健康或營養門檻無效。");
+            foreach (float value in new[] { healthRecoveryDelay, healthRecoveryFraction, staminaRecoveryDelay, staminaRecoveryRate, manaRecoveryRate, nutritionStart, nutritionStop, nutritionReserve, nutritionBudget, nutritionHealthFraction, nutritionStamina, nutritionMana })
+                if (!float.IsFinite(value) || value < 0) throw new ArgumentException("恢復配置無效。");
             if (foraging) (combat ?? throw new ArgumentException("缺少戰鬥配置。")).Validate();
         }
     }
@@ -147,7 +158,12 @@ namespace Ecosystem
         public float y;
         public bool boundary;
         public float health;
-        public float energy;
+        public float satiety, stamina, mana;
+        public float lastStrenuousAt = -1000f;
+        public bool[] nutritionActive = new bool[3];
+        public string[] recoveryStatus = new string[3];
+        public float basalSpent, foodReceived, nutritionSpent;
+        public float[] automaticRecovered = new float[3], nutritionRecovered = new float[3];
         public float age;
         public float bornAt;
         public float reproductionCooldown;
@@ -463,8 +479,8 @@ namespace Ecosystem
             var individual = new IndividualState
             {
                 individual = ++nextIndividual, species = species,
-                health = CombatRules.MaxHealth(species),
-                energy = Config.initialEnergy,
+                health = CombatRules.MaxHealth(species) * Config.initialHealthFraction,
+                satiety = Config.initialSatiety, stamina = Config.initialStamina, mana = Config.initialMana,
                 age = Config.foraging ? Config.maturityAge : 0,
                 bornAt = Config.foraging ? State.time - Config.maturityAge : State.time,
                 x = (float)(random.NextDouble() - 0.5) * Config.halfExtent,
@@ -480,6 +496,45 @@ namespace Ecosystem
         {
             if (State.individuals.RemoveAll(value => value.individual == individual) != 1)
                 throw new ArgumentException("個體不存在。");
+        }
+
+        // 固定結算：活動傷害、基礎消耗、採食、飢餓、自動恢復、營養恢復。
+        private void RecoverVitals(IndividualState individual, float time)
+        {
+            if (individual.health <= 0) return;
+            float maximum = CombatRules.MaxHealth(individual.species);
+            float[] caps = { maximum, 100f, 100f };
+            float[] values = { individual.health, individual.stamina, individual.mana };
+            bool[] allowed = { individual.satiety > 0 && time - individual.lastCombatAt >= Config.healthRecoveryDelay,
+                time - individual.lastStrenuousAt >= Config.staminaRecoveryDelay, true };
+            float[] rates = { maximum * Config.healthRecoveryFraction, Config.staminaRecoveryRate, Config.manaRecoveryRate };
+            float[] efficiency = { maximum * Config.nutritionHealthFraction, Config.nutritionStamina, Config.nutritionMana };
+            for (int i = 0; i < 3; i++)
+            {
+                if (values[i] < caps[i] * Config.nutritionStart) individual.nutritionActive[i] = true;
+                float gain = allowed[i] ? Mathf.Min(caps[i] - values[i], rates[i] * Config.stepSeconds) : 0;
+                values[i] += gain; individual.automaticRecovered[i] += gain;
+                if (values[i] >= caps[i] * Config.nutritionStop) individual.nutritionActive[i] = false;
+            }
+            float total = 0;
+            float[] weights = new float[3];
+            for (int i = 0; i < 3; i++)
+            {
+                individual.recoveryStatus[i] = !individual.nutritionActive[i] ? "inactive" : !allowed[i] || individual.satiety <= Config.nutritionReserve ? "paused" : "active";
+                if (individual.nutritionActive[i] && allowed[i] && efficiency[i] > 0)
+                    total += weights[i] = Mathf.Max(0, Config.nutritionStop - values[i] / caps[i]);
+            }
+            float budget = Mathf.Min(Config.nutritionBudget * Config.stepSeconds, Mathf.Max(0, individual.satiety - Config.nutritionReserve));
+            for (int i = 0; i < 3; i++)
+            {
+                if (weights[i] <= 0 || total <= 0) continue;
+                float gain = Mathf.Min(caps[i] * Config.nutritionStop - values[i], budget * weights[i] / total * efficiency[i]);
+                values[i] += gain; float spent = gain / efficiency[i];
+                individual.satiety -= spent; individual.nutritionSpent += spent; individual.nutritionRecovered[i] += gain;
+                if (values[i] >= caps[i] * Config.nutritionStop) { individual.nutritionActive[i] = false; individual.recoveryStatus[i] = "inactive"; }
+            }
+            individual.health = Mathf.Clamp(values[0], 0, maximum);
+            individual.stamina = Mathf.Clamp(values[1], 0, 100); individual.mana = Mathf.Clamp(values[2], 0, 100);
         }
 
         public WorldState Step(IReadOnlyDictionary<int, Vector2> actions)
@@ -534,15 +589,16 @@ namespace Ecosystem
                 individual.age = time - individual.bornAt;
                 individual.reproductionCooldown = Mathf.Max(0, individual.nextReproductionTime - time);
                 float distance = distances[individual.individual];
-                individual.energy = Mathf.Max(0, individual.energy - Config.idleCost * Config.stepSeconds - Config.movementCost * distance);
+                float basal = Mathf.Min(individual.satiety, Config.idleCost * Config.stepSeconds);
+                individual.satiety -= basal; individual.basalSpent += basal;
                 if (individual.health > 0 && actions[individual.individual].forage)
                     foreach (var food in State.foods)
                         if (food.mature && food.phase == FoodPhase.Available && Vector2.Distance(CombatRules.Position(individual), new Vector2(food.x, food.y)) <= Config.forageRadius)
                         {
-                            float eaten = Mathf.Min(food.amount, Config.forageRate * Config.stepSeconds, 100f - individual.energy);
+                            float eaten = Mathf.Min(food.amount, Config.forageRate * Config.stepSeconds, 100f - individual.satiety);
                             if (eaten <= 0) continue;
                             food.amount -= eaten;
-                            individual.energy += eaten;
+                            individual.satiety += eaten; individual.foodReceived += eaten;
                             State.events.Add(new WorldEvent { kind = "ate", individual = individual.individual, food = food.food, amount = eaten });
                             if (food.amount <= 0.00001f)
                             {
@@ -553,12 +609,15 @@ namespace Ecosystem
                             }
                             break;
                         }
-                if (individual.health > 0 && individual.energy <= 0)
+                if (individual.health > 0 && individual.satiety <= 0)
                 {
-                    individual.health = Mathf.Max(0, individual.health - Config.starvationDamage * Config.stepSeconds);
+                    float damage = Mathf.Min(individual.health, CombatRules.MaxHealth(individual.species) * Config.starvationDamage * Config.stepSeconds);
+                    individual.health -= damage;
+                    State.events.Add(new WorldEvent { kind = "starvation_damage", individual = individual.individual, amount = damage });
                     individual.lastDamageCause = "starved";
                 }
                 CombatRules.Recover(Config, State, individual, time);
+                RecoverVitals(individual, time);
                 string cause = individual.health <= 0 ? individual.lastDamageCause : individual.age >= Config.lifespan ? "old_age" : "";
                 if (cause != "")
                 {
@@ -581,7 +640,7 @@ namespace Ecosystem
                 var parents = State.individuals.ToArray();
                 foreach (var parent in parents)
                 {
-                    if (parent.age < Config.maturityAge || parent.energy < Config.reproductionEnergy ||
+                    if (parent.age < Config.maturityAge || parent.satiety < Config.reproductionEnergy ||
                         parent.reproductionCooldown > 0) continue;
                     var statistics = Statistics(parent.species);
                     if (State.individuals.Count >= Config.populationLimit)
@@ -595,7 +654,7 @@ namespace Ecosystem
                     child.y = parent.y;
                     child.age = 0;
                     child.bornAt = time;
-                    parent.energy -= Config.reproductionCost;
+                    parent.satiety -= Config.reproductionCost;
                     parent.nextReproductionTime = time + Config.reproductionCooldown;
                     parent.reproductionCooldown = Config.reproductionCooldown;
                     statistics.births++;
@@ -641,7 +700,7 @@ namespace Ecosystem
             }
             var threat = individual.perception.Find(value => value.species != individual.species &&
                 Vector2.Distance(CombatRules.Position(individual), new Vector2(value.x, value.y)) <= Config.scanThreatRadius);
-            string reason = individual.energy <= Config.scanEnergyThreshold ? ScanReasons.Energy
+            string reason = individual.satiety <= Config.scanEnergyThreshold ? ScanReasons.Energy
                 : individual.dashRemaining > 0 ? ScanReasons.Escape
                 : threat != null ? ScanReasons.Threat : "";
             if (reason != "")
@@ -779,10 +838,13 @@ namespace Ecosystem
                 Mathf.Clamp01((Config.halfExtent + individual.x) / Config.observationRadius),
                 Mathf.Clamp01((Config.halfExtent - individual.y) / Config.observationRadius),
                 Mathf.Clamp01((Config.halfExtent + individual.y) / Config.observationRadius),
-                individual.facing / 360f, Mathf.Clamp01(individual.energy / 100f),
+                individual.facing / 360f, Mathf.Clamp01(individual.satiety / 100f),
                 (int)individual.loadout[0] / 12f, (int)individual.loadout[1] / 12f,
                 individual.health / CombatRules.MaxHealth(individual.species),
-                individual.skillCooldowns[0] / 10f, individual.skillCooldowns[1] / 10f
+                individual.skillCooldowns[0] / 10f, individual.skillCooldowns[1] / 10f,
+                individual.stamina / 100f, individual.mana / 100f,
+                individual.nutritionActive[0] ? 1f : 0f, individual.nutritionActive[1] ? 1f : 0f, individual.nutritionActive[2] ? 1f : 0f,
+                individual.recoveryStatus[0] == "paused" ? 1f : 0f, individual.recoveryStatus[1] == "paused" ? 1f : 0f, individual.recoveryStatus[2] == "paused" ? 1f : 0f
             };
         }
 
