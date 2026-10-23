@@ -196,8 +196,8 @@ namespace Ecosystem
             GUILayout.BeginArea(inspector, GUI.skin.box);
             scroll = GUILayout.BeginScrollView(scroll);
             GUILayout.Label($"#{individual.individual}　{SpeciesName(individual.species)}");
-            GUILayout.Label($"健康 {individual.health:F1} / {CombatRules.MaxHealth(individual.species):g}　飽食度 {individual.satiety:F1} / 100　體力 {individual.stamina:F1}　魔力 {individual.mana:F1}");
-            GUILayout.Label($"營養恢復 {string.Join(" / ", individual.recoveryStatus)}　基礎 {individual.basalSpent:F1}　進食 {individual.foodReceived:F1}　營養支出 {individual.nutritionSpent:F1}");
+            GUILayout.Label($"健康 {individual.health:F1} / {CombatRules.MaxHealth(individual.species):g}　飽食度 {individual.satiety:F1} / 100\n{(individual.running ? "奔跑" : "走路")}　體力 {individual.stamina:F1}　魔力 {individual.mana:F1}");
+            GUILayout.Label($"營養恢復 {string.Join(" / ", individual.recoveryStatus)}\n基礎 {individual.basalSpent:F1}　進食 {individual.foodReceived:F1}　營養支出 {individual.nutritionSpent:F1}\n活動體力 {individual.activityStaminaSpent:F1}　技能魔力 {individual.skillManaSpent:F1}　繁殖 {individual.reproductionSpent:F1}");
             GUILayout.Label($"年齡 {individual.age:F1}　{(individual.age < world.Config.maturityAge ? "成長期" : "成年")}　繁殖 {individual.reproductionCooldown:F1}s");
             GUILayout.Label($"普通攻擊　{(individual.species == "Moss" ? "無" : individual.attackCooldown > 0 ? $"冷卻 {individual.attackCooldown:F1}s" : "就緒")}");
             for (int slot = 0; slot < individual.loadout.Length; slot++)
@@ -248,7 +248,7 @@ namespace Ecosystem
         private string Availability(IndividualState individual, int slot)
         {
             if (individual.skillCooldowns[slot] > 0) return $"冷卻 {individual.skillCooldowns[slot]:F1}s";
-            if (individual.mana < SkillRules.EnergyCost(world.Config.combat, individual.loadout[slot])) return "魔力不足";
+            if (individual.mana < SkillRules.ManaCost(world.Config.combat, individual.loadout[slot])) return "魔力不足";
             if (individual.chargeRemaining > 0 || individual.dashRemaining > 0 || individual.windupActiveThisStep || individual.cultivateRemaining > 0) return "施放中";
             if (individual.loadout[slot] == WorldSkill.ColdMistDash && individual.rootRemaining > 0) return "定身中";
             return "就緒";
