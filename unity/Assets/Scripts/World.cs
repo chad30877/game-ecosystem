@@ -59,6 +59,8 @@ namespace Ecosystem
         public float scanEnergyThreshold = 12f;
         public int episodeSteps = 256;
         public int individualsPerSpecies = 2;
+        public string initialSpecies = "";
+        public bool disableReproduction, disableAging;
         public int removeStep = 64;
         public int addStep = 96;
         public bool foraging;
@@ -98,6 +100,8 @@ namespace Ecosystem
 
         public void Validate()
         {
+            if (!string.IsNullOrEmpty(initialSpecies) && (!foraging || initialSpecies != "Flame" && initialSpecies != "Frost" && initialSpecies != "Moss"))
+                throw new ArgumentException("指定起始物種須為覓食世界的合法物種。");
             if (foraging)
             {
                 (smallFood ?? throw new ArgumentException("缺少小型生長類型。")).Validate();
@@ -456,7 +460,7 @@ namespace Ecosystem
             enemyMemory.Clear();
             for (int species = 0; species < 3; species++)
                 ShuffleLoadouts(species);
-            foreach (string species in Species)
+            foreach (string species in string.IsNullOrEmpty(Config.initialSpecies) ? Species : new[] { Config.initialSpecies })
                 for (int i = 0; i < Config.individualsPerSpecies; i++)
                     AddIndividual(species, balancedLoadout: true);
             if (Config.foraging)
@@ -594,7 +598,7 @@ namespace Ecosystem
             foreach (var individual in State.individuals)
             {
                 if (!Config.foraging) continue;
-                individual.age = time - individual.bornAt;
+                if (!Config.disableAging) individual.age = time - individual.bornAt;
                 individual.reproductionCooldown = Mathf.Max(0, individual.nextReproductionTime - time);
                 float distance = distances[individual.individual];
                 float basal = Mathf.Min(individual.satiety, Config.idleCost * Config.stepSeconds);
@@ -626,7 +630,7 @@ namespace Ecosystem
                 }
                 CombatRules.Recover(Config, State, individual, time);
                 RecoverVitals(individual, time);
-                string cause = individual.health <= 0 ? individual.lastDamageCause : individual.age >= Config.lifespan ? "old_age" : "";
+                string cause = individual.health <= 0 ? individual.lastDamageCause : !Config.disableAging && individual.age >= Config.lifespan ? "old_age" : "";
                 if (cause != "")
                 {
                     individual.health = 0;
@@ -648,7 +652,7 @@ namespace Ecosystem
                 var parents = State.individuals.ToArray();
                 foreach (var parent in parents)
                 {
-                    if (parent.age < Config.maturityAge || parent.satiety < Config.reproductionSatiety ||
+                    if (Config.disableReproduction || parent.age < Config.maturityAge || parent.satiety < Config.reproductionSatiety ||
                         parent.health < CombatRules.MaxHealth(parent.species) * Config.reproductionHealthFraction ||
                         parent.satiety - Config.reproductionCost <= Config.reproductionReserve ||
                         parent.reproductionCooldown > 0) continue;
