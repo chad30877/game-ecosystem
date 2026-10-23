@@ -24,31 +24,44 @@ def episode_report(log):
 def inspect(log):
     events, reasons, transitions = Counter(), Counter(), Counter()
     previous, examples, births = {}, {}, []
-    supply = {"initial": 0, "final": 0, "harvested": 0, "maxSources": 0}
+    supply = {"initial": 0, "final": 0, "harvested": 0, "maxSources": 0,
+              "existingSourceGrowth": 0, "newSourceStock": 0, "removedStock": 0, "cultivated": 0}
     last = None
     checks = Counter()
     with log.open(encoding="utf-8-sig") as source:
         for line in source:
             record = json.loads(line)
             state = record.get("state")
-            if state is None or record["kind"] not in ("reset", "step"):
+            if state is None or state["episode"] != 1 or record["kind"] not in ("reset", "step"):
                 continue
             if last is None:
                 supply["initial"] = sum(f["amount"] for f in state["foods"])
             supply["maxSources"] = max(supply["maxSources"], len(state["foods"]))
             if record["kind"] == "step":
+                harvested = Counter()
                 for event in state["events"]:
                     kind = event["kind"]
                     events[kind] += 1
                     examples.setdefault(kind, {"step": state["step"], "event": event})
+                    if kind == "cultivated":
+                        supply["cultivated"] += event["amount"]
                     if kind == "ate":
                         supply["harvested"] += event["amount"]
+                        harvested[event["food"]] += event["amount"]
                     if kind == "born":
                         parent = next((i for i in state["individuals"] if i["individual"] == event["parent"]), None)
                         child = next((i for i in state["individuals"] if i["individual"] == event["individual"]), None)
                         births.append({"step": state["step"], "parent": event["parent"], "child": event["individual"],
                                        "parentSatiety": None if parent is None else parent["satiety"],
                                        "childSatiety": None if child is None else child["satiety"]})
+                old_foods = {f["food"]: f for f in last["foods"]}
+                new_foods = {f["food"]: f for f in state["foods"]}
+                for key, food in new_foods.items():
+                    if key in old_foods:
+                        supply["existingSourceGrowth"] += food["amount"] - old_foods[key]["amount"] + harvested[key]
+                    else:
+                        supply["newSourceStock"] += food["amount"] + harvested[key]
+                supply["removedStock"] += sum(f["amount"] for key, f in old_foods.items() if key not in new_foods)
                 for individual in state["individuals"]:
                     for entity in individual.get("perception", []):
                         if entity.get("feeding"):
@@ -72,6 +85,27 @@ def inspect(log):
     supply["final"] = sum(f["amount"] for f in last["foods"])
     return {"events": events, "decisionSteps": reasons, "transitions": transitions,
             "examples": examples, "births": births, "supply": supply, "seconds": last["time"], "checks": checks}
+
+
+def run_case(output, name, config, scenario, seed, rules_species=None):
+    folder = output / name
+    folder.mkdir()
+    for file, data in (("config.json", config), ("layout.json", scenario)):
+        (folder / file).write_text(json.dumps(data, indent=2), encoding="utf-8")
+    command = ["powershell", "-NoProfile", "-File", str(ROOT / "scripts/world.ps1"),
+               "-Mode", "forage", "-Controller", "scripted" if rules_species else "rules",
+               "-WorldConfig", str(folder / "config.json"), "-Scenario", str(folder / "layout.json"),
+               "-Seed", str(seed), "-Steps", str(config["episodeSteps"]),
+               "-RecordEpisodes", "1", "-OutputRoot", str(folder)]
+    if rules_species:
+        command.extend(["-RulesSpecies", rules_species])
+    subprocess.run(command, check=True)
+    log = next(folder.glob("forage-*/record-source.jsonl"))
+    summary, observation = episode_report(log)
+    result = {"name": name, "seed": seed, "log": str(log), "config": config,
+              "summary": summary, "observation": observation}
+    (folder / "result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
+    return result
 
 
 def main():
@@ -103,8 +137,6 @@ def main():
             ("stale", False, False, "Flame", ["Shield", "IntimidatingRoar"]),
             ("hidden", False, False, "Flame", ["Shield", "IntimidatingRoar"]),
         ):
-            folder = output / name
-            folder.mkdir()
             config = {**base, "initialSpecies": "", "disableAging": False, "disableReproduction": False,
                       "episodeSteps": 1000, "naturalFoodLimit": 2 if alternative else 1}
             actor = {"Flame": 1, "Frost": 2, "Moss": 3}[species]
@@ -133,15 +165,7 @@ def main():
                 scenario["foods"][0].update(setElapsedAge=True, elapsedAge=239.9)
             if name == "hidden":
                 placements[actor - 1]["facing"] = 180
-            for file, data in (("config.json", config), ("layout.json", scenario)):
-                (folder / file).write_text(json.dumps(data, indent=2), encoding="utf-8")
-            subprocess.run(["powershell", "-NoProfile", "-File", str(ROOT / "scripts/world.ps1"),
-                            "-Mode", "forage", "-Controller", "scripted", "-RulesSpecies", species,
-                            "-WorldConfig", str(folder / "config.json"), "-Scenario", str(folder / "layout.json"),
-                            "-Seed", "101", "-Steps", "1000", "-RecordEpisodes", "1", "-OutputRoot", str(folder)], check=True)
-            log = next(folder.glob("forage-*/record-source.jsonl"))
-            summary, observation = episode_report(log)
-            results.append({"name": name, "log": str(log), "summary": summary, "observation": observation})
+            results.append(run_case(output, name, config, scenario, 101, species))
             (output / "results.json").write_text(json.dumps(results, indent=2), encoding="utf-8")
         return
     for stage in ("reproduction", "limited", "combat"):
@@ -149,8 +173,6 @@ def main():
         for species in species_list:
             for seed in (101, 102):
                 name = f"{stage}-{species}-{seed}"
-                folder = output / name
-                folder.mkdir()
                 config = {**base, "initialSpecies": "" if species == "all" else species,
                           "disableAging": False, "disableReproduction": False,
                           "episodeSteps": 15000, "populationLimit": 24}
@@ -161,18 +183,7 @@ def main():
                     scenario["placements"] = [{"slot": i + 1, "x": 1 + i * .5, "y": 0, "facing": 180} for i in range(3)]
                 if stage != "reproduction":
                     scenario["foods"] = scenario["foods"][:1]
-                for file, data in (("config.json", config), ("layout.json", scenario)):
-                    (folder / file).write_text(json.dumps(data, indent=2), encoding="utf-8")
-                subprocess.run(["powershell", "-NoProfile", "-File", str(ROOT / "scripts/world.ps1"),
-                                "-Mode", "forage", "-Controller", "rules", "-WorldConfig", str(folder / "config.json"),
-                                "-Scenario", str(folder / "layout.json"), "-Seed", str(seed), "-Steps", "15000",
-                                "-RecordEpisodes", "1", "-OutputRoot", str(folder)], check=True)
-                log = next(folder.glob("forage-*/record-source.jsonl"))
-                summary, observation = episode_report(log)
-                result = {"name": name, "seed": seed, "log": str(log), "config": config,
-                          "summary": summary, "observation": observation}
-                (folder / "result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
-                results.append(result)
+                results.append(run_case(output, name, config, scenario, seed))
                 (output / "results.json").write_text(json.dumps(results, indent=2), encoding="utf-8")
                 print(name, "完成", flush=True)
 
