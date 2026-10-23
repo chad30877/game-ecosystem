@@ -80,6 +80,7 @@ def metrics(log: Path):
     half_extent = cell_size = None
     tracks = {}
     individual_coverage = {}
+    species_coverage = defaultdict(set)
     food_steps = defaultdict(set)
     def group(item):
         key = item["species"] + ":" + ",".join(map(str, sorted(item["loadout"])))
@@ -88,6 +89,30 @@ def metrics(log: Path):
             "births": 0, "foodEnergy": 0.0, "damageDealt": 0.0, "damageTaken": 0.0,
             "exploredCells": 0, "distanceMoved": 0.0, "revisitDistance": 0.0,
             "productiveRevisitDistance": 0.0, "activeTurns": 0, "assistedScanTurns": 0})
+    def track_step(item, step):
+        identifier = item["individual"]
+        bucket = individual_metrics.get(identifier)
+        track = tracks.get(identifier)
+        if bucket is None or track is None:
+            return
+        distance = math.hypot(item["x"] - track["position"][0], item["y"] - track["position"][1])
+        cell = (math.floor((item["x"] + half_extent) / cell_size), math.floor((item["y"] + half_extent) / cell_size))
+        bucket["distanceMoved"] += distance
+        if cell != track["cell"]:
+            track["revisiting"] = cell in track["cells"]
+            track["cell"] = cell
+        if distance > 0 and track["revisiting"]:
+            bucket["revisitDistance"] += distance
+            track["pending"].append((step, distance))
+        track["cells"].add(cell)
+        track["position"] = (item["x"], item["y"])
+        bucket["activeTurns"] += item["rawTurn"] != 0
+        bucket["assistedScanTurns"] += item["scanIntervened"]
+        while track["pending"] and step - track["pending"][0][0] > 250:
+            track["pending"].popleft()
+        if identifier in food_steps[step]:
+            bucket["productiveRevisitDistance"] += sum(value for _, value in track["pending"])
+            track["pending"].clear()
     with log.open(encoding="utf-8-sig") as source:
         for line in source:
             row = json.loads(line)
@@ -114,35 +139,22 @@ def metrics(log: Path):
                 for event in sample["events"]:
                     if event["kind"] == "ate": food_steps[sample["step"]].add(event["individual"])
             if kind == "metric":
+                food_steps.pop(row["step"] - 1, None)
                 for item in row["individuals"]:
-                    identifier = item["individual"]
-                    bucket = individual_metrics.get(identifier)
-                    track = tracks.get(identifier)
-                    if bucket is None or track is None: continue
-                    distance = math.hypot(item["x"] - track["position"][0], item["y"] - track["position"][1])
-                    cell = (math.floor((item["x"] + half_extent) / cell_size), math.floor((item["y"] + half_extent) / cell_size))
-                    bucket["distanceMoved"] += distance
-                    if cell != track["cell"]:
-                        track["revisiting"] = cell in track["cells"]
-                        track["cell"] = cell
-                    if distance > 0 and track["revisiting"]:
-                        bucket["revisitDistance"] += distance
-                        track["pending"].append((row["step"], distance))
-                    track["cells"].add(cell)
-                    track["position"] = (item["x"], item["y"])
-                    individual_coverage[identifier] = item["exploredCells"]
-                    bucket["activeTurns"] += item["rawTurn"] != 0
-                    bucket["assistedScanTurns"] += item["scanIntervened"]
-                    while track["pending"] and row["step"] - track["pending"][0][0] > 250:
-                        track["pending"].popleft()
-                    if identifier in food_steps[row["step"]]:
-                        bucket["productiveRevisitDistance"] += sum(value for _, value in track["pending"])
-                        track["pending"].clear()
-                food_steps.pop(row["step"], None)
+                    track_step(item, row["step"])
+                    individual_coverage[item["individual"]] = item["exploredCells"]
+            if kind == "agent_died":
+                item = row["individual"]
+                track_step(item, state["step"])
+                individual_coverage[item["individual"]] = len(item["rewardedCells"])
+                species_coverage[item["species"]].update(item["rewardedCells"])
             if kind == "reset":
                 population.append({"time": state["time"], "counts": {s["species"]: s["incompleteLives"] for s in state["statistics"]}})
             if kind == "episode_end":
                 final = state
+                for item in state["individuals"]:
+                    species_coverage[item["species"]].update(item["rewardedCells"])
+                    individual_coverage[item["individual"]] = len(item["rewardedCells"])
                 if not population or population[-1]["time"] != state["time"]:
                     population.append({"time": state["time"], "counts": {s["species"]: s["incompleteLives"] for s in state["statistics"]}})
             if kind == "resources": resources = row
@@ -171,6 +183,7 @@ def metrics(log: Path):
             "meanObservedSeconds": statistics.mean([v for b in buckets for v in b["observedSeconds"]])}
     return {"steps": final["step"], "seconds": final["time"], "reason": final["endReason"],
             "explorationGridCells": math.ceil(half_extent * 2 / cell_size) ** 2,
+            "speciesExploredCells": {species: len(species_coverage[species]) for species in SPECIES},
             "species": species, "configurations": configurations, "population": population, "resources": resources}
 
 
@@ -196,7 +209,8 @@ def rollout(args, output, seed, modes, weights, network, initial, capture):
         env.reset()
         specs = {name.split("?")[0]: (name, spec) for name, spec in env.behavior_specs.items()}
         if set(specs) != set(SPECIES): raise ValueError("三物種 behavior 不完整。")
-        policies = {s: policy(specs[s][1], network[s], weights[s] if modes[s] == "trained" else initial[s]) for s in SPECIES}
+        policies = {s: policy(specs[s][1], network[s], weights[s] if modes[s] == "trained" else initial[s])
+                    for s in SPECIES if modes[s] != "rules"}
         random_states = {}
         for index, s in enumerate(SPECIES):
             torch.manual_seed(seed * 10 + index)
@@ -207,9 +221,12 @@ def rollout(args, output, seed, modes, weights, network, initial, capture):
                 behavior = specs[species][0]
                 decisions, _ = env.get_steps(behavior)
                 if len(decisions) == 0: continue
-                torch.set_rng_state(random_states[species])
-                action = policies[species].get_action(decisions).action
-                random_states[species] = torch.get_rng_state()
+                if modes[species] == "rules":
+                    action = specs[species][1].action_spec.empty_action(len(decisions))
+                else:
+                    torch.set_rng_state(random_states[species])
+                    action = policies[species].get_action(decisions).action
+                    random_states[species] = torch.get_rng_state()
                 env.set_actions(behavior, action)
             try:
                 env.step()
@@ -294,9 +311,11 @@ def report(output, cases, metadata):
                 species[s][field] = describe([sum(bucket[field] for bucket in run["configurations"].values()
                                                    if bucket["species"] == s) for run in runs])
             species[s]["explorationCoverage"] = describe([
-                sum(bucket["exploredCells"] for bucket in run["configurations"].values() if bucket["species"] == s)
-                / max(1, sum(bucket["individuals"] for bucket in run["configurations"].values() if bucket["species"] == s))
-                / run["explorationGridCells"] for run in runs])
+                run["speciesExploredCells"][s] / run["explorationGridCells"] for run in runs])
+            species[s]["unproductiveRevisitDistance"] = describe([
+                sum(bucket["revisitDistance"] - bucket["productiveRevisitDistance"]
+                    for bucket in run["configurations"].values() if bucket["species"] == s)
+                for run in runs])
             species[s]["extinctionFrequency"] = sum(r["species"][s]["extinct"] for r in runs) / len(runs)
         configurations = defaultdict(list)
         for run in runs:
@@ -330,8 +349,8 @@ def report(output, cases, metadata):
             baseline = initial[field]["mean"] or 0
             observed = trained[field]["mean"] or 0
             return observed >= baseline * ratio and observed > 0
-        initial_empty = (initial["revisitDistance"]["mean"] or 0) - (initial["productiveRevisitDistance"]["mean"] or 0)
-        trained_empty = (trained["revisitDistance"]["mean"] or 0) - (trained["productiveRevisitDistance"]["mean"] or 0)
+        initial_empty = initial["unproductiveRevisitDistance"]["mean"] or 0
+        trained_empty = trained["unproductiveRevisitDistance"]["mean"] or 0
         checks[s] = {"survival": enough("meanObservedSeconds", ACCEPTANCE["minObservedSecondsRatio"]),
                      "food": enough("foodEnergy", ACCEPTANCE["minFoodEnergyRatio"]),
                      "starvation": (trained["starved"]["mean"] or 0) <= (initial["starved"]["mean"] or 0) * ACCEPTANCE["maxStarvedRatio"],
@@ -356,18 +375,17 @@ def report(output, cases, metadata):
     for name, aggregate in aggregates.items():
         for s, values in aggregate["species"].items():
             lines.append(f"| {name} | {s} | {fmt(values['meanObservedSeconds'])} | {fmt(values['meanCompletedAge'])} | {fmt(values['starved'])} | {fmt(values['births'])} | {values['extinctionFrequency']:.0%} | {values['incompleteLives']['mean']:.1f} |")
-    lines += ["", "| 條件 | 物種 | 採食能量 mean ± sd | 個體探索覆蓋 mean ± sd | 重複路徑 mean ± sd | 無收益重複路徑 mean ± sd | 主動轉向 mean ± sd | 系統掃視 mean ± sd |", "|---|---|---|---|---|---|---|---|"]
+    lines += ["", "| 條件 | 物種 | 採食能量 mean ± sd | 物種探索覆蓋 mean ± sd | 重複路徑 mean ± sd | 無收益重複路徑 mean ± sd | 主動轉向 mean ± sd | 系統掃視 mean ± sd |", "|---|---|---|---|---|---|---|---|"]
     for name, aggregate in aggregates.items():
         for s, values in aggregate["species"].items():
-            empty = {"mean": (values["revisitDistance"]["mean"] or 0) - (values["productiveRevisitDistance"]["mean"] or 0), "sd": None}
-            lines.append(f"| {name} | {s} | {fmt(values['foodEnergy'])} | {fmt(values['explorationCoverage'])} | {fmt(values['revisitDistance'])} | {fmt(empty)} | {fmt(values['activeTurns'])} | {fmt(values['assistedScanTurns'])} |")
-    lines += ["", "個體探索覆蓋為每隻個體首次看過格數／世界格數，再按物種取平均；配置的探索格數是所屬個體格數加總。重複路徑指再次進入已走過格子的移動距離；若其後五秒內採食，該段列為有收益，其餘列為無收益。", "",
+            lines.append(f"| {name} | {s} | {fmt(values['foodEnergy'])} | {fmt(values['explorationCoverage'])} | {fmt(values['revisitDistance'])} | {fmt(values['unproductiveRevisitDistance'])} | {fmt(values['activeTurns'])} | {fmt(values['assistedScanTurns'])} |")
+    lines += ["", "物種探索覆蓋為該物種所有個體首次看過格子的去重聯集／世界格數；配置的探索格數是所屬個體格數加總。重複路徑指再次進入已走過格子的移動距離；若其後五秒內採食，該段列為有收益，其餘列為無收益。", "",
               "預先固定門檻：觀測存活時間與採食能量各至少增加 5%，飢餓死亡不增加，無收益重複路徑不超過初始策略的 1.25 倍；須有三次獨立訓練及固定場景支持。", ""]
     lines += ["## 固定場景", "", "| 場景 | 控制 | 苔靈採食能量 | 探索格數 | 主動轉向 | 系統掃視 |", "|---|---|---:|---:|---:|---:|"]
     for name, conditions in metadata["scenes"].items():
         for mode, scene in conditions.items():
             moss = [value for value in scene["configurations"].values() if value["species"] == "Moss"]
-            lines.append(f"| {name} | {mode} | {sum(value['foodEnergy'] for value in moss):.1f} | {sum(value['exploredCells'] for value in moss)} | {sum(value['activeTurns'] for value in moss)} | {sum(value['assistedScanTurns'] for value in moss)} |")
+            lines.append(f"| {name} | {mode} | {sum(value['foodEnergy'] for value in moss):.1f} | {scene['speciesExploredCells']['Moss']} | {sum(value['activeTurns'] for value in moss)} | {sum(value['assistedScanTurns'] for value in moss)} |")
     lines += ["", "完整逐配置樣本、變異、族群曲線、上限觸發、未完成個體年齡、版本與參數保存在 evaluation.json。起始成年個體已有年齡，完成生命年齡與本次觀測存活秒數分開呈現；未完成樣本不當作完整壽命。", "",
               "## 預算與限制", "", f"平均推論 {statistics.mean(speeds):.1f} 世界步／秒；目前輸出 {disk:,} bytes。Unity 記憶體峰值見 JSON，未包含 Python／trainer，不能直接當作訓練記憶體預算。", "",
               f"來源訓練實測 {training_steps:,} 世界步／{training_seconds:.2f} 秒，trainer 峰值 {training['trainerPeakWorkingSetBytes']} bytes，Unity 峰值 {training['unityPeakWorkingSetBytes']} bytes，保存容量 {training['diskBytes']:,} bytes。兩程序各自峰值不代表同時峰值；工時與磁碟量依相同配置線性外推，族群增長及長訓練可能改變成本。", "",
