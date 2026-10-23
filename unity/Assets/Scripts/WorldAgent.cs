@@ -25,7 +25,7 @@ namespace Ecosystem
             var discrete = actions.DiscreteActions;
             Action = new WorldAction(new Vector2(continuous[0], continuous[1]), discrete[3] == 1,
                 new Vector2(Individual.x, Individual.y) + new Vector2(continuous[2], continuous[3]) * (World.Config.halfExtent * 2f), discrete[2] == 1,
-                turn: discrete[0] - 1, skillSlot: discrete[1] - 1);
+                turn: discrete[0] - 1, skillSlot: discrete[1] - 1, run: discrete[4] == 1);
         }
 
         public override void Heuristic(in ActionBuffers actionsOut)
@@ -42,6 +42,7 @@ namespace Ecosystem
             discrete[1] = Input.GetKey(KeyCode.S) ? 1 : Input.GetKey(KeyCode.D) ? 2 : 0;
             discrete[2] = Input.GetKey(KeyCode.A) ? 1 : 0;
             discrete[3] = Input.GetKey(KeyCode.Space) ? 1 : 0;
+            discrete[4] = Input.GetKey(KeyCode.LeftShift) ? 1 : 0;
         }
 
     }

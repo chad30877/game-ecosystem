@@ -14,58 +14,55 @@ namespace Ecosystem
         public float mossSpeed = 2.7f;
         public float meleeRange = 1.1f;
         public float meleeDamage = 12f;
-        public float meleeEnergy = 2f;
+        public float meleeStamina = 2f;
         public float meleeCooldown = 1f;
         public float chargeDistance = 4f;
         public float chargeSpeed = 10f;
         public float chargeDamage = 24f;
-        public float chargeEnergy = 12f;
+        public float chargeMana = 12f;
         public float chargeCooldown = 6f;
         public float hitRadius = 0.55f;
-        public float recoveryEnergy = 50f;
-        public float recoveryDelay = 5f;
-        public float recoveryRate = 2f;
         public float iceRange = 6f;
         public float iceSpeed = 8f;
         public float iceDamage = 10f;
-        public float iceEnergy = 6f;
+        public float iceMana = 6f;
         public float iceWindup = 0.45f;
         public float iceCooldown = 2.5f;
         public float slowDuration = 1f;
         public float slowMultiplier = 0.55f;
         public float cultivateRange = 1.5f;
-        public float cultivateEnergy = 8f;
+        public float cultivateMana = 8f;
         public float cultivateCooldown = 6f;
         public float cultivateDuration = 3f;
         public float cultivateRate = 4f;
-        public float shieldEnergy = 10f;
+        public float shieldMana = 10f;
         public float shieldCooldown = 8f;
         public float shieldDuration = 2f;
         public float shieldMultiplier = 0.35f;
 
-        public float hotStrikeEnergy = 10f;
+        public float hotStrikeMana = 10f;
         public float hotStrikeCooldown = 5f;
         public float hotStrikeDamage = 26f;
         public float hotStrikeRange = 1.5f;
-        public float roarEnergy = 9f;
+        public float roarMana = 9f;
         public float roarCooldown = 7f;
         public float roarRange = 3f;
         public float roarDuration = 2f;
         public float roarBias = 0.2f;
         public float maxMovementBias = 0.35f;
 
-        public float frostbindEnergy = 10f;
+        public float frostbindMana = 10f;
         public float frostbindCooldown = 5f;
         public float frostbindDamage = 8f;
-        public float piercingEnergy = 14f;
+        public float piercingMana = 14f;
         public float piercingCooldown = 7f;
         public float piercingDamage = 18f;
         public float piercingRange = 8f;
-        public float dashEnergy = 12f;
+        public float dashMana = 12f;
         public float dashCooldown = 7f;
         public float dashDistance = 3f;
         public float dashSpeed = 8f;
-        public float trapEnergy = 10f;
+        public float trapMana = 10f;
         public float trapCooldown = 8f;
         public float trapRange = 4f;
         public float trapRadius = 0.6f;
@@ -73,16 +70,16 @@ namespace Ecosystem
         public float trapRootDuration = 1.2f;
         public float trapSlowDuration = 2f;
 
-        public float sowEnergy = 12f;
+        public float sowMana = 12f;
         public float sowCooldown = 8f;
         public float sowRange = 3f;
         public float sowSpacing = 0.8f;
         public float sowMaturity = 5f;
-        public float rootsEnergy = 10f;
+        public float rootsMana = 10f;
         public float rootsCooldown = 7f;
         public float rootsRange = 2.5f;
         public float rootsDuration = 2f;
-        public float smokeEnergy = 14f;
+        public float smokeMana = 14f;
         public float smokeCooldown = 10f;
         public float smokeRadius = 2.5f;
         public float smokeDuration = 8f;
@@ -96,19 +93,19 @@ namespace Ecosystem
 
         public void Validate()
         {
-            foreach (float value in new[] { flameSpeed, frostSpeed, mossSpeed, meleeRange, meleeDamage, meleeEnergy, meleeCooldown,
-                chargeDistance, chargeSpeed, chargeDamage, chargeEnergy, chargeCooldown,
-                hitRadius, recoveryEnergy, recoveryDelay, recoveryRate, iceRange, iceSpeed, iceDamage,
-                iceEnergy, iceWindup, iceCooldown, slowDuration, slowMultiplier, cultivateRange, cultivateEnergy,
-                cultivateCooldown, cultivateDuration, cultivateRate, shieldEnergy, shieldCooldown, shieldDuration, shieldMultiplier, hotStrikeEnergy, hotStrikeCooldown, hotStrikeDamage, hotStrikeRange,
-                roarEnergy, roarCooldown, roarRange, roarDuration, roarBias, maxMovementBias,
-                frostbindEnergy, frostbindCooldown, frostbindDamage, piercingEnergy, piercingCooldown, piercingDamage, piercingRange,
-                dashEnergy, dashCooldown, dashDistance, dashSpeed, trapEnergy, trapCooldown, trapRange, trapRadius, trapDuration, trapRootDuration, trapSlowDuration,
-                sowEnergy, sowCooldown, sowRange, sowSpacing, sowMaturity, rootsEnergy, rootsCooldown, rootsRange, rootsDuration,
-                smokeEnergy, smokeCooldown, smokeRadius, smokeDuration, smokeBias, smokeBiasDuration, smokeDirectionInterval, smokeTurnSpeed,
+            foreach (float value in new[] { flameSpeed, frostSpeed, mossSpeed, meleeRange, meleeDamage, meleeStamina, meleeCooldown,
+                chargeDistance, chargeSpeed, chargeDamage, chargeMana, chargeCooldown,
+                hitRadius, iceRange, iceSpeed, iceDamage,
+                iceMana, iceWindup, iceCooldown, slowDuration, slowMultiplier, cultivateRange, cultivateMana,
+                cultivateCooldown, cultivateDuration, cultivateRate, shieldMana, shieldCooldown, shieldDuration, shieldMultiplier, hotStrikeMana, hotStrikeCooldown, hotStrikeDamage, hotStrikeRange,
+                roarMana, roarCooldown, roarRange, roarDuration, roarBias, maxMovementBias,
+                frostbindMana, frostbindCooldown, frostbindDamage, piercingMana, piercingCooldown, piercingDamage, piercingRange,
+                dashMana, dashCooldown, dashDistance, dashSpeed, trapMana, trapCooldown, trapRange, trapRadius, trapDuration, trapRootDuration, trapSlowDuration,
+                sowMana, sowCooldown, sowRange, sowSpacing, sowMaturity, rootsMana, rootsCooldown, rootsRange, rootsDuration,
+                smokeMana, smokeCooldown, smokeRadius, smokeDuration, smokeBias, smokeBiasDuration, smokeDirectionInterval, smokeTurnSpeed,
                 poisonInterval, poisonDuration, poisonDamage })
                 if (!float.IsFinite(value) || value <= 0) throw new ArgumentException("戰鬥參數須為有限正數。");
-            if (meleeEnergy > 100 || chargeEnergy > 100 || recoveryEnergy > 100 || iceEnergy > 100 || cultivateEnergy > 100 || shieldEnergy > 100 || hotStrikeEnergy > 100 || roarEnergy > 100 || frostbindEnergy > 100 || piercingEnergy > 100 || dashEnergy > 100 || trapEnergy > 100 || sowEnergy > 100 || rootsEnergy > 100 || smokeEnergy > 100)
+            if (meleeStamina > 100 || chargeMana > 100 || iceMana > 100 || cultivateMana > 100 || shieldMana > 100 || hotStrikeMana > 100 || roarMana > 100 || frostbindMana > 100 || piercingMana > 100 || dashMana > 100 || trapMana > 100 || sowMana > 100 || rootsMana > 100 || smokeMana > 100)
                 throw new ArgumentException("戰鬥能量門檻不得大於 100。");
             if (maxMovementBias >= 1 || roarBias > maxMovementBias || smokeBias > maxMovementBias) throw new ArgumentException("移動偏向須保留個體操作能力。");
             if (slowDuration >= iceCooldown || slowMultiplier >= 1 || iceWindup >= iceCooldown)
@@ -133,6 +130,9 @@ namespace Ecosystem
                 individual.chargeActiveThisStep = individual.chargeRemaining > 0;
                 individual.windupActiveThisStep = individual.windupUntil > 0;
                 individual.skillUsedThisStep = false;
+                individual.running = false;
+                if (individual.chargeActiveThisStep || individual.dashActiveThisStep)
+                    individual.lastStrenuousAt = state.time + config.stepSeconds;
                 if (individual.health <= 0) continue;
                 var action = actions[individual.individual];
                 if (individual.windupUntil > 0 && state.time >= individual.windupUntil)
@@ -147,11 +147,13 @@ namespace Ecosystem
                     state.events.Add(new WorldEvent { kind = "ice_fired", skill = individual.windupSkill, individual = individual.individual, x = individual.x, y = individual.y });
                 }
                 SkillRules.TryCast(config, state, individual, action);
+                if (individual.skillUsedThisStep && (individual.lastSkill == WorldSkill.Charge || individual.lastSkill == WorldSkill.ColdMistDash || individual.lastSkill == WorldSkill.HotStrike))
+                    individual.lastStrenuousAt = state.time + config.stepSeconds;
                 Vector2 direction = AimDirection(individual, action);
                 if (individual.species == "Frost" && action.attack && !individual.windupActiveThisStep && !individual.dashActiveThisStep && !individual.skillUsedThisStep && direction.sqrMagnitude > 0 &&
-                    state.time >= individual.attackReadyAt && individual.mana >= config.combat.iceEnergy)
+                    state.time >= individual.attackReadyAt && individual.mana >= config.combat.iceMana)
                 {
-                    individual.mana -= config.combat.iceEnergy;
+                    individual.mana -= config.combat.iceMana; individual.skillManaSpent += config.combat.iceMana;
                     individual.attackReadyAt = state.time + config.combat.iceCooldown;
                     individual.windupSkill = WorldSkill.None;
                     individual.windupUntil = state.time + config.combat.iceWindup;
@@ -159,7 +161,7 @@ namespace Ecosystem
                     individual.aimX = direction.x;
                     individual.aimY = direction.y;
                     individual.lastCombatAt = state.time;
-                    state.events.Add(new WorldEvent { kind = "ice_windup", individual = individual.individual, amount = config.combat.iceEnergy });
+                    state.events.Add(new WorldEvent { kind = "ice_windup", individual = individual.individual, amount = config.combat.iceMana });
                 }
             }
         }
@@ -167,7 +169,9 @@ namespace Ecosystem
         public static Vector2 Move(WorldConfig config, WorldState state, IndividualState individual, WorldAction action)
         {
             if (state.time < individual.rootUntil) { individual.boundary = false; return Position(individual); }
+            bool running = action.run && action.movement.sqrMagnitude > 0 && individual.chargeRemaining <= 0 && individual.dashRemaining <= 0 && !individual.windupActiveThisStep && individual.stamina + 0.00001f >= config.runStaminaRate * config.stepSeconds;
             float speed = individual.species == "Frost" ? config.combat.frostSpeed : individual.species == "Moss" ? config.combat.mossSpeed : config.combat.flameSpeed;
+            if (running) speed *= config.runMultiplier;
             bool charging = individual.chargeRemaining > 0;
             bool dashing = individual.dashRemaining > 0;
             if (!charging && state.time < individual.slowUntil) speed *= config.combat.slowMultiplier;
@@ -179,6 +183,12 @@ namespace Ecosystem
             Vector2 end = start + delta;
             end = new Vector2(Mathf.Clamp(end.x, -config.halfExtent, config.halfExtent), Mathf.Clamp(end.y, -config.halfExtent, config.halfExtent));
             individual.boundary = end != start + delta;
+            if (running && end != start)
+            {
+                float cost = Mathf.Min(individual.stamina, config.runStaminaRate * config.stepSeconds);
+                individual.stamina -= cost; individual.activityStaminaSpent += cost;
+                individual.running = true; individual.lastStrenuousAt = state.time + config.stepSeconds;
+            }
             if (dashing) individual.dashRemaining = individual.boundary ? 0 : Mathf.Max(0, individual.dashRemaining - delta.magnitude);
             if (charging)
             {
@@ -200,11 +210,12 @@ namespace Ecosystem
             {
                 var action = actions[individual.individual];
                 if (individual.health <= 0 || individual.species != "Flame" || individual.chargeActiveThisStep || individual.skillUsedThisStep || !action.attack ||
-                    AimDirection(individual, action).sqrMagnitude == 0 || state.time < individual.attackReadyAt || individual.mana < config.combat.meleeEnergy) continue;
-                individual.mana -= config.combat.meleeEnergy;
+                    AimDirection(individual, action).sqrMagnitude == 0 || state.time < individual.attackReadyAt || individual.stamina < config.combat.meleeStamina) continue;
+                individual.stamina -= config.combat.meleeStamina; individual.activityStaminaSpent += config.combat.meleeStamina;
+                individual.lastStrenuousAt = state.time + config.stepSeconds;
                 individual.attackReadyAt = state.time + config.combat.meleeCooldown;
                 individual.lastCombatAt = state.time;
-                state.events.Add(new WorldEvent { kind = "melee", individual = individual.individual, amount = config.combat.meleeEnergy });
+                state.events.Add(new WorldEvent { kind = "melee", individual = individual.individual, amount = config.combat.meleeStamina });
                 var target = FirstHit(state, individual.species, Position(individual),
                     Position(individual) + AimDirection(individual, action) * config.combat.meleeRange, config.combat.hitRadius, out _);
                 if (target != null) Damage(config, state, individual, target, config.combat.meleeDamage, "melee_hit", state.time + config.stepSeconds);

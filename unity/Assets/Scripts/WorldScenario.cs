@@ -95,7 +95,7 @@ namespace Ecosystem
                 foreach (var command in commands)
                     if (command.slot == slot && step >= command.fromStep && step <= command.toStep)
                         return new WorldAction(new Vector2(command.moveX, command.moveY), command.forage,
-                            new Vector2(command.aimX, command.aimY), command.attack, Enum.Parse<WorldSkill>(command.skill), command.turn, command.skillSlot);
+                            new Vector2(command.aimX, command.aimY), command.attack, Enum.Parse<WorldSkill>(command.skill), command.turn, command.skillSlot, command.run);
             return new WorldAction(Vector2.zero);
         }
 
@@ -123,6 +123,7 @@ namespace Ecosystem
             public float aimX;
             public float aimY;
             public bool forage;
+            public bool run;
             public bool attack;
             public int turn;
             public int skillSlot = -1;

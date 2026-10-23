@@ -80,11 +80,12 @@ namespace Ecosystem
         public float nutritionStart = 0.3f, nutritionStop = 0.6f, nutritionReserve = 30f, nutritionBudget = 0.5f;
         public float nutritionHealthFraction = 0.01f, nutritionStamina = 4f, nutritionMana = 4f;
         public float idleCost = 0.5f;
-        public float movementCost = 1.2f;
+        public float runMultiplier = 1.5f, runStaminaRate = 10f;
         public float starvationDamage = 0.02f;
         public float maturityAge = 30f;
         public float lifespan = 240f;
-        public float reproductionEnergy = 80f;
+        public float reproductionSatiety = 80f;
+        public float reproductionHealthFraction = 0.8f, reproductionReserve = 30f, newbornSatiety = 30f;
         public float reproductionCost = 40f;
         public float reproductionCooldown = 30f;
         public int populationLimit = 120;
@@ -125,13 +126,16 @@ namespace Ecosystem
                 !float.IsFinite(forageRate) || forageRate <= 0 ||
                 !float.IsFinite(initialSatiety) || initialSatiety < 0 || initialSatiety > 100 ||
                 !float.IsFinite(idleCost) || idleCost < 0 ||
-                !float.IsFinite(movementCost) || movementCost < 0 ||
+                !float.IsFinite(runMultiplier) || runMultiplier < 1 || !float.IsFinite(runStaminaRate) || runStaminaRate <= 0 ||
                 !float.IsFinite(starvationDamage) || starvationDamage <= 0))
                 throw new ArgumentException("食物、採食與生存參數無效。");
             if (foraging && (!float.IsFinite(maturityAge) || maturityAge <= 0 ||
                 !float.IsFinite(lifespan) || lifespan <= maturityAge ||
-                !float.IsFinite(reproductionEnergy) || reproductionEnergy <= 0 || reproductionEnergy > 100 ||
-                !float.IsFinite(reproductionCost) || reproductionCost <= 0 || reproductionCost > reproductionEnergy ||
+                !float.IsFinite(reproductionSatiety) || reproductionSatiety <= 0 || reproductionSatiety > 100 ||
+                !float.IsFinite(reproductionCost) || reproductionCost <= 0 || reproductionCost > reproductionSatiety ||
+                !float.IsFinite(reproductionHealthFraction) || reproductionHealthFraction <= 0 || reproductionHealthFraction > 1 ||
+                !float.IsFinite(reproductionReserve) || reproductionReserve < 0 || reproductionReserve >= reproductionSatiety ||
+                !float.IsFinite(newbornSatiety) || newbornSatiety < 0 || newbornSatiety > reproductionCost || newbornSatiety > 100 ||
                 !float.IsFinite(reproductionCooldown) || reproductionCooldown <= 0 ||
                 populationLimit < (long)individualsPerSpecies * 3))
                 throw new ArgumentException("成長期、壽命、繁殖或人口上限參數無效。");
@@ -162,6 +166,8 @@ namespace Ecosystem
         public float lastStrenuousAt = -1000f;
         public bool[] nutritionActive = new bool[3];
         public string[] recoveryStatus = new string[3];
+        public bool running;
+        public float activityStaminaSpent, skillManaSpent, reproductionSpent;
         public float basalSpent, foodReceived, nutritionSpent;
         public float[] automaticRecovered = new float[3], nutritionRecovered = new float[3];
         public float age;
@@ -345,15 +351,17 @@ namespace Ecosystem
     {
         public readonly Vector2 movement;
         public readonly bool forage;
+        public readonly bool run;
         public readonly Vector2 aim;
         public readonly bool attack;
         public readonly WorldSkill skill;
         public readonly int turn;
         public readonly int skillSlot;
-        public WorldAction(Vector2 movement, bool forage = false, Vector2 aim = default, bool attack = false, WorldSkill skill = WorldSkill.None, int turn = 0, int skillSlot = -1)
+        public WorldAction(Vector2 movement, bool forage = false, Vector2 aim = default, bool attack = false, WorldSkill skill = WorldSkill.None, int turn = 0, int skillSlot = -1, bool run = false)
         {
             this.movement = movement;
             this.forage = forage;
+            this.run = run;
             this.aim = aim;
             this.attack = attack;
             this.skill = skill;
@@ -640,7 +648,9 @@ namespace Ecosystem
                 var parents = State.individuals.ToArray();
                 foreach (var parent in parents)
                 {
-                    if (parent.age < Config.maturityAge || parent.satiety < Config.reproductionEnergy ||
+                    if (parent.age < Config.maturityAge || parent.satiety < Config.reproductionSatiety ||
+                        parent.health < CombatRules.MaxHealth(parent.species) * Config.reproductionHealthFraction ||
+                        parent.satiety - Config.reproductionCost <= Config.reproductionReserve ||
                         parent.reproductionCooldown > 0) continue;
                     var statistics = Statistics(parent.species);
                     if (State.individuals.Count >= Config.populationLimit)
@@ -653,8 +663,10 @@ namespace Ecosystem
                     child.x = parent.x;
                     child.y = parent.y;
                     child.age = 0;
+                    child.health = CombatRules.MaxHealth(child.species); child.stamina = child.mana = 100f;
+                    child.satiety = Config.newbornSatiety;
                     child.bornAt = time;
-                    parent.satiety -= Config.reproductionCost;
+                    parent.satiety -= Config.reproductionCost; parent.reproductionSpent += Config.reproductionCost;
                     parent.nextReproductionTime = time + Config.reproductionCooldown;
                     parent.reproductionCooldown = Config.reproductionCooldown;
                     statistics.births++;
