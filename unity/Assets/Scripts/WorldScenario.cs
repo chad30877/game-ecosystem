@@ -36,6 +36,11 @@ namespace Ecosystem
                 {
                     if (!float.IsFinite(placement.health) || placement.health <= 0 || placement.health > CombatRules.MaxHealth(individual.species) || !float.IsFinite(placement.stamina) || placement.stamina < 0 || placement.stamina > 100 || !float.IsFinite(placement.mana) || placement.mana < 0 || placement.mana > 100) throw new ArgumentException("場景資源無效。");
                     individual.health = placement.health; individual.stamina = placement.stamina; individual.mana = placement.mana;
+                    if (placement.nutritionActive != null)
+                    {
+                        if (placement.nutritionActive.Length != 3) throw new ArgumentException("恢復狀態須包含健康、體力、魔力。");
+                        individual.nutritionActive = (bool[])placement.nutritionActive.Clone();
+                    }
                 }
                 if (placement.loadout != null && placement.loadout.Length > 0)
                 {
@@ -95,7 +100,7 @@ namespace Ecosystem
         }
 
         [Serializable]
-        public sealed class Placement { public int slot; public float x; public float y; public float facing; public bool setSatiety; public float satiety; public bool setVitals; public float health, stamina, mana; public string[] loadout; }
+        public sealed class Placement { public int slot; public float x; public float y; public float facing; public bool setSatiety; public float satiety; public bool[] nutritionActive; public bool setVitals; public float health, stamina, mana; public string[] loadout; }
         [Serializable]
         public sealed class FoodPlacement
         {
