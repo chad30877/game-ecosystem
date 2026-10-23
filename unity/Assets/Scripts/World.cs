@@ -184,6 +184,15 @@ namespace Ecosystem
         public float foodTargetX, foodTargetY, contestHealth, retreatUntil, retreatX, retreatY;
         public string decisionReason = "";
         public float activityStaminaSpent, skillManaSpent, reproductionSpent;
+        public bool initialAdult = true;
+        public float observedStart, observedSeconds;
+        public float combatDamageTaken, starvationDamageTaken, agingHealthLost;
+        public float lastAteAt = -1, lastReproducedAt = -1, lastNutritionAt = -1;
+        public float lastCombatDamageAt = -1;
+        public string lastCombatDamageKind = "";
+        public int lastCombatDamageSource;
+        public ResourceLedger ledger = new ResourceLedger();
+        [NonSerialized] public List<VitalSample> recentHistory = new List<VitalSample>();
         public float basalSpent, foodReceived, nutritionSpent;
         public float[] automaticRecovered = new float[3], nutritionRecovered = new float[3];
         public float age;
@@ -343,6 +352,24 @@ namespace Ecosystem
     }
 
     [Serializable]
+    public sealed class ResourceLedger
+    {
+        // 陣列順序固定為健康、體力、魔力、飽食度；本帳由實際餘額與分類收支推導。
+        public float[] opening = new float[4], income = new float[4], expense = new float[4], closing = new float[4], residual = new float[4];
+    }
+
+    [Serializable]
+    public sealed class VitalSample
+    {
+        public float time;
+        public float[] resources;
+        public string decision;
+        public string[] recoveryStatus;
+        public bool running;
+        public float combatDamage, starvationDamage, foodReceived, reproductionSpent, nutritionSpent;
+    }
+
+    [Serializable]
     public sealed class DeathRecord
     {
         public int individual;
@@ -350,6 +377,15 @@ namespace Ecosystem
         public string cause;
         public float age;
         public float time;
+        public bool initialAdult;
+        public float observedSeconds, historyFromTime;
+        public float combatDamage, starvationDamage, lastAteAt, lastReproducedAt, lastNutritionAt, lastCombatDamageAt;
+        public float basalSpent, activityStaminaSpent, skillManaSpent, reproductionSpent, foodReceived, nutritionSpent, agingHealthLost;
+        public float[] automaticRecovered, nutritionRecovered;
+        public string lastCombatDamageKind, decisionReason;
+        public int lastCombatDamageSource;
+        public ResourceLedger ledger;
+        public VitalSample[] history;
     }
 
     [Serializable]
@@ -363,6 +399,7 @@ namespace Ecosystem
         public int populationLimitHits;
         public int incompleteLives;
         public float completedAgeTotal;
+        public float completedObservedTotal;
     }
 
     public readonly struct WorldAction
@@ -513,9 +550,40 @@ namespace Ecosystem
                 y = (float)(random.NextDouble() - 0.5) * Config.halfExtent,
                 facing = (float)random.NextDouble() * 360f
             };
+            CaptureResourceBaseline(individual, State.time, true);
             individual.loadout = CreateLoadout(species, balancedLoadout);
             State.individuals.Add(individual);
             return individual;
+        }
+
+        internal static void CaptureResourceBaseline(IndividualState individual, float time, bool initialAdult)
+        {
+            individual.initialAdult = initialAdult;
+            individual.observedStart = time;
+            individual.ledger = new ResourceLedger { opening = Resources(individual), closing = Resources(individual) };
+            individual.recentHistory.Clear();
+        }
+
+        private static float[] Resources(IndividualState individual) => new[] { individual.health, individual.stamina, individual.mana, individual.satiety };
+
+        private static void CaptureDiagnostics(IndividualState individual, float time)
+        {
+            individual.observedSeconds = Mathf.Max(0, time - individual.observedStart);
+            var account = new ResourceLedger { opening = individual.ledger.opening, closing = Resources(individual) };
+            for (int i = 0; i < 3; i++) account.income[i] = individual.automaticRecovered[i] + individual.nutritionRecovered[i];
+            account.income[3] = individual.foodReceived;
+            account.expense[0] = individual.combatDamageTaken + individual.starvationDamageTaken + individual.agingHealthLost;
+            account.expense[1] = individual.activityStaminaSpent;
+            account.expense[2] = individual.skillManaSpent;
+            account.expense[3] = individual.basalSpent + individual.nutritionSpent + individual.reproductionSpent;
+            for (int i = 0; i < 4; i++) account.residual[i] = account.closing[i] - (account.opening[i] + account.income[i] - account.expense[i]);
+            individual.ledger = account;
+            var history = individual.recentHistory;
+            if (history.Count > 0 && individual.health > 0 && time - history[history.Count - 1].time < 1f) return;
+            history.Add(new VitalSample { time = time, resources = Resources(individual), decision = individual.decisionReason,
+                running = individual.running, recoveryStatus = (string[])individual.recoveryStatus.Clone(), combatDamage = individual.combatDamageTaken, starvationDamage = individual.starvationDamageTaken,
+                foodReceived = individual.foodReceived, reproductionSpent = individual.reproductionSpent, nutritionSpent = individual.nutritionSpent });
+            if (history.Count > 32) history.RemoveAt(0);
         }
 
         public void RemoveIndividual(int individual)
@@ -556,7 +624,8 @@ namespace Ecosystem
                 if (weights[i] <= 0 || total <= 0) continue;
                 float gain = Mathf.Min(caps[i] * Config.nutritionStop - values[i], budget * weights[i] / total * efficiency[i]);
                 values[i] += gain; float spent = gain / efficiency[i];
-                individual.satiety -= spent; individual.nutritionSpent += spent; individual.nutritionRecovered[i] += gain;
+                individual.satiety -= spent; individual.nutritionSpent += spent;
+                if (spent > 0) individual.lastNutritionAt = time; individual.nutritionRecovered[i] += gain;
                 if (values[i] >= caps[i] * Config.nutritionStop) { individual.nutritionActive[i] = false; individual.recoveryStatus[i] = "inactive"; }
             }
             individual.health = Mathf.Clamp(values[0], 0, maximum);
@@ -631,7 +700,7 @@ namespace Ecosystem
                             if (eaten <= 0) continue;
                             food.amount -= eaten;
                             individual.satiety += eaten; individual.foodReceived += eaten;
-                            individual.feeding = true; individual.fedAmount = eaten;
+                            individual.feeding = true; individual.fedAmount = eaten; individual.lastAteAt = time;
                             individual.fedSourceX = food.x; individual.fedSourceY = food.y;
                             State.events.Add(new WorldEvent { kind = "ate", individual = individual.individual, food = food.food, amount = eaten });
                             if (food.amount <= 0.00001f)
@@ -646,7 +715,7 @@ namespace Ecosystem
                 if (individual.health > 0 && individual.satiety <= 0)
                 {
                     float damage = Mathf.Min(individual.health, CombatRules.MaxHealth(individual.species) * Config.starvationDamage * Config.stepSeconds);
-                    individual.health -= damage;
+                    individual.health -= damage; individual.starvationDamageTaken += damage;
                     State.events.Add(new WorldEvent { kind = "starvation_damage", individual = individual.individual, amount = damage });
                     individual.lastDamageCause = "starved";
                 }
@@ -655,16 +724,27 @@ namespace Ecosystem
                 string cause = individual.health <= 0 ? individual.lastDamageCause : !Config.disableAging && individual.age >= Config.lifespan ? "old_age" : "";
                 if (cause != "")
                 {
+                    if (cause == "old_age") individual.agingHealthLost += individual.health;
                     individual.health = 0;
+                    CaptureDiagnostics(individual, time);
                     State.events.Add(new WorldEvent { kind = cause, individual = individual.individual,
                         species = individual.species, cause = cause, age = individual.age });
                     State.deaths.Add(new DeathRecord { individual = individual.individual, species = individual.species,
-                        cause = cause, age = individual.age, time = time });
+                        cause = cause, age = individual.age, time = time, initialAdult = individual.initialAdult,
+                        observedSeconds = individual.observedSeconds, historyFromTime = individual.recentHistory.Count == 0 ? time : individual.recentHistory[0].time,
+                        combatDamage = individual.combatDamageTaken, starvationDamage = individual.starvationDamageTaken,
+                        lastAteAt = individual.lastAteAt, lastReproducedAt = individual.lastReproducedAt, lastNutritionAt = individual.lastNutritionAt,
+                        lastCombatDamageKind = individual.lastCombatDamageKind, lastCombatDamageSource = individual.lastCombatDamageSource, lastCombatDamageAt = individual.lastCombatDamageAt,
+                        decisionReason = individual.decisionReason, ledger = individual.ledger, history = individual.recentHistory.ToArray(),
+                        basalSpent = individual.basalSpent, activityStaminaSpent = individual.activityStaminaSpent, skillManaSpent = individual.skillManaSpent,
+                        reproductionSpent = individual.reproductionSpent, foodReceived = individual.foodReceived, nutritionSpent = individual.nutritionSpent,
+                        automaticRecovered = individual.automaticRecovered, nutritionRecovered = individual.nutritionRecovered, agingHealthLost = individual.agingHealthLost });
                     var statistics = Statistics(individual.species);
                     if (cause == "starved") statistics.starved++;
                     else if (cause == "combat") statistics.combat++;
                     else statistics.oldAge++;
                     statistics.completedAgeTotal += individual.age;
+                    statistics.completedObservedTotal += individual.observedSeconds;
                 }
             }
             if (Config.foraging)
@@ -692,7 +772,8 @@ namespace Ecosystem
                     child.health = CombatRules.MaxHealth(child.species); child.stamina = child.mana = 100f;
                     child.satiety = Config.newbornSatiety;
                     child.bornAt = time;
-                    parent.satiety -= Config.reproductionCost; parent.reproductionSpent += Config.reproductionCost;
+                    CaptureResourceBaseline(child, time, false);
+                    parent.satiety -= Config.reproductionCost; parent.reproductionSpent += Config.reproductionCost; parent.lastReproducedAt = time;
                     parent.nextReproductionTime = time + Config.reproductionCooldown;
                     parent.reproductionCooldown = Config.reproductionCooldown;
                     statistics.births++;
@@ -701,6 +782,7 @@ namespace Ecosystem
                 }
                 UpdateIncompleteLives();
             }
+            foreach (var individual in State.individuals) CaptureDiagnostics(individual, time);
             State.step++;
             State.time = State.step * Config.stepSeconds;
             RefreshPerception(awardExploration: true);

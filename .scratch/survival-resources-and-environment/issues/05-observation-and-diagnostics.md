@@ -6,19 +6,19 @@
 
 **Blocked by:** [04：可見採食與爭食、換點決策](04-perception-and-survival-ai.md)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 [正式規格](../spec.md)為實作依據。開始前讀取前置完成紀錄與本任務討論；前置全部 resolved 才能開始，開始改 claimed，全部驗收通過才改 resolved。
 
 ## 驗收條件
 
-- [ ] 沿用 01、02、04 已交付的簡潔個體檢視，將四資源、走跑、恢復與決策串接至死亡摘要及歷史檢視；即時與回放的相同時間點一致。
-- [ ] 資源帳分列基礎、活動、技能、繁殖、進食及兩條恢復；期初、收入、支出、期末可核對，不重複計算營養轉換。
-- [ ] 死亡紀錄能關聯死亡前資源變化、戰鬥／飢餓傷害、最近進食、繁殖與恢復，保留最後死因及混合成因證據。
-- [ ] 分開起始成年／新生、觀察存活秒數／生命年齡及未完成生命；不能把存活到截止者當作完整壽命。
-- [ ] 規則模式可產生可回放結果，前後拖動能重現資源、決策及死亡；不需PPO模型、不重新執行策略。
-- [ ] 全景與個體當時所知可區分，當次執行的完整配置、種子及版本可追溯；保留舊資料並明確處理版本不相容。
-- [ ] 同步適用的使用文件與人工操作，完成相關建置、回放與紀錄核對；不新增測試檔。
+- [x] 沿用 01、02、04 已交付的簡潔個體檢視，將四資源、走跑、恢復與決策串接至死亡摘要及歷史檢視；即時與回放的相同時間點一致。
+- [x] 資源帳分列基礎、活動、技能、繁殖、進食及兩條恢復；期初、收入、支出、期末可核對，不重複計算營養轉換。
+- [x] 死亡紀錄能關聯死亡前資源變化、戰鬥／飢餓傷害、最近進食、繁殖與恢復，保留最後死因及混合成因證據。
+- [x] 分開起始成年／新生、觀察存活秒數／生命年齡及未完成生命；不能把存活到截止者當作完整壽命。
+- [x] 規則模式可產生可回放結果，前後拖動能重現資源、決策及死亡；不需PPO模型、不重新執行策略。
+- [x] 全景與個體當時所知可區分，當次執行的完整配置、種子及版本可追溯；保留舊資料並明確處理版本不相容。
+- [x] 同步適用的使用文件與人工操作，完成相關建置、回放與紀錄核對；不新增測試檔。
 
 ## 人工核對
 
@@ -30,4 +30,22 @@
 
 ## 完成紀錄
 
-尚未開始。完成時記錄變更、實際配置／命令、證據路徑、檢查結果、限制與繁體中文 Git commit。
+2026-10-23：完成四資源收支帳、實際傷害分類、死亡前32筆每秒資源／走跑／恢復／決策樣本、最近戰鬥來源及進食／繁殖／營養恢復時間。即時與回放可選擇死亡摘要，歷史按鈕可跳回該時刻；完整逐步紀錄保存所有事件。摘要區分起始成年／本輪出生、生命年齡／觀測秒數、完整／截止生命；關閉時保留最後快照。版本升為 survival-v9，保留並拒絕不相容資料，執行與回放標頭保留規則物種及場景。
+
+證據位於主工作區 `artifacts/survival-ticket05/`，`results.json` 與三份 `*-summary.json` 彙整核對，配置與完整錄製一併保留。建置紀錄 `build.log`；既有 bridge 128步、678 observations 通過（`bridge-20261023-185157-91703566/bridge.json`）。Python compileall、PowerShell語法解析、git diff --check 通過；未新增測試檔。
+
+實際命令（Python指定主工作區既有環境）：
+
+```powershell
+./scripts/world.ps1 -Mode build -Editor D:/Projects/game-ecosystem/.tools/unity/6000.0.85f1/Editor/Unity.exe
+./scripts/world.ps1 -Mode forage -WorldConfig artifacts/diagnostics-validation/life.json -Controller rules -Steps 250 -RecordEpisodes 1 -Python D:/Projects/game-ecosystem/.venv/Scripts/python.exe -OutputRoot artifacts/diagnostics-validation
+./scripts/world.ps1 -Mode forage -WorldConfig artifacts/diagnostics-validation/mixed.json -Scenario artifacts/diagnostics-validation/mixed-scenario.json -Steps 2600 -RecordEpisodes 1 -Python D:/Projects/game-ecosystem/.venv/Scripts/python.exe -OutputRoot artifacts/diagnostics-validation
+./scripts/world.ps1 -Mode forage -WorldConfig artifacts/diagnostics-validation/recovery.json -Scenario artifacts/diagnostics-validation/recovery-scenario.json -Steps 500 -Python D:/Projects/game-ecosystem/.venv/Scripts/python.exe -OutputRoot artifacts/diagnostics-validation
+./scripts/world.ps1 -Mode replay -ReplayFrom artifacts/diagnostics-validation/forage-20261023-185210-d07bd3ba/episode-1.replay.jsonl -SeekFrames '0,1,100,last,50,0' -Python D:/Projects/game-ecosystem/.venv/Scripts/python.exe -OutputRoot artifacts/diagnostics-validation
+./scripts/world.ps1 -Mode replay -ReplayFrom artifacts/diagnostics-validation/forage-20261023-185210-bbdafac1/episode-1.replay.jsonl -SeekFrames '0,10,2200,last,1500,0' -Python D:/Projects/game-ecosystem/.venv/Scripts/python.exe -OutputRoot artifacts/diagnostics-validation
+./scripts/world.ps1 -Mode bridge -Steps 128 -Python D:/Projects/game-ecosystem/.venv/Scripts/python.exe
+```
+
+結果：規則模式202個frame包含3起始成年觀測3秒／年齡4秒、3新生觀測4秒，完整平均3.5秒；截止下一輪6個體均標未完成。混合案例最後死因飢餓，仍保留10戰鬥及110飢餓傷害、32筆歷史；停用老化時生命年齡30而觀測45.84秒。恢復案例活動支出6、技能10、進食2.16、自動及營養恢復三項均非零。全部資源帳最大殘差0.000872，兩組各6次前後seek完整state逐值相等。改成v8的副本拒絕，原始回放hash未改。
+
+人工操作：依 `docs/survival-resources.md` 開啟可見規則世界／回放，點選個體核對收支與恢復；按「死亡」選取摘要，再點歷史樣本或拖曳回放，跨越出生、死亡後返回核對。此次生產入口與seek驗證為無畫面執行，未宣稱完成視覺人工操作。完整每步快照較大（混合2502 frame約30.5MB），保留全部事件及原始來源；死亡摘要最多32筆。06／07仍未啟動。

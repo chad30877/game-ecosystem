@@ -489,6 +489,7 @@ namespace Ecosystem
 
         private void OnApplicationQuit()
         {
+            if (output != null && world != null && world.State != null) Record("observation_end");
             if (output != null)
                 output.WriteLine(JsonUtility.ToJson(new ResourceRecord { elapsedSeconds = elapsed.Elapsed.TotalSeconds,
                     peakWorkingSetBytes = System.Diagnostics.Process.GetCurrentProcess().PeakWorkingSet64 }));
@@ -547,7 +548,7 @@ namespace Ecosystem
             public string device;
             public string control;
             public string policyMode;
-            public string rules = "survival-v8";
+            public string rules = "survival-v9";
             public string[] rulesSpecies;
             public WorldConfig config;
             public WorldScenario scenario;

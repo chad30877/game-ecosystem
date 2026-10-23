@@ -301,6 +301,8 @@ namespace Ecosystem
                     amount = damage - effective, rawAmount = damage, x = target.x, y = target.y });
             float actual = Mathf.Min(target.health, effective);
             target.health -= actual;
+            target.combatDamageTaken += actual;
+            target.lastCombatDamageAt = time; target.lastCombatDamageKind = kind; target.lastCombatDamageSource = source.individual;
             source.lastCombatAt = target.lastCombatAt = time;
             target.lastDamageCause = "combat";
             target.hitUntil = time + 0.2f;
