@@ -4,7 +4,7 @@
 
 **Blocked by:** [01：幼體成長與普通攻擊](01-growth-and-basic-combat.md)。
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 ## 驗收條件
 

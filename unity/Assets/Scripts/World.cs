@@ -51,6 +51,7 @@ namespace Ecosystem
         public float explorationCellSize = 2f;
         public int areaMemoryLimit = 64;
         public float areaMemorySeconds = 30f;
+        public float familySearchSatiety = 40f;
         public int foodMemoryLimit = 32;
         public float foodMemorySeconds = 30f;
         public float foodPredictionSeconds = 30f;
@@ -121,6 +122,7 @@ namespace Ecosystem
                 !float.IsFinite(explorationCellSize) || explorationCellSize <= 0 ||
                 halfExtent * 2 / explorationCellSize > 64 ||
                 areaMemoryLimit < 1 || areaMemoryLimit > 256 || foodMemoryLimit < 1 || foodMemoryLimit > 128 ||
+                !float.IsFinite(familySearchSatiety) || familySearchSatiety < 0 || familySearchSatiety > 100 ||
                 !float.IsFinite(areaMemorySeconds) || areaMemorySeconds <= 0 ||
                 !float.IsFinite(foodMemorySeconds) || foodMemorySeconds <= 0 ||
                 !float.IsFinite(foodPredictionSeconds) || foodPredictionSeconds <= 0 ||
@@ -187,6 +189,8 @@ namespace Ecosystem
         public string decisionReason = "";
         public float activityStaminaSpent, skillManaSpent, reproductionSpent;
         public bool initialAdult = true;
+        public int parentId;
+        public List<FamilyMemory> children = new List<FamilyMemory>();
         public float observedStart, observedSeconds;
         public float combatDamageTaken, starvationDamageTaken, agingHealthLost;
         public float lastAteAt = -1, lastReproducedAt = -1, lastNutritionAt = -1;
@@ -270,6 +274,15 @@ namespace Ecosystem
         public int cellX;
         public int cellY;
         public float lastSeenAt;
+    }
+
+    [Serializable]
+    public sealed class FamilyMemory
+    {
+        public int child;
+        public float x, y, age, satiety, lastSeenAt;
+        public float predictedAge, predictedSatiety;
+        public bool visible, confirmedDead, threatened, searched;
     }
 
     [Serializable]
@@ -755,6 +768,15 @@ namespace Ecosystem
             }
             if (Config.foraging)
             {
+                // 僅在死亡位置可見時，親代才知道子女死亡。
+                foreach (var child in State.individuals)
+                {
+                    if (child.health > 0 || child.parentId == 0) continue;
+                    var parent = State.individuals.Find(value => value.individual == child.parentId && value.health > 0);
+                    var known = parent?.children.Find(value => value.child == child.individual);
+                    if (known != null && CanSeePoint(parent, CombatRules.Position(child)))
+                    { known.confirmedDead = true; known.visible = false; known.x = child.x; known.y = child.y; known.age = child.age; known.satiety = child.satiety; known.lastSeenAt = time; }
+                }
                 State.individuals.RemoveAll(value => value.health <= 0);
                 // 本步新生個體不再行動或繁殖；先結算死亡，再分配可用人口名額。
                 var parents = State.individuals.ToArray();
@@ -772,6 +794,7 @@ namespace Ecosystem
                         continue;
                     }
                     var child = AddIndividual(parent.species);
+                    child.parentId = parent.individual;
                     child.x = parent.x;
                     child.y = parent.y;
                     child.age = 0;
@@ -780,6 +803,8 @@ namespace Ecosystem
                     child.bornAt = time;
                     child.growth = CombatRules.Growth(Config, child); child.maxHealth = CombatRules.CurrentMaxHealth(Config, child);
                     CaptureResourceBaseline(child, time, false);
+                    parent.children.Add(new FamilyMemory { child = child.individual, x = child.x, y = child.y,
+                        age = child.age, satiety = child.satiety, lastSeenAt = time, visible = true });
                     parent.satiety -= Config.reproductionCost; parent.reproductionSpent += Config.reproductionCost; parent.lastReproducedAt = time;
                     parent.nextReproductionTime = time + Config.reproductionCooldown;
                     parent.reproductionCooldown = Config.reproductionCooldown;
@@ -1014,11 +1039,21 @@ namespace Ecosystem
                 if (!enemyMemory.TryGetValue(observer.individual, out var memory))
                     enemyMemory.Add(observer.individual, memory = new Dictionary<int, EnemySighting>());
                 observer.perception.Clear();
+                foreach (var child in observer.children) child.visible = false;
                 var visible = new HashSet<int>();
                 foreach (var target in State.individuals)
                 {
                     if (!CanSee(observer, target)) continue;
                     visible.Add(target.individual);
+                    if (target.parentId == observer.individual)
+                    {
+                        var child = observer.children.Find(value => value.child == target.individual);
+                        if (child == null) observer.children.Add(child = new FamilyMemory { child = target.individual });
+                        child.x = target.x; child.y = target.y; child.age = target.age; child.satiety = target.satiety;
+                        child.lastSeenAt = State.time; child.visible = true; child.confirmedDead = false; child.searched = false;
+                        child.threatened = State.individuals.Exists(enemy => enemy.health > 0 && enemy.species != observer.species &&
+                            CanSee(observer, enemy) && Vector2.Distance(CombatRules.Position(target), CombatRules.Position(enemy)) <= 2.5f);
+                    }
                     observer.perception.Add(new EntityObservation { species = target.species, x = target.x, y = target.y,
                         visible = true, velocityX = target.velocityX, velocityY = target.velocityY,
                         feeding = target.feeding && CanSeePoint(observer, new Vector2(target.fedSourceX, target.fedSourceY)),
@@ -1026,6 +1061,12 @@ namespace Ecosystem
                         sourceY = target.feeding && CanSeePoint(observer, new Vector2(target.fedSourceX, target.fedSourceY)) ? target.fedSourceY : 0 });
                     if (target.species != observer.species)
                         memory[target.individual] = new EnemySighting { species = target.species, position = CombatRules.Position(target), lastSeenAt = State.time };
+                }
+                foreach (var child in observer.children)
+                {
+                    float elapsed = Mathf.Max(0, State.time - child.lastSeenAt);
+                    child.predictedAge = child.age + (Config.disableAging ? 0 : elapsed);
+                    child.predictedSatiety = Mathf.Max(0, child.satiety - elapsed * Config.idleCost);
                 }
                 var expired = new List<int>();
                 foreach (var pair in memory)
@@ -1161,6 +1202,18 @@ namespace Ecosystem
                     Mathf.Clamp01((State.time - food.lastSeenAt) / Config.foodMemorySeconds),
                     food.mature && food.phase == FoodPhase.Available ? 1f : 0f,
                     food.capacity > 0 ? food.amount / food.capacity : 0f, food.possiblyAvailable ? 1f : 0f, 0f, 0f };
+            }
+            foreach (var child in individual.children)
+                yield return new[] { -2f, Mathf.Clamp((child.x - individual.x) / (Config.halfExtent * 2), -1f, 1f),
+                    Mathf.Clamp((child.y - individual.y) / (Config.halfExtent * 2), -1f, 1f), child.visible ? 1f : 0f,
+                    Mathf.Clamp01((State.time - child.lastSeenAt) / Config.maturityAge), child.predictedAge / Config.maturityAge,
+                    child.predictedSatiety / 100f, child.confirmedDead ? 1f : 0f, child.threatened ? 1f : 0f, child.child };
+            if (individual.parentId != 0)
+            {
+                var parent = State.individuals.Find(value => value.individual == individual.parentId && CanSee(individual, value));
+                if (parent != null)
+                    yield return new[] { -3f, (parent.x - individual.x) / (Config.halfExtent * 2), (parent.y - individual.y) / (Config.halfExtent * 2),
+                        1f, 0f, 0f, 0f, 0f, 0f, (float)parent.individual };
             }
             foreach (var area in individual.areaMemory)
             {
