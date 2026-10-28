@@ -52,6 +52,35 @@ namespace Ecosystem
                 var away = new Vector2(individual.retreatX, individual.retreatY);
                 return new WorldAction(away, true, turn: Turn(individual, away), run: individual.runPreferred);
             }
+            if (individual.satiety >= config.aiUrgentSatiety && (target == null || !target.visible))
+            {
+                var child = individual.children.Where(value => !value.visible && !value.confirmedDead && !value.searched &&
+                    value.predictedAge < config.maturityAge && (value.predictedSatiety < config.familySearchSatiety || value.threatened))
+                    .OrderBy(value => Vector2.Distance(position, new Vector2(value.x, value.y))).FirstOrDefault();
+                if (child != null)
+                {
+                    var deltaChild = new Vector2(child.x, child.y) - position;
+                    if (deltaChild.magnitude <= config.forageRadius) child.searched = true;
+                    else
+                    {
+                        individual.decisionReason = "search_child";
+                        return new WorldAction(deltaChild.normalized, true, turn: Turn(individual, deltaChild));
+                    }
+                }
+                if (individual.age < config.maturityAge && individual.parentId != 0)
+                {
+                    var parent = world.State.individuals.Find(value => value.individual == individual.parentId && world.CanSee(individual, value));
+                    if (parent != null)
+                    {
+                        var deltaParent = CombatRules.Position(parent) - position;
+                        if (deltaParent.magnitude > config.forageRadius)
+                        {
+                            individual.decisionReason = "approach_parent";
+                            return new WorldAction(deltaParent.normalized, true, turn: Turn(individual, deltaParent));
+                        }
+                    }
+                }
+            }
             if (target == null)
             {
                 individual.decisionReason = lostTarget ? "food_lost" : "explore";
