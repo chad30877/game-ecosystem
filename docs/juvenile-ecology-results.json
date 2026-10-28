@@ -1,0 +1,1751 @@
+[
+  {
+    "scene": "abundant",
+    "seed": 101,
+    "disableCare": false,
+    "wallSeconds": 4.811533600004623,
+    "simulationSeconds": 30.0,
+    "events": {
+      "care_started": 5,
+      "care_feed": 112,
+      "care_stopped": 5,
+      "protection_started": 8,
+      "piercing_windup": 1,
+      "spore_smoke": 1,
+      "poison_applied": 4,
+      "ate": 480,
+      "frostbind_windup": 1,
+      "ice_fired": 5,
+      "ice_windup": 3,
+      "trap_placed": 1,
+      "rooted": 1,
+      "trap_triggered": 1,
+      "frostbind_hit": 1,
+      "slowed": 2,
+      "piercing_hit": 2,
+      "protection_retreat": 1,
+      "poison_damage": 6,
+      "ice_hit": 3,
+      "combat": 2,
+      "protection_changed": 1,
+      "protection_ended": 7,
+      "roar": 2,
+      "food_depleted": 3,
+      "cultivate": 1,
+      "cultivated": 116,
+      "hot_strike": 2,
+      "hot_strike_hit": 2,
+      "mist_dash": 1,
+      "food_recovering": 1
+    },
+    "reasons": {
+      "care_feed": 241,
+      "forage": 503,
+      "explore": 2486,
+      "feed": 517,
+      "protect_child": 133,
+      "contest": 109,
+      "retreat": 300,
+      "food_lost": 26,
+      "food_prediction": 1730,
+      "approach_parent": 309
+    },
+    "careGiven": 11.199999332427979,
+    "foodEaten": 114.79014496318996,
+    "foodInitial": 90.0,
+    "foodFinal": 1.5899989604949951,
+    "individuals": {
+      "1": {
+        "species": "Flame",
+        "parentId": 0,
+        "health": 120.0,
+        "satiety": 78.54674530029297,
+        "careGiven": 4.799997806549072,
+        "careReceived": 0.0
+      },
+      "2": {
+        "species": "Flame",
+        "parentId": 1,
+        "health": 63.03403854370117,
+        "satiety": 57.39061737060547,
+        "careGiven": 0.0,
+        "careReceived": 4.799997806549072
+      },
+      "3": {
+        "species": "Frost",
+        "parentId": 0,
+        "health": 46.64598846435547,
+        "satiety": 59.7383918762207,
+        "careGiven": 1.5000001192092896,
+        "careReceived": 0.0
+      },
+      "4": {
+        "species": "Frost",
+        "parentId": 3,
+        "health": 16.868000030517578,
+        "satiety": 28.95994758605957,
+        "careGiven": 0.0,
+        "careReceived": 1.5000001192092896
+      },
+      "5": {
+        "species": "Moss",
+        "parentId": 0,
+        "health": 85.53251647949219,
+        "satiety": 80.46661376953125,
+        "careGiven": 4.899997711181641,
+        "careReceived": 0.0
+      },
+      "6": {
+        "species": "Moss",
+        "parentId": 5,
+        "health": 8.787109375,
+        "satiety": 46.14017868041992,
+        "careGiven": 0.0,
+        "careReceived": 4.899997711181641
+      }
+    },
+    "alive": [
+      1,
+      2,
+      3,
+      5
+    ]
+  },
+  {
+    "scene": "abundant",
+    "seed": 101,
+    "disableCare": true,
+    "wallSeconds": 5.5961305999953765,
+    "simulationSeconds": 30.0,
+    "events": {
+      "ate": 492,
+      "frostbind_windup": 1,
+      "melee": 2,
+      "cultivate": 1,
+      "cultivated": 70,
+      "ice_fired": 2,
+      "ice_windup": 1,
+      "shield": 1,
+      "hot_strike": 1,
+      "hot_strike_hit": 1,
+      "melee_hit": 1,
+      "frostbind_hit": 1,
+      "slowed": 2,
+      "trap_placed": 1,
+      "rooted": 1,
+      "trap_triggered": 1,
+      "ice_hit": 1,
+      "food_depleted": 3,
+      "food_recovering": 3
+    },
+    "reasons": {
+      "explore": 5375,
+      "forage": 86,
+      "contest": 141,
+      "feed": 459,
+      "food_lost": 44,
+      "food_prediction": 2895
+    },
+    "careGiven": 0.0,
+    "foodEaten": 107.6602146755904,
+    "foodInitial": 90.0,
+    "foodFinal": 10.379997491836548,
+    "individuals": {
+      "1": {
+        "species": "Flame",
+        "parentId": 0,
+        "health": 120.0,
+        "satiety": 86.97721862792969,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "2": {
+        "species": "Flame",
+        "parentId": 1,
+        "health": 60.19700241088867,
+        "satiety": 26.421401977539062,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "3": {
+        "species": "Frost",
+        "parentId": 0,
+        "health": 70.0,
+        "satiety": 77.55659484863281,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "4": {
+        "species": "Frost",
+        "parentId": 3,
+        "health": 34.950504302978516,
+        "satiety": 14.999656677246094,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "5": {
+        "species": "Moss",
+        "parentId": 0,
+        "health": 90.0,
+        "satiety": 72.0366439819336,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "6": {
+        "species": "Moss",
+        "parentId": 5,
+        "health": 47.27567672729492,
+        "satiety": 34.652957916259766,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      }
+    },
+    "alive": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ]
+  },
+  {
+    "scene": "abundant",
+    "seed": 102,
+    "disableCare": false,
+    "wallSeconds": 4.94109630001185,
+    "simulationSeconds": 30.0,
+    "events": {
+      "sow": 1,
+      "care_started": 5,
+      "care_feed": 155,
+      "care_stopped": 5,
+      "protection_started": 3,
+      "piercing_windup": 1,
+      "spore_smoke": 1,
+      "poison_applied": 7,
+      "ate": 985,
+      "mist_dash": 1,
+      "roots": 1,
+      "rooted": 1,
+      "ice_fired": 3,
+      "frostbind_windup": 1,
+      "piercing_hit": 2,
+      "protection_retreat": 1,
+      "ice_windup": 1,
+      "poison_damage": 7,
+      "frostbind_hit": 1,
+      "slowed": 1,
+      "ice_hit": 1,
+      "combat": 2,
+      "protection_ended": 2,
+      "charge": 2,
+      "charge_hit": 2,
+      "food_depleted": 4,
+      "food_matured": 1,
+      "melee": 2,
+      "food_available": 2,
+      "shield": 1,
+      "food_recovering": 2
+    },
+    "reasons": {
+      "care_feed": 301,
+      "forage": 542,
+      "explore": 1897,
+      "feed": 1094,
+      "protect_child": 126,
+      "contest": 140,
+      "retreat": 288,
+      "approach_parent": 328,
+      "search_child": 249,
+      "food_lost": 18,
+      "food_prediction": 1329
+    },
+    "careGiven": 15.499999076128006,
+    "foodEaten": 124.35034202039242,
+    "foodInitial": 90.0,
+    "foodFinal": 5.789998531341553,
+    "individuals": {
+      "1": {
+        "species": "Flame",
+        "parentId": 0,
+        "health": 120.0,
+        "satiety": 87.74456024169922,
+        "careGiven": 9.099998474121094,
+        "careReceived": 0.0
+      },
+      "2": {
+        "species": "Flame",
+        "parentId": 1,
+        "health": 60.02864456176758,
+        "satiety": 45.22237014770508,
+        "careGiven": 0.0,
+        "careReceived": 9.099998474121094
+      },
+      "3": {
+        "species": "Frost",
+        "parentId": 0,
+        "health": 37.385963439941406,
+        "satiety": 96.1591796875,
+        "careGiven": 1.5000001192092896,
+        "careReceived": 0.0
+      },
+      "4": {
+        "species": "Frost",
+        "parentId": 3,
+        "health": 18.113815307617188,
+        "satiety": 29.619962692260742,
+        "careGiven": 0.0,
+        "careReceived": 1.5000001192092896
+      },
+      "5": {
+        "species": "Moss",
+        "parentId": 0,
+        "health": 87.28008270263672,
+        "satiety": 50.821895599365234,
+        "careGiven": 4.899997711181641,
+        "careReceived": 0.0
+      },
+      "6": {
+        "species": "Moss",
+        "parentId": 5,
+        "health": 3.5669002532958984,
+        "satiety": 51.66025924682617,
+        "careGiven": 0.0,
+        "careReceived": 4.899997711181641
+      }
+    },
+    "alive": [
+      1,
+      2,
+      3,
+      5
+    ]
+  },
+  {
+    "scene": "abundant",
+    "seed": 102,
+    "disableCare": true,
+    "wallSeconds": 5.81958239999949,
+    "simulationSeconds": 30.0,
+    "events": {
+      "sow": 4,
+      "ate": 527,
+      "ice_windup": 2,
+      "melee": 2,
+      "ice_fired": 3,
+      "roar": 1,
+      "trap_placed": 1,
+      "rooted": 1,
+      "trap_triggered": 1,
+      "charge": 2,
+      "mist_dash": 1,
+      "ice_hit": 1,
+      "charge_hit": 2,
+      "melee_hit": 1,
+      "slowed": 1,
+      "food_depleted": 6,
+      "food_matured": 4,
+      "food_available": 4,
+      "food_recovering": 5,
+      "piercing_windup": 1,
+      "piercing_hit": 1
+    },
+    "reasons": {
+      "explore": 4427,
+      "forage": 539,
+      "contest": 172,
+      "feed": 488,
+      "food_lost": 49,
+      "food_prediction": 3218,
+      "walk_recover": 22,
+      "retreat": 85
+    },
+    "careGiven": 0.0,
+    "foodEaten": 116.8052217811346,
+    "foodInitial": 90.0,
+    "foodFinal": 18.06000316143036,
+    "individuals": {
+      "1": {
+        "species": "Flame",
+        "parentId": 0,
+        "health": 120.0,
+        "satiety": 86.92720794677734,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "2": {
+        "species": "Flame",
+        "parentId": 1,
+        "health": 57.149173736572266,
+        "satiety": 28.691511154174805,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "3": {
+        "species": "Frost",
+        "parentId": 0,
+        "health": 70.0,
+        "satiety": 76.47667694091797,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "4": {
+        "species": "Frost",
+        "parentId": 3,
+        "health": 32.726444244384766,
+        "satiety": 14.999656677246094,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "5": {
+        "species": "Moss",
+        "parentId": 0,
+        "health": 72.0,
+        "satiety": 79.46158599853516,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "6": {
+        "species": "Moss",
+        "parentId": 5,
+        "health": 22.056812286376953,
+        "satiety": 33.56307601928711,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      }
+    },
+    "alive": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ]
+  },
+  {
+    "scene": "abundant",
+    "seed": 103,
+    "disableCare": false,
+    "wallSeconds": 5.7084840000025,
+    "simulationSeconds": 30.0,
+    "events": {
+      "care_started": 8,
+      "care_feed": 129,
+      "care_stopped": 8,
+      "protection_started": 23,
+      "frostbind_windup": 2,
+      "roots": 3,
+      "rooted": 4,
+      "ate": 524,
+      "ice_windup": 5,
+      "cultivate": 2,
+      "cultivated": 189,
+      "ice_fired": 7,
+      "trap_placed": 1,
+      "trap_triggered": 1,
+      "frostbind_hit": 2,
+      "slowed": 3,
+      "ice_hit": 4,
+      "mist_dash": 2,
+      "protection_ended": 22,
+      "protection_changed": 4,
+      "sow": 4,
+      "food_depleted": 6,
+      "food_matured": 3,
+      "food_available": 3,
+      "food_recovering": 2,
+      "spore_smoke": 1,
+      "poison_applied": 3,
+      "protection_retreat": 1,
+      "poison_damage": 2
+    },
+    "reasons": {
+      "care_feed": 389,
+      "forage": 580,
+      "explore": 3272,
+      "feed": 534,
+      "protect_child": 447,
+      "contest": 183,
+      "retreat": 322,
+      "food_lost": 33,
+      "approach_parent": 841,
+      "food_prediction": 2353,
+      "search_child": 10,
+      "walk_recover": 6,
+      "rest": 7,
+      "contest_approach": 23
+    },
+    "careGiven": 12.899999231100082,
+    "foodEaten": 125.04600858688354,
+    "foodInitial": 90.0,
+    "foodFinal": 5.430007219314575,
+    "individuals": {
+      "1": {
+        "species": "Flame",
+        "parentId": 0,
+        "health": 120.0,
+        "satiety": 81.35658264160156,
+        "careGiven": 3.399998903274536,
+        "careReceived": 0.0
+      },
+      "2": {
+        "species": "Flame",
+        "parentId": 1,
+        "health": 56.97917556762695,
+        "satiety": 59.1999397277832,
+        "careGiven": 0.0,
+        "careReceived": 3.399998903274536
+      },
+      "3": {
+        "species": "Frost",
+        "parentId": 0,
+        "health": 70.0,
+        "satiety": 50.40116500854492,
+        "careGiven": 4.5999979972839355,
+        "careReceived": 0.0
+      },
+      "4": {
+        "species": "Frost",
+        "parentId": 3,
+        "health": 28.584068298339844,
+        "satiety": 28.89881706237793,
+        "careGiven": 0.0,
+        "careReceived": 4.5999979972839355
+      },
+      "5": {
+        "species": "Moss",
+        "parentId": 0,
+        "health": 82.0,
+        "satiety": 62.473079681396484,
+        "careGiven": 4.899997711181641,
+        "careReceived": 0.0
+      },
+      "6": {
+        "species": "Moss",
+        "parentId": 5,
+        "health": 26.850305557250977,
+        "satiety": 43.225250244140625,
+        "careGiven": 0.0,
+        "careReceived": 4.899997711181641
+      }
+    },
+    "alive": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ]
+  },
+  {
+    "scene": "abundant",
+    "seed": 103,
+    "disableCare": true,
+    "wallSeconds": 5.670836999997846,
+    "simulationSeconds": 30.0,
+    "events": {
+      "sow": 4,
+      "ate": 541,
+      "ice_windup": 1,
+      "melee": 2,
+      "cultivate": 2,
+      "cultivated": 89,
+      "ice_fired": 1,
+      "roar": 1,
+      "trap_placed": 1,
+      "rooted": 1,
+      "trap_triggered": 1,
+      "charge": 1,
+      "mist_dash": 1,
+      "ice_hit": 1,
+      "charge_hit": 1,
+      "melee_hit": 1,
+      "slowed": 1,
+      "food_depleted": 6,
+      "food_matured": 4,
+      "food_available": 4,
+      "food_recovering": 4
+    },
+    "reasons": {
+      "explore": 4553,
+      "forage": 487,
+      "contest": 147,
+      "feed": 509,
+      "food_lost": 48,
+      "food_prediction": 3256
+    },
+    "careGiven": 0.0,
+    "foodEaten": 120.44048443436623,
+    "foodInitial": 90.0,
+    "foodFinal": 16.665003180503845,
+    "individuals": {
+      "1": {
+        "species": "Flame",
+        "parentId": 0,
+        "health": 120.0,
+        "satiety": 86.92720794677734,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "2": {
+        "species": "Flame",
+        "parentId": 1,
+        "health": 60.141170501708984,
+        "satiety": 27.25151252746582,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "3": {
+        "species": "Frost",
+        "parentId": 0,
+        "health": 70.0,
+        "satiety": 76.47667694091797,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "4": {
+        "species": "Frost",
+        "parentId": 3,
+        "health": 35.114959716796875,
+        "satiety": 25.709657669067383,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "5": {
+        "species": "Moss",
+        "parentId": 0,
+        "health": 90.0,
+        "satiety": 75.5316162109375,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "6": {
+        "species": "Moss",
+        "parentId": 5,
+        "health": 47.27567672729492,
+        "satiety": 31.858461380004883,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      }
+    },
+    "alive": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ]
+  },
+  {
+    "scene": "limited",
+    "seed": 101,
+    "disableCare": false,
+    "wallSeconds": 5.584196300012991,
+    "simulationSeconds": 30.0,
+    "events": {
+      "care_started": 7,
+      "care_feed": 675,
+      "care_stopped": 7,
+      "ate": 49,
+      "food_depleted": 1
+    },
+    "reasons": {
+      "care_feed": 734,
+      "explore": 6433,
+      "feed": 264,
+      "food_lost": 18,
+      "approach_parent": 175,
+      "food_prediction": 1376
+    },
+    "careGiven": 67.49999597668648,
+    "foodEaten": 11.59000925719738,
+    "foodInitial": 4.0,
+    "foodFinal": 0.0,
+    "individuals": {
+      "1": {
+        "species": "Flame",
+        "parentId": 0,
+        "health": 120.0,
+        "satiety": 36.36298751831055,
+        "careGiven": 22.800050735473633,
+        "careReceived": 0.0
+      },
+      "2": {
+        "species": "Flame",
+        "parentId": 1,
+        "health": 63.03403854370117,
+        "satiety": 43.56221008300781,
+        "careGiven": 0.0,
+        "careReceived": 22.800050735473633
+      },
+      "3": {
+        "species": "Frost",
+        "parentId": 0,
+        "health": 70.0,
+        "satiety": 29.262523651123047,
+        "careGiven": 22.400049209594727,
+        "careReceived": 0.0
+      },
+      "4": {
+        "species": "Frost",
+        "parentId": 3,
+        "health": 36.7698974609375,
+        "satiety": 35.732418060302734,
+        "careGiven": 0.0,
+        "careReceived": 22.400049209594727
+      },
+      "5": {
+        "species": "Moss",
+        "parentId": 0,
+        "health": 90.0,
+        "satiety": 29.362529754638672,
+        "careGiven": 22.300048828125,
+        "careReceived": 0.0
+      },
+      "6": {
+        "species": "Moss",
+        "parentId": 5,
+        "health": 47.27567672729492,
+        "satiety": 35.632415771484375,
+        "careGiven": 0.0,
+        "careReceived": 22.300048828125
+      }
+    },
+    "alive": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ]
+  },
+  {
+    "scene": "limited",
+    "seed": 101,
+    "disableCare": true,
+    "wallSeconds": 5.160753999996814,
+    "simulationSeconds": 30.0,
+    "events": {
+      "ate": 19,
+      "food_depleted": 1,
+      "food_recovering": 1
+    },
+    "reasons": {
+      "explore": 8018,
+      "feed": 4,
+      "food_lost": 10,
+      "food_prediction": 968
+    },
+    "careGiven": 0.0,
+    "foodEaten": 4.539999529719353,
+    "foodInitial": 4.0,
+    "foodFinal": 6.960017204284668,
+    "individuals": {
+      "1": {
+        "species": "Flame",
+        "parentId": 0,
+        "health": 120.0,
+        "satiety": 56.199764251708984,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "2": {
+        "species": "Flame",
+        "parentId": 1,
+        "health": 63.03403854370117,
+        "satiety": 18.339893341064453,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "3": {
+        "species": "Frost",
+        "parentId": 0,
+        "health": 70.0,
+        "satiety": 55.0002326965332,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "4": {
+        "species": "Frost",
+        "parentId": 3,
+        "health": 36.7698974609375,
+        "satiety": 14.999656677246094,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "5": {
+        "species": "Moss",
+        "parentId": 0,
+        "health": 90.0,
+        "satiety": 55.0002326965332,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "6": {
+        "species": "Moss",
+        "parentId": 5,
+        "health": 47.27567672729492,
+        "satiety": 14.999656677246094,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      }
+    },
+    "alive": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ]
+  },
+  {
+    "scene": "limited",
+    "seed": 102,
+    "disableCare": false,
+    "wallSeconds": 5.6178227999917,
+    "simulationSeconds": 30.0,
+    "events": {
+      "sow": 4,
+      "care_started": 7,
+      "care_feed": 675,
+      "care_stopped": 7,
+      "ate": 117,
+      "food_matured": 4,
+      "food_depleted": 4,
+      "food_available": 4,
+      "charge": 2,
+      "roots": 2,
+      "rooted": 2,
+      "spore_smoke": 2,
+      "poison_applied": 9,
+      "charge_hit": 2,
+      "poison_damage": 9,
+      "food_recovering": 2,
+      "protection_started": 1,
+      "roar": 1,
+      "melee": 1,
+      "melee_hit": 1,
+      "ice_windup": 1,
+      "ice_fired": 1,
+      "protection_changed": 1,
+      "combat": 1,
+      "ice_hit": 1,
+      "protection_retreat": 1
+    },
+    "reasons": {
+      "care_feed": 734,
+      "explore": 4343,
+      "feed": 325,
+      "food_lost": 34,
+      "approach_parent": 375,
+      "food_prediction": 2126,
+      "forage": 498,
+      "contest": 61,
+      "retreat": 336,
+      "walk_recover": 13,
+      "protect_child": 72
+    },
+    "careGiven": 67.49999597668648,
+    "foodEaten": 27.5650145560503,
+    "foodInitial": 4.0,
+    "foodFinal": 6.390000700950623,
+    "individuals": {
+      "1": {
+        "species": "Flame",
+        "parentId": 0,
+        "health": 120.0,
+        "satiety": 37.143001556396484,
+        "careGiven": 22.800050735473633,
+        "careReceived": 0.0
+      },
+      "2": {
+        "species": "Flame",
+        "parentId": 1,
+        "health": 54.88023376464844,
+        "satiety": 43.56221008300781,
+        "careGiven": 0.0,
+        "careReceived": 22.800050735473633
+      },
+      "3": {
+        "species": "Frost",
+        "parentId": 0,
+        "health": 0.32160091400146484,
+        "satiety": 38.872859954833984,
+        "careGiven": 22.400049209594727,
+        "careReceived": 0.0
+      },
+      "4": {
+        "species": "Frost",
+        "parentId": 3,
+        "health": 35.14634704589844,
+        "satiety": 35.732418060302734,
+        "careGiven": 0.0,
+        "careReceived": 22.400049209594727
+      },
+      "5": {
+        "species": "Moss",
+        "parentId": 0,
+        "health": 80.31266784667969,
+        "satiety": 37.58779525756836,
+        "careGiven": 22.300048828125,
+        "careReceived": 0.0
+      },
+      "6": {
+        "species": "Moss",
+        "parentId": 5,
+        "health": 44.91018295288086,
+        "satiety": 36.11241912841797,
+        "careGiven": 0.0,
+        "careReceived": 22.300048828125
+      }
+    },
+    "alive": [
+      1,
+      2,
+      4,
+      5,
+      6
+    ]
+  },
+  {
+    "scene": "limited",
+    "seed": 102,
+    "disableCare": true,
+    "wallSeconds": 5.068176500004483,
+    "simulationSeconds": 30.0,
+    "events": {
+      "sow": 1,
+      "ate": 47,
+      "food_depleted": 2,
+      "food_matured": 1,
+      "food_available": 2,
+      "food_recovering": 2
+    },
+    "reasons": {
+      "explore": 6982,
+      "feed": 30,
+      "food_lost": 17,
+      "food_prediction": 1803,
+      "forage": 168
+    },
+    "careGiven": 0.0,
+    "foodEaten": 11.259992510080338,
+    "foodInitial": 4.0,
+    "foodFinal": 11.520024299621582,
+    "individuals": {
+      "1": {
+        "species": "Flame",
+        "parentId": 0,
+        "health": 120.0,
+        "satiety": 56.199764251708984,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "2": {
+        "species": "Flame",
+        "parentId": 1,
+        "health": 63.03403854370117,
+        "satiety": 18.339893341064453,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "3": {
+        "species": "Frost",
+        "parentId": 0,
+        "health": 70.0,
+        "satiety": 55.0002326965332,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "4": {
+        "species": "Frost",
+        "parentId": 3,
+        "health": 36.7698974609375,
+        "satiety": 14.999656677246094,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "5": {
+        "species": "Moss",
+        "parentId": 0,
+        "health": 90.0,
+        "satiety": 61.717899322509766,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "6": {
+        "species": "Moss",
+        "parentId": 5,
+        "health": 47.27567672729492,
+        "satiety": 14.999656677246094,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      }
+    },
+    "alive": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ]
+  },
+  {
+    "scene": "limited",
+    "seed": 103,
+    "disableCare": false,
+    "wallSeconds": 5.536665000006906,
+    "simulationSeconds": 30.0,
+    "events": {
+      "care_started": 8,
+      "care_feed": 685,
+      "care_stopped": 8,
+      "sow": 4,
+      "ate": 147,
+      "food_depleted": 5,
+      "food_matured": 4,
+      "food_available": 4,
+      "cultivate": 2,
+      "cultivated": 55,
+      "food_recovering": 1,
+      "melee": 1,
+      "charge": 1
+    },
+    "reasons": {
+      "care_feed": 745,
+      "explore": 4844,
+      "feed": 339,
+      "food_lost": 29,
+      "approach_parent": 185,
+      "food_prediction": 2412,
+      "forage": 400,
+      "search_child": 27,
+      "contest": 19
+    },
+    "careGiven": 68.49999591708183,
+    "foodEaten": 34.724175587296486,
+    "foodInitial": 4.0,
+    "foodFinal": 0.5099997520446777,
+    "individuals": {
+      "1": {
+        "species": "Flame",
+        "parentId": 0,
+        "health": 120.0,
+        "satiety": 36.36298751831055,
+        "careGiven": 22.800050735473633,
+        "careReceived": 0.0
+      },
+      "2": {
+        "species": "Flame",
+        "parentId": 1,
+        "health": 59.627079010009766,
+        "satiety": 43.56221008300781,
+        "careGiven": 0.0,
+        "careReceived": 22.800050735473633
+      },
+      "3": {
+        "species": "Frost",
+        "parentId": 0,
+        "health": 70.0,
+        "satiety": 33.89781951904297,
+        "careGiven": 22.400049209594727,
+        "careReceived": 0.0
+      },
+      "4": {
+        "species": "Frost",
+        "parentId": 3,
+        "health": 36.7698974609375,
+        "satiety": 35.732418060302734,
+        "careGiven": 0.0,
+        "careReceived": 22.400049209594727
+      },
+      "5": {
+        "species": "Moss",
+        "parentId": 0,
+        "health": 90.0,
+        "satiety": 46.84174728393555,
+        "careGiven": 23.300052642822266,
+        "careReceived": 0.0
+      },
+      "6": {
+        "species": "Moss",
+        "parentId": 5,
+        "health": 47.27567672729492,
+        "satiety": 39.99242401123047,
+        "careGiven": 0.0,
+        "careReceived": 23.300052642822266
+      }
+    },
+    "alive": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ]
+  },
+  {
+    "scene": "limited",
+    "seed": 103,
+    "disableCare": true,
+    "wallSeconds": 5.227428199999849,
+    "simulationSeconds": 30.0,
+    "events": {
+      "sow": 4,
+      "ate": 123,
+      "food_depleted": 4,
+      "food_matured": 4,
+      "food_available": 5,
+      "cultivate": 3,
+      "cultivated": 169,
+      "food_recovering": 2
+    },
+    "reasons": {
+      "explore": 6524,
+      "feed": 97,
+      "food_lost": 19,
+      "food_prediction": 1928,
+      "forage": 418,
+      "walk_recover": 14
+    },
+    "careGiven": 0.0,
+    "foodEaten": 29.365051552653313,
+    "foodInitial": 4.0,
+    "foodFinal": 15.815104007720947,
+    "individuals": {
+      "1": {
+        "species": "Flame",
+        "parentId": 0,
+        "health": 120.0,
+        "satiety": 56.199764251708984,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "2": {
+        "species": "Flame",
+        "parentId": 1,
+        "health": 63.03403854370117,
+        "satiety": 18.339893341064453,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "3": {
+        "species": "Frost",
+        "parentId": 0,
+        "health": 70.0,
+        "satiety": 55.0002326965332,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "4": {
+        "species": "Frost",
+        "parentId": 3,
+        "health": 36.7698974609375,
+        "satiety": 14.999656677246094,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "5": {
+        "species": "Moss",
+        "parentId": 0,
+        "health": 90.0,
+        "satiety": 78.65364074707031,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "6": {
+        "species": "Moss",
+        "parentId": 5,
+        "health": 47.27567672729492,
+        "satiety": 16.16792106628418,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      }
+    },
+    "alive": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ]
+  },
+  {
+    "scene": "threat",
+    "seed": 101,
+    "disableCare": false,
+    "wallSeconds": 5.249578899994958,
+    "simulationSeconds": 30.0,
+    "events": {
+      "protection_started": 1,
+      "roar": 1,
+      "hot_strike": 1,
+      "hot_strike_hit": 1,
+      "ate": 20,
+      "melee": 1,
+      "melee_hit": 1,
+      "protection_ended": 1,
+      "food_depleted": 1,
+      "care_started": 4,
+      "care_feed": 330,
+      "care_stopped": 4,
+      "food_recovering": 1
+    },
+    "reasons": {
+      "protect_child": 6,
+      "explore": 6424,
+      "feed": 10,
+      "food_lost": 12,
+      "care_feed": 496,
+      "food_prediction": 1112,
+      "approach_parent": 940
+    },
+    "careGiven": 32.99999803304672,
+    "foodEaten": 4.720000296831131,
+    "foodInitial": 4.0,
+    "foodFinal": 6.81001615524292,
+    "individuals": {
+      "1": {
+        "species": "Flame",
+        "parentId": 0,
+        "health": 120.0,
+        "satiety": 29.262550354003906,
+        "careGiven": 22.400049209594727,
+        "careReceived": 0.0
+      },
+      "2": {
+        "species": "Flame",
+        "parentId": 1,
+        "health": 63.03403854370117,
+        "satiety": 42.12216567993164,
+        "careGiven": 0.0,
+        "careReceived": 22.400049209594727
+      },
+      "3": {
+        "species": "Frost",
+        "parentId": 0,
+        "health": 49.415924072265625,
+        "satiety": 44.40045928955078,
+        "careGiven": 10.600004196166992,
+        "careReceived": 0.0
+      },
+      "4": {
+        "species": "Frost",
+        "parentId": 3,
+        "health": 36.7698974609375,
+        "satiety": 24.77988052368164,
+        "careGiven": 0.0,
+        "careReceived": 10.600004196166992
+      },
+      "5": {
+        "species": "Moss",
+        "parentId": 0,
+        "health": 90.0,
+        "satiety": 55.0002326965332,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "6": {
+        "species": "Moss",
+        "parentId": 5,
+        "health": 47.27567672729492,
+        "satiety": 14.999656677246094,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      }
+    },
+    "alive": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ]
+  },
+  {
+    "scene": "threat",
+    "seed": 101,
+    "disableCare": true,
+    "wallSeconds": 5.029251200001454,
+    "simulationSeconds": 30.0,
+    "events": {
+      "ate": 19,
+      "food_depleted": 1,
+      "food_recovering": 1
+    },
+    "reasons": {
+      "explore": 7428,
+      "feed": 4,
+      "food_lost": 20,
+      "food_prediction": 1548
+    },
+    "careGiven": 0.0,
+    "foodEaten": 4.539999529719353,
+    "foodInitial": 4.0,
+    "foodFinal": 6.960017204284668,
+    "individuals": {
+      "1": {
+        "species": "Flame",
+        "parentId": 0,
+        "health": 120.0,
+        "satiety": 56.199764251708984,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "2": {
+        "species": "Flame",
+        "parentId": 1,
+        "health": 63.03403854370117,
+        "satiety": 18.339893341064453,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "3": {
+        "species": "Frost",
+        "parentId": 0,
+        "health": 70.0,
+        "satiety": 55.0002326965332,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "4": {
+        "species": "Frost",
+        "parentId": 3,
+        "health": 36.7698974609375,
+        "satiety": 14.999656677246094,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "5": {
+        "species": "Moss",
+        "parentId": 0,
+        "health": 90.0,
+        "satiety": 55.0002326965332,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "6": {
+        "species": "Moss",
+        "parentId": 5,
+        "health": 47.27567672729492,
+        "satiety": 14.999656677246094,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      }
+    },
+    "alive": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ]
+  },
+  {
+    "scene": "threat",
+    "seed": 102,
+    "disableCare": false,
+    "wallSeconds": 5.302881700001308,
+    "simulationSeconds": 30.0,
+    "events": {
+      "protection_started": 4,
+      "shield": 1,
+      "sow": 1,
+      "ate": 64,
+      "melee": 1,
+      "melee_hit": 1,
+      "protection_ended": 4,
+      "food_depleted": 3,
+      "care_started": 5,
+      "care_feed": 372,
+      "food_matured": 1,
+      "care_stopped": 5,
+      "food_available": 2,
+      "frostbind_windup": 1,
+      "ice_fired": 4,
+      "piercing_windup": 1,
+      "frostbind_hit": 1,
+      "slowed": 1,
+      "ice_windup": 2,
+      "ice_hit": 1,
+      "food_recovering": 2,
+      "spore_smoke": 1,
+      "poison_applied": 1,
+      "poison_damage": 1
+    },
+    "reasons": {
+      "protect_child": 135,
+      "explore": 5362,
+      "feed": 48,
+      "food_lost": 18,
+      "care_feed": 569,
+      "food_prediction": 1679,
+      "approach_parent": 793,
+      "forage": 151,
+      "retreat": 200,
+      "search_child": 13,
+      "walk_recover": 9,
+      "contest": 23
+    },
+    "careGiven": 37.199997782707214,
+    "foodEaten": 15.100010573863983,
+    "foodInitial": 4.0,
+    "foodFinal": 6.81001615524292,
+    "individuals": {
+      "1": {
+        "species": "Flame",
+        "parentId": 0,
+        "health": 119.0,
+        "satiety": 34.932716369628906,
+        "careGiven": 22.400049209594727,
+        "careReceived": 0.0
+      },
+      "2": {
+        "species": "Flame",
+        "parentId": 1,
+        "health": 63.03403854370117,
+        "satiety": 42.12216567993164,
+        "careGiven": 0.0,
+        "careReceived": 22.400049209594727
+      },
+      "3": {
+        "species": "Frost",
+        "parentId": 0,
+        "health": 69.04595184326172,
+        "satiety": 39.92058181762695,
+        "careGiven": 14.800020217895508,
+        "careReceived": 0.0
+      },
+      "4": {
+        "species": "Frost",
+        "parentId": 3,
+        "health": 36.7698974609375,
+        "satiety": 28.16998863220215,
+        "careGiven": 0.0,
+        "careReceived": 14.800020217895508
+      },
+      "5": {
+        "species": "Moss",
+        "parentId": 0,
+        "health": 78.85713958740234,
+        "satiety": 55.0002326965332,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "6": {
+        "species": "Moss",
+        "parentId": 5,
+        "health": 45.78602981567383,
+        "satiety": 19.70966148376465,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      }
+    },
+    "alive": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ]
+  },
+  {
+    "scene": "threat",
+    "seed": 102,
+    "disableCare": true,
+    "wallSeconds": 5.170261699997354,
+    "simulationSeconds": 30.0,
+    "events": {
+      "sow": 1,
+      "ate": 65,
+      "food_depleted": 3,
+      "food_matured": 1,
+      "food_available": 2,
+      "food_recovering": 2
+    },
+    "reasons": {
+      "explore": 6926,
+      "feed": 46,
+      "food_lost": 24,
+      "food_prediction": 1859,
+      "forage": 136,
+      "walk_recover": 9
+    },
+    "careGiven": 0.0,
+    "foodEaten": 15.34000651538372,
+    "foodInitial": 4.0,
+    "foodFinal": 6.960017204284668,
+    "individuals": {
+      "1": {
+        "species": "Flame",
+        "parentId": 0,
+        "health": 120.0,
+        "satiety": 56.199764251708984,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "2": {
+        "species": "Flame",
+        "parentId": 1,
+        "health": 63.03403854370117,
+        "satiety": 18.339893341064453,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "3": {
+        "species": "Frost",
+        "parentId": 0,
+        "health": 70.0,
+        "satiety": 55.0002326965332,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "4": {
+        "species": "Frost",
+        "parentId": 3,
+        "health": 36.7698974609375,
+        "satiety": 14.999656677246094,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "5": {
+        "species": "Moss",
+        "parentId": 0,
+        "health": 90.0,
+        "satiety": 55.0002326965332,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "6": {
+        "species": "Moss",
+        "parentId": 5,
+        "health": 47.27567672729492,
+        "satiety": 25.799654006958008,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      }
+    },
+    "alive": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ]
+  },
+  {
+    "scene": "threat",
+    "seed": 103,
+    "disableCare": false,
+    "wallSeconds": 5.355067399999825,
+    "simulationSeconds": 30.0,
+    "events": {
+      "protection_started": 4,
+      "roar": 1,
+      "sow": 4,
+      "hot_strike": 1,
+      "hot_strike_hit": 1,
+      "ate": 114,
+      "melee": 2,
+      "melee_hit": 1,
+      "protection_ended": 4,
+      "food_depleted": 5,
+      "care_started": 6,
+      "care_feed": 410,
+      "food_matured": 3,
+      "care_stopped": 6,
+      "food_available": 4,
+      "frostbind_windup": 2,
+      "ice_fired": 4,
+      "ice_windup": 2,
+      "frostbind_hit": 2,
+      "slowed": 2,
+      "ice_hit": 2,
+      "mist_dash": 1,
+      "food_recovering": 2,
+      "roots": 1,
+      "rooted": 2
+    },
+    "reasons": {
+      "protect_child": 132,
+      "explore": 4738,
+      "feed": 188,
+      "food_lost": 20,
+      "care_feed": 601,
+      "food_prediction": 1899,
+      "approach_parent": 512,
+      "forage": 498,
+      "contest": 28,
+      "retreat": 300,
+      "search_child": 84
+    },
+    "careGiven": 40.999997556209564,
+    "foodEaten": 26.980007752776146,
+    "foodInitial": 4.0,
+    "foodFinal": 6.81001615524292,
+    "individuals": {
+      "1": {
+        "species": "Flame",
+        "parentId": 0,
+        "health": 120.0,
+        "satiety": 29.262550354003906,
+        "careGiven": 22.400049209594727,
+        "careReceived": 0.0
+      },
+      "2": {
+        "species": "Flame",
+        "parentId": 1,
+        "health": 63.03403854370117,
+        "satiety": 42.12216567993164,
+        "careGiven": 0.0,
+        "careReceived": 22.400049209594727
+      },
+      "3": {
+        "species": "Frost",
+        "parentId": 0,
+        "health": 39.53196716308594,
+        "satiety": 46.01517105102539,
+        "careGiven": 18.600034713745117,
+        "careReceived": 0.0
+      },
+      "4": {
+        "species": "Frost",
+        "parentId": 3,
+        "health": 36.7698974609375,
+        "satiety": 44.0257682800293,
+        "careGiven": 0.0,
+        "careReceived": 18.600034713745117
+      },
+      "5": {
+        "species": "Moss",
+        "parentId": 0,
+        "health": 55.65614318847656,
+        "satiety": 56.68022918701172,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "6": {
+        "species": "Moss",
+        "parentId": 5,
+        "health": 47.27567672729492,
+        "satiety": 14.999656677246094,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      }
+    },
+    "alive": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ]
+  },
+  {
+    "scene": "threat",
+    "seed": 103,
+    "disableCare": true,
+    "wallSeconds": 5.323525999992853,
+    "simulationSeconds": 30.0,
+    "events": {
+      "sow": 4,
+      "ate": 99,
+      "food_depleted": 5,
+      "food_matured": 4,
+      "food_available": 4,
+      "roots": 1,
+      "rooted": 1,
+      "roar": 1,
+      "melee": 1,
+      "hot_strike": 1,
+      "hot_strike_hit": 1,
+      "food_recovering": 3,
+      "ice_windup": 1,
+      "ice_fired": 1
+    },
+    "reasons": {
+      "explore": 6137,
+      "feed": 71,
+      "food_lost": 24,
+      "food_prediction": 2401,
+      "forage": 314,
+      "contest": 53
+    },
+    "careGiven": 0.0,
+    "foodEaten": 23.26003608107567,
+    "foodInitial": 4.0,
+    "foodFinal": 8.595016121864319,
+    "individuals": {
+      "1": {
+        "species": "Flame",
+        "parentId": 0,
+        "health": 120.0,
+        "satiety": 56.919769287109375,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "2": {
+        "species": "Flame",
+        "parentId": 1,
+        "health": 63.03403854370117,
+        "satiety": 18.339893341064453,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "3": {
+        "species": "Frost",
+        "parentId": 0,
+        "health": 70.0,
+        "satiety": 64.17779541015625,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "4": {
+        "species": "Frost",
+        "parentId": 3,
+        "health": 35.159915924072266,
+        "satiety": 14.999656677246094,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "5": {
+        "species": "Moss",
+        "parentId": 0,
+        "health": 69.6692886352539,
+        "satiety": 63.81989669799805,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      },
+      "6": {
+        "species": "Moss",
+        "parentId": 5,
+        "health": 47.27567672729492,
+        "satiety": 14.999656677246094,
+        "careGiven": 0.0,
+        "careReceived": 0.0
+      }
+    },
+    "alive": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ]
+  }
+]
