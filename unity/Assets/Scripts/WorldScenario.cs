@@ -32,9 +32,17 @@ namespace Ecosystem
                     if (!float.IsFinite(placement.satiety) || placement.satiety < 0 || placement.satiety > 100) throw new ArgumentException("場景能量無效。");
                     individual.satiety = placement.satiety;
                 }
+                if (placement.setAge)
+                {
+                    if (!float.IsFinite(placement.age) || placement.age < 0 || placement.age >= world.Config.lifespan) throw new ArgumentException("場景年齡無效。");
+                    individual.age = placement.age; individual.bornAt = world.State.time - placement.age;
+                    individual.initialAdult = placement.age >= world.Config.maturityAge;
+                    individual.health = CombatRules.CurrentMaxHealth(world.Config, individual) * world.Config.initialHealthFraction;
+                    individual.growth = CombatRules.Growth(world.Config, individual); individual.maxHealth = CombatRules.CurrentMaxHealth(world.Config, individual);
+                }
                 if (placement.setVitals)
                 {
-                    if (!float.IsFinite(placement.health) || placement.health <= 0 || placement.health > CombatRules.MaxHealth(individual.species) || !float.IsFinite(placement.stamina) || placement.stamina < 0 || placement.stamina > 100 || !float.IsFinite(placement.mana) || placement.mana < 0 || placement.mana > 100) throw new ArgumentException("場景資源無效。");
+                    if (!float.IsFinite(placement.health) || placement.health <= 0 || placement.health > CombatRules.CurrentMaxHealth(world.Config, individual) || !float.IsFinite(placement.stamina) || placement.stamina < 0 || placement.stamina > 100 || !float.IsFinite(placement.mana) || placement.mana < 0 || placement.mana > 100) throw new ArgumentException("場景資源無效。");
                     individual.health = placement.health; individual.stamina = placement.stamina; individual.mana = placement.mana;
                     if (placement.nutritionActive != null)
                     {
@@ -101,7 +109,7 @@ namespace Ecosystem
         }
 
         [Serializable]
-        public sealed class Placement { public int slot; public float x; public float y; public float facing; public bool setSatiety; public float satiety; public bool[] nutritionActive; public bool setVitals; public float health, stamina, mana; public string[] loadout; }
+        public sealed class Placement { public int slot; public float x; public float y; public float facing; public bool setAge; public float age; public bool setSatiety; public float satiety; public bool[] nutritionActive; public bool setVitals; public float health, stamina, mana; public string[] loadout; }
         [Serializable]
         public sealed class FoodPlacement
         {

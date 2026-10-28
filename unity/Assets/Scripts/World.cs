@@ -87,7 +87,7 @@ namespace Ecosystem
         public float idleCost = 0.5f;
         public float runMultiplier = 1.5f, runStaminaRate = 10f;
         public float starvationDamage = 0.02f;
-        public float maturityAge = 30f;
+        public float maturityAge = 30f, newbornGrowth = 0.3f;
         public float lifespan = 240f;
         public float reproductionSatiety = 80f;
         public float reproductionHealthFraction = 0.8f, reproductionReserve = 30f, newbornSatiety = 30f;
@@ -136,7 +136,7 @@ namespace Ecosystem
                 !float.IsFinite(runMultiplier) || runMultiplier < 1 || !float.IsFinite(runStaminaRate) || runStaminaRate <= 0 ||
                 !float.IsFinite(starvationDamage) || starvationDamage <= 0))
                 throw new ArgumentException("食物、採食與生存參數無效。");
-            if (foraging && (!float.IsFinite(maturityAge) || maturityAge <= 0 ||
+            if (foraging && (!float.IsFinite(newbornGrowth) || newbornGrowth <= 0 || newbornGrowth > 1 || !float.IsFinite(maturityAge) || maturityAge <= 0 ||
                 !float.IsFinite(lifespan) || lifespan <= maturityAge ||
                 !float.IsFinite(reproductionSatiety) || reproductionSatiety <= 0 || reproductionSatiety > 100 ||
                 !float.IsFinite(reproductionCost) || reproductionCost <= 0 || reproductionCost > reproductionSatiety ||
@@ -196,6 +196,7 @@ namespace Ecosystem
         public float basalSpent, foodReceived, nutritionSpent;
         public float[] automaticRecovered = new float[3], nutritionRecovered = new float[3];
         public float age;
+        public float growth, maxHealth;
         public float bornAt;
         public float reproductionCooldown;
         public float nextReproductionTime;
@@ -230,6 +231,7 @@ namespace Ecosystem
         public float lastCombatAt = -1000f;
         public string lastDamageCause = "";
         public float hitUntil;
+        public float basicAttackGrowth = 1f;
         public WorldSkill windupSkill;
         public float windupUntil;
         public float windupRemaining;
@@ -552,6 +554,7 @@ namespace Ecosystem
             };
             CaptureResourceBaseline(individual, State.time, true);
             individual.loadout = CreateLoadout(species, balancedLoadout);
+            individual.growth = CombatRules.Growth(Config, individual); individual.maxHealth = CombatRules.CurrentMaxHealth(Config, individual);
             State.individuals.Add(individual);
             return individual;
         }
@@ -596,7 +599,7 @@ namespace Ecosystem
         private void RecoverVitals(IndividualState individual, float time)
         {
             if (individual.health <= 0) return;
-            float maximum = CombatRules.MaxHealth(individual.species);
+            float maximum = CombatRules.CurrentMaxHealth(Config, individual);
             float[] caps = { maximum, 100f, 100f };
             float[] values = { individual.health, individual.stamina, individual.mana };
             bool[] allowed = { individual.satiety > 0 && time - individual.lastCombatAt >= Config.healthRecoveryDelay,
@@ -714,7 +717,7 @@ namespace Ecosystem
                         }
                 if (individual.health > 0 && individual.satiety <= 0)
                 {
-                    float damage = Mathf.Min(individual.health, CombatRules.MaxHealth(individual.species) * Config.starvationDamage * Config.stepSeconds);
+                    float damage = Mathf.Min(individual.health, CombatRules.CurrentMaxHealth(Config, individual) * Config.starvationDamage * Config.stepSeconds);
                     individual.health -= damage; individual.starvationDamageTaken += damage;
                     State.events.Add(new WorldEvent { kind = "starvation_damage", individual = individual.individual, amount = damage });
                     individual.lastDamageCause = "starved";
@@ -769,9 +772,10 @@ namespace Ecosystem
                     child.x = parent.x;
                     child.y = parent.y;
                     child.age = 0;
-                    child.health = CombatRules.MaxHealth(child.species); child.stamina = child.mana = 100f;
+                    child.health = CombatRules.CurrentMaxHealth(Config, child); child.stamina = child.mana = 100f;
                     child.satiety = Config.newbornSatiety;
                     child.bornAt = time;
+                    child.growth = CombatRules.Growth(Config, child); child.maxHealth = CombatRules.CurrentMaxHealth(Config, child);
                     CaptureResourceBaseline(child, time, false);
                     parent.satiety -= Config.reproductionCost; parent.reproductionSpent += Config.reproductionCost; parent.lastReproducedAt = time;
                     parent.nextReproductionTime = time + Config.reproductionCooldown;
@@ -782,7 +786,7 @@ namespace Ecosystem
                 }
                 UpdateIncompleteLives();
             }
-            foreach (var individual in State.individuals) CaptureDiagnostics(individual, time);
+            foreach (var individual in State.individuals) { individual.growth = CombatRules.Growth(Config, individual); individual.maxHealth = CombatRules.CurrentMaxHealth(Config, individual); CaptureDiagnostics(individual, time); }
             State.step++;
             State.time = State.step * Config.stepSeconds;
             RefreshPerception(awardExploration: true);
@@ -960,7 +964,7 @@ namespace Ecosystem
                 Mathf.Clamp01((Config.halfExtent + individual.y) / Config.observationRadius),
                 individual.facing / 360f, Mathf.Clamp01(individual.satiety / 100f),
                 (int)individual.loadout[0] / 12f, (int)individual.loadout[1] / 12f,
-                individual.health / CombatRules.MaxHealth(individual.species),
+                individual.health / CombatRules.CurrentMaxHealth(Config, individual),
                 individual.skillCooldowns[0] / 10f, individual.skillCooldowns[1] / 10f,
                 individual.stamina / 100f, individual.mana / 100f,
                 individual.nutritionActive[0] ? 1f : 0f, individual.nutritionActive[1] ? 1f : 0f, individual.nutritionActive[2] ? 1f : 0f,
