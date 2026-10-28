@@ -118,6 +118,9 @@ namespace Ecosystem
     public static class CombatRules
     {
         public static float MaxHealth(string species) => species == "Flame" ? 120f : species == "Frost" ? 70f : 90f;
+        public static float Growth(WorldConfig config, IndividualState individual) => !config.foraging ? 1f : Mathf.Lerp(config.newbornGrowth, 1f, Mathf.Clamp01(individual.age / config.maturityAge));
+        public static float CurrentMaxHealth(WorldConfig config, IndividualState individual) => MaxHealth(individual.species) * Growth(config, individual);
+
         public static Vector2 Position(IndividualState individual) => new Vector2(individual.x, individual.y);
 
         public static Vector2 AimDirection(IndividualState individual, WorldAction action) => (action.aim - Position(individual)).normalized;
@@ -139,9 +142,9 @@ namespace Ecosystem
                 {
                     state.projectiles.Add(new ProjectileState { projectile = ++state.nextProjectile, owner = individual.individual,
                         species = individual.species, skill = individual.windupSkill, x = individual.x, y = individual.y,
-                        damage = individual.windupSkill == WorldSkill.FrostbindArrow ? config.combat.frostbindDamage
-                            : individual.windupSkill == WorldSkill.PiercingIceArrow ? config.combat.piercingDamage : config.combat.iceDamage,
-                        directionX = individual.aimX, directionY = individual.aimY,
+                        damage = individual.windupSkill == WorldSkill.FrostbindArrow ? config.combat.frostbindDamage * individual.skillGrowth
+                            : individual.windupSkill == WorldSkill.PiercingIceArrow ? config.combat.piercingDamage * individual.skillGrowth : config.combat.iceDamage * individual.basicAttackGrowth,
+                        growth = individual.skillGrowth, directionX = individual.aimX, directionY = individual.aimY,
                         remaining = individual.windupSkill == WorldSkill.PiercingIceArrow ? config.combat.piercingRange : config.combat.iceRange });
                     individual.windupUntil = 0;
                     state.events.Add(new WorldEvent { kind = "ice_fired", skill = individual.windupSkill, individual = individual.individual, x = individual.x, y = individual.y });
@@ -156,6 +159,7 @@ namespace Ecosystem
                     individual.mana -= config.combat.iceMana; individual.skillManaSpent += config.combat.iceMana;
                     individual.attackReadyAt = state.time + config.combat.iceCooldown;
                     individual.windupSkill = WorldSkill.None;
+                    individual.basicAttackGrowth = Growth(config, individual);
                     individual.windupUntil = state.time + config.combat.iceWindup;
                     individual.windupActiveThisStep = true;
                     individual.aimX = direction.x;
@@ -196,7 +200,7 @@ namespace Ecosystem
                 if (target != null)
                 {
                     end = Vector2.Lerp(start, end, fraction);
-                    Damage(config, state, individual, target, config.combat.chargeDamage, "charge_hit", state.time + config.stepSeconds);
+                    Damage(config, state, individual, target, config.combat.chargeDamage * individual.chargeGrowth, "charge_hit", state.time + config.stepSeconds);
                     individual.chargeRemaining = 0;
                 }
                 else individual.chargeRemaining = individual.boundary ? 0 : Mathf.Max(0, individual.chargeRemaining - delta.magnitude);
@@ -218,7 +222,7 @@ namespace Ecosystem
                 state.events.Add(new WorldEvent { kind = "melee", individual = individual.individual, amount = config.combat.meleeStamina });
                 var target = FirstHit(state, individual.species, Position(individual),
                     Position(individual) + AimDirection(individual, action) * config.combat.meleeRange, config.combat.hitRadius, out _);
-                if (target != null) Damage(config, state, individual, target, config.combat.meleeDamage, "melee_hit", state.time + config.stepSeconds);
+                if (target != null) Damage(config, state, individual, target, config.combat.meleeDamage * Growth(config, individual), "melee_hit", state.time + config.stepSeconds);
             }
             foreach (var projectile in state.projectiles)
             {
@@ -237,7 +241,7 @@ namespace Ecosystem
                     Damage(config, state, source, target, projectile.damage, kind, state.time + config.stepSeconds);
                     projectile.hitIndividuals.Add(target.individual);
                     if (projectile.skill == WorldSkill.FrostbindArrow && target.health > 0)
-                        ControlEffects.Slow(state, target, state.time + config.stepSeconds, config.combat.slowDuration);
+                        ControlEffects.Slow(state, target, state.time + config.stepSeconds, config.combat.slowDuration * projectile.growth);
                     if (projectile.skill != WorldSkill.PiercingIceArrow) { projectile.remaining = 0; break; }
                 }
                 projectile.remaining = Mathf.Max(0, projectile.remaining - distance);
@@ -246,21 +250,30 @@ namespace Ecosystem
                 if (Mathf.Abs(end.x) > config.halfExtent || Mathf.Abs(end.y) > config.halfExtent) projectile.remaining = 0;
             }
             state.projectiles.RemoveAll(value => value.remaining <= 0);
-            var cultivatedFoods = new HashSet<int>();
-            foreach (var individual in state.individuals)
+            foreach (var food in state.foods)
             {
-                if (individual.health <= 0 || state.time >= individual.cultivateUntil) continue;
-                var food = state.foods.Find(value => value.food == individual.cultivatingFood);
-                if (food == null || !food.mature || food.phase == FoodPhase.Resting || cultivatedFoods.Contains(food.food) || Vector2.Distance(Position(individual), new Vector2(food.x, food.y)) > config.combat.cultivateRange) continue;
-                float grown = Mathf.Min(food.capacity - food.amount, config.combat.cultivateRate *
-                    Mathf.Min(config.stepSeconds, individual.cultivateUntil - state.time));
-                if (grown <= 0) continue;
-                cultivatedFoods.Add(food.food);
-                var growth = food.growthType == FoodGrowthType.Large ? config.largeFood : config.smallFood;
-                bool available = growth.Grow(food, grown);
-                state.events.Add(new WorldEvent { kind = "cultivated", individual = individual.individual, food = food.food, amount = grown });
-                if (available)
-                    state.events.Add(new WorldEvent { kind = "food_available", food = food.food, x = food.x, y = food.y });
+                if (!food.mature || food.phase == FoodPhase.Resting) continue;
+                float cursor = state.time;
+                float stepEnd = state.time + config.stepSeconds;
+                while (cursor < stepEnd)
+                {
+                    IndividualState strongest = null;
+                    foreach (var individual in state.individuals)
+                    {
+                        if (individual.health <= 0 || individual.cultivatingFood != food.food || individual.cultivateUntil <= cursor ||
+                            Vector2.Distance(Position(individual), new Vector2(food.x, food.y)) > config.combat.cultivateRange) continue;
+                        if (strongest == null || individual.cultivateGrowth > strongest.cultivateGrowth) strongest = individual;
+                    }
+                    if (strongest == null) break;
+                    float end = Mathf.Min(stepEnd, strongest.cultivateUntil);
+                    float grown = Mathf.Min(food.capacity - food.amount, config.combat.cultivateRate * strongest.cultivateGrowth * (end - cursor));
+                    if (grown <= 0) break;
+                    var growth = food.growthType == FoodGrowthType.Large ? config.largeFood : config.smallFood;
+                    bool available = growth.Grow(food, grown);
+                    state.events.Add(new WorldEvent { kind = "cultivated", individual = strongest.individual, food = food.food, amount = grown });
+                    if (available) state.events.Add(new WorldEvent { kind = "food_available", food = food.food, x = food.x, y = food.y });
+                    cursor = end;
+                }
             }
         }
 
@@ -295,7 +308,7 @@ namespace Ecosystem
         public static void Damage(WorldConfig config, WorldState state, IndividualState source, IndividualState target, float damage, string kind, float time)
         {
             if (source.species == target.species || target.health <= 0) return;
-            float effective = time < target.shieldUntil ? damage * config.combat.shieldMultiplier : damage;
+            float effective = time < target.shieldUntil ? damage * (1f - (1f - config.combat.shieldMultiplier) * target.shieldGrowth) : damage;
             if (effective < damage)
                 state.events.Add(new WorldEvent { kind = "shield_blocked", individual = source.individual, target = target.individual,
                     amount = damage - effective, rawAmount = damage, x = target.x, y = target.y });

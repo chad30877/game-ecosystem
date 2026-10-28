@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace Ecosystem
@@ -32,9 +33,17 @@ namespace Ecosystem
                     if (!float.IsFinite(placement.satiety) || placement.satiety < 0 || placement.satiety > 100) throw new ArgumentException("場景能量無效。");
                     individual.satiety = placement.satiety;
                 }
+                if (placement.setAge)
+                {
+                    if (!float.IsFinite(placement.age) || placement.age < 0 || placement.age >= world.Config.lifespan) throw new ArgumentException("場景年齡無效。");
+                    individual.age = placement.age; individual.bornAt = world.State.time - placement.age;
+                    individual.initialAdult = placement.age >= world.Config.maturityAge;
+                    individual.health = CombatRules.CurrentMaxHealth(world.Config, individual) * world.Config.initialHealthFraction;
+                    individual.growth = CombatRules.Growth(world.Config, individual); individual.maxHealth = CombatRules.CurrentMaxHealth(world.Config, individual);
+                }
                 if (placement.setVitals)
                 {
-                    if (!float.IsFinite(placement.health) || placement.health <= 0 || placement.health > CombatRules.MaxHealth(individual.species) || !float.IsFinite(placement.stamina) || placement.stamina < 0 || placement.stamina > 100 || !float.IsFinite(placement.mana) || placement.mana < 0 || placement.mana > 100) throw new ArgumentException("場景資源無效。");
+                    if (!float.IsFinite(placement.health) || placement.health <= 0 || placement.health > CombatRules.CurrentMaxHealth(world.Config, individual) || !float.IsFinite(placement.stamina) || placement.stamina < 0 || placement.stamina > 100 || !float.IsFinite(placement.mana) || placement.mana < 0 || placement.mana > 100) throw new ArgumentException("場景資源無效。");
                     individual.health = placement.health; individual.stamina = placement.stamina; individual.mana = placement.mana;
                     if (placement.nutritionActive != null)
                     {
@@ -52,6 +61,19 @@ namespace Ecosystem
                     if (skills[0] == skills[1]) throw new ArgumentException("配置技能不可重複。");
                     individual.loadout = skills;
                 }
+            }
+            foreach (var placement in placements)
+            {
+                if (placement.parentSlot == 0) continue;
+                if (placement.parentSlot < 1 || placement.parentSlot > count || placement.parentSlot == placement.slot)
+                    throw new ArgumentException("場景親代無效。");
+                var child = world.State.individuals[placement.slot - 1];
+                var parent = world.State.individuals[placement.parentSlot - 1];
+                if (child.species != parent.species || child.age >= world.Config.maturityAge)
+                    throw new ArgumentException("場景親子需同物種且子女為幼體。");
+                child.parentId = parent.individual;
+                parent.children.Add(new FamilyMemory { child = child.individual, x = parent.x, y = parent.y,
+                    age = child.age, satiety = world.Config.newbornSatiety, lastSeenAt = world.State.time });
             }
             var placedFoods = new HashSet<int>();
             foreach (var placement in foods)
@@ -76,7 +98,7 @@ namespace Ecosystem
             {
                 var command = commands[i];
                 if (command.slot < 1 || command.slot > count || command.fromStep < 1 || command.toStep < command.fromStep ||
-                    (command.turn < -1 || command.turn > 1) || command.skillSlot < -1 || command.skillSlot > 1 || !float.IsFinite(command.moveX) || !float.IsFinite(command.moveY) ||
+                    (command.turn < -1 || command.turn > 1) || command.skillSlot < -1 || command.skillSlot > 1 || command.feedChild < 0 || command.feedChild > count || !float.IsFinite(command.moveX) || !float.IsFinite(command.moveY) ||
                     !float.IsFinite(command.aimX) || !float.IsFinite(command.aimY) ||
                     !Enum.TryParse<WorldSkill>(command.skill, out var skill) || !Enum.IsDefined(typeof(WorldSkill), skill))
                     throw new ArgumentException("指定動作的個體、步數、方向或技能無效。");
@@ -96,12 +118,12 @@ namespace Ecosystem
                 foreach (var command in commands)
                     if (command.slot == slot && step >= command.fromStep && step <= command.toStep)
                         return new WorldAction(new Vector2(command.moveX, command.moveY), command.forage,
-                            new Vector2(command.aimX, command.aimY), command.attack, Enum.Parse<WorldSkill>(command.skill), command.turn, command.skillSlot, command.run);
+                            new Vector2(command.aimX, command.aimY), command.attack, Enum.Parse<WorldSkill>(command.skill), command.turn, command.skillSlot, command.run, command.feedChild == 0 ? 0 : slots.First(value => value.Value == command.feedChild).Key);
             return new WorldAction(Vector2.zero);
         }
 
         [Serializable]
-        public sealed class Placement { public int slot; public float x; public float y; public float facing; public bool setSatiety; public float satiety; public bool[] nutritionActive; public bool setVitals; public float health, stamina, mana; public string[] loadout; }
+        public sealed class Placement { public int slot; public int parentSlot; public float x; public float y; public float facing; public bool setAge; public float age; public bool setSatiety; public float satiety; public bool[] nutritionActive; public bool setVitals; public float health, stamina, mana; public string[] loadout; }
         [Serializable]
         public sealed class FoodPlacement
         {
@@ -124,6 +146,7 @@ namespace Ecosystem
             public float aimX;
             public float aimY;
             public bool forage;
+            public int feedChild;
             public bool run;
             public bool attack;
             public int turn;
