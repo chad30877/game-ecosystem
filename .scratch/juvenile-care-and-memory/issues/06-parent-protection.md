@@ -4,7 +4,7 @@
 
 **Blocked by:** [05：親代餵養與營養收支](05-parent-feeding.md)。
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 ## 驗收條件
 
@@ -19,3 +19,4 @@
 ## 討論紀錄
 
 ## 完成紀錄
+
