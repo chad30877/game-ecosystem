@@ -225,11 +225,13 @@ namespace Ecosystem
         public float rootUntil;
         public float rootRemaining;
         public bool trapSlowPending;
+        public float trapSlowDuration;
         public float poisonUntil;
         public int poisonStacks;
         public float nextPoisonExposureAt;
         public float nextPoisonDamageAt;
         public int poisonOwner;
+        public float chargeGrowth = 1f;
         public float chargeRemaining;
         public bool chargeActiveThisStep;
         public float aimX;
@@ -238,14 +240,17 @@ namespace Ecosystem
         public string lastDamageCause = "";
         public float hitUntil;
         public float basicAttackGrowth = 1f;
+        public float skillGrowth = 1f;
         public WorldSkill windupSkill;
         public float windupUntil;
         public float windupRemaining;
         public bool windupActiveThisStep;
         public float slowUntil;
         public float slowRemaining;
+        public float shieldGrowth = 1f;
         public float shieldUntil;
         public float shieldRemaining;
+        public float cultivateGrowth = 1f;
         public float cultivateUntil;
         public float cultivateRemaining;
         public int cultivatingFood;
@@ -308,6 +313,7 @@ namespace Ecosystem
         public float angle;
         public float targetAngle;
         public float nextDirectionAt;
+        public float strength = 1f;
     }
 
     [Serializable]
@@ -472,6 +478,7 @@ namespace Ecosystem
         public string species;
         public WorldSkill skill;
         public float x, y, radius, until;
+        public float growth = 1f;
     }
 
     [Serializable]
@@ -480,6 +487,7 @@ namespace Ecosystem
         public WorldSkill skill;
         public List<int> hitIndividuals = new List<int>();
         public float damage;
+        public float growth = 1f;
         public int projectile;
         public int owner;
         public string species;

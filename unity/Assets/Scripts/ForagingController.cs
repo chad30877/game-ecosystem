@@ -127,6 +127,7 @@ namespace Ecosystem
         private static int ChooseSkill(World world, IndividualState individual, EntityObservation enemy, ref Vector2 aim)
         {
             var c = world.Config.combat;
+            float growth = CombatRules.Growth(world.Config, individual);
             var position = CombatRules.Position(individual);
             float distance = enemy == null ? float.PositiveInfinity : Vector2.Distance(position, new Vector2(enemy.x, enemy.y));
             for (int offset = 0; offset < 2; offset++)
@@ -135,7 +136,7 @@ namespace Ecosystem
                 if (individual.skillCooldowns[slot] > 0 || individual.mana < SkillRules.ManaCost(c, individual.loadout[slot])) continue;
                 switch (individual.loadout[slot])
                 {
-                    case WorldSkill.Charge: if (distance > 1.5f && distance <= c.chargeDistance) return slot; break;
+                    case WorldSkill.Charge: if (distance > Mathf.Min(1.5f, c.chargeDistance * growth * 0.5f) && distance <= c.chargeDistance * growth) return slot; break;
                     case WorldSkill.HotStrike: if (distance <= c.hotStrikeRange) return slot; break;
                     case WorldSkill.Shield: if (distance <= c.roarRange) return slot; break;
                     case WorldSkill.IntimidatingRoar: if (distance <= c.roarRange) return slot; break;
@@ -144,13 +145,13 @@ namespace Ecosystem
                     case WorldSkill.ColdMistDash:
                         if (distance < 2.5f)
                         {
-                            aim = position + (position - aim).normalized * c.dashDistance;
+                            aim = position + (position - aim).normalized * (c.dashDistance * growth);
                             return slot;
                         }
                         break;
                     case WorldSkill.FrostTrap: if (distance <= c.trapRange) return slot; break;
                     case WorldSkill.EntanglingRoots: if (distance <= c.rootsRange) return slot; break;
-                    case WorldSkill.SporeSmoke: if (distance <= c.smokeRadius) return slot; break;
+                    case WorldSkill.SporeSmoke: if (distance <= c.smokeRadius * growth) return slot; break;
                     case WorldSkill.Cultivate:
                         if (individual.visibleFoods.Exists(food => food.mature && food.phase != FoodPhase.Resting && food.amount < food.capacity &&
                             Vector2.Distance(position, new Vector2(food.x, food.y)) <= c.cultivateRange)) return slot;
