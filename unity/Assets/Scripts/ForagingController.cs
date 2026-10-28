@@ -52,6 +52,100 @@ namespace Ecosystem
                 var away = new Vector2(individual.retreatX, individual.retreatY);
                 return new WorldAction(away, true, turn: Turn(individual, away), run: individual.runPreferred);
             }
+            // 近期受擊且看見攻擊者時先脫離自身危險，之後再評估照顧。
+            var attacker = individual.lastCombatDamageAt >= 0 && individual.lastCombatDamageAt >= world.State.time - config.stepSeconds
+                ? individual.perception.FirstOrDefault(value => value.visible && value.individual == individual.lastCombatDamageSource) : null;
+            if (attacker != null)
+            {
+                if (individual.protectionChild != 0)
+                {
+                    individual.protectionEvent = "protection_retreat";
+                    individual.protectionEventChild = individual.protectionChild;
+                    individual.protectionEventThreat = attacker.individual;
+                    individual.protectionRetreat = true;
+                    individual.protectionChild = individual.protectionThreat = 0;
+                }
+                Vector2 away = (position - new Vector2(attacker.x, attacker.y)).normalized;
+                individual.retreatUntil = world.State.time + 2f;
+                individual.retreatX = away.x; individual.retreatY = away.y;
+                individual.decisionReason = "retreat";
+                return new WorldAction(away, turn: Turn(individual, away), run: individual.runPreferred);
+            }
+            // 僅使用親代當前可見的幼體與異種，最近的受威脅子女優先。
+            var threatened = individual.children.Where(child => child.visible && !child.confirmedDead && child.predictedAge < config.maturityAge)
+                .Select(child => new { child, enemy = individual.perception.Where(other => other.visible && other.species != individual.species &&
+                    Vector2.Distance(new Vector2(child.x, child.y), new Vector2(other.x, other.y)) <= config.protectionRadius)
+                    .OrderBy(other => Vector2.Distance(position, new Vector2(other.x, other.y))).FirstOrDefault() })
+                .Where(value => value.enemy != null)
+                .OrderBy(value => Vector2.Distance(position, new Vector2(value.child.x, value.child.y))).FirstOrDefault();
+            if (threatened == null)
+            {
+                if (individual.protectionChild != 0)
+                {
+                    individual.protectionEvent = "protection_ended";
+                    individual.protectionEventChild = individual.protectionChild;
+                    individual.protectionEventThreat = individual.protectionThreat;
+                }
+                individual.protectionChild = individual.protectionThreat = 0;
+                individual.protectionRetreat = false;
+            }
+            else
+            {
+                var threat = threatened.enemy;
+                Vector2 threatPoint = new Vector2(threat.x, threat.y);
+                Vector2 deltaThreat = threatPoint - position;
+                bool lostTooMuch = individual.protectionChild != 0 &&
+                    individual.combatDamageTaken - individual.protectionDamageStart >= config.protectionLoss * CombatRules.CurrentMaxHealth(config, individual);
+                if (health < config.protectionRetreatHealth || lostTooMuch || individual.protectionRetreat)
+                {
+                    if (!individual.protectionRetreat)
+                    {
+                        individual.protectionEvent = "protection_retreat";
+                        individual.protectionEventChild = threatened.child.child;
+                        individual.protectionEventThreat = threat.individual;
+                    }
+                    individual.protectionRetreat = true;
+                    individual.protectionChild = individual.protectionThreat = 0;
+                    individual.decisionReason = "protection_retreat";
+                    Vector2 away = -deltaThreat.normalized;
+                    return new WorldAction(away, turn: Turn(individual, away), run: individual.runPreferred);
+                }
+                if (individual.protectionChild != 0 || health >= config.protectionEngageHealth)
+                {
+                    if (individual.protectionChild == 0)
+                    {
+                        individual.protectionDamageStart = individual.combatDamageTaken;
+                        individual.protectionEvent = "protection_started";
+                        individual.protectionEventChild = threatened.child.child;
+                        individual.protectionEventThreat = threat.individual;
+                    }
+                    else if (individual.protectionChild != threatened.child.child || individual.protectionThreat != threat.individual)
+                    {
+                        individual.protectionEvent = "protection_changed";
+                        individual.protectionEventChild = threatened.child.child;
+                        individual.protectionEventThreat = threat.individual;
+                    }
+                    individual.protectionChild = threatened.child.child;
+                    individual.protectionThreat = threat.individual;
+                    individual.decisionReason = "protect_child";
+                    Vector2 aim = threatPoint;
+                    int defensiveSkill = ChooseSkill(world, individual, threat, ref aim, true);
+                    float preferred = individual.species == "Flame" ? config.combat.meleeRange * 0.8f :
+                        individual.species == "Frost" ? config.combat.iceRange * 0.8f : config.protectionRadius * 0.6f;
+                    Vector2 move = deltaThreat.magnitude > preferred ? deltaThreat.normalized : Vector2.zero;
+                    bool protectAttack = individual.species == "Flame" ? deltaThreat.magnitude <= config.combat.meleeRange :
+                        individual.species == "Frost" && deltaThreat.magnitude <= config.combat.iceRange;
+                    return new WorldAction(move, aim: aim, attack: protectAttack, turn: Turn(individual, deltaThreat), skillSlot: defensiveSkill,
+                        run: individual.runPreferred && move != Vector2.zero);
+                }
+                if (individual.protectionChild != 0)
+                {
+                    individual.protectionEvent = "protection_ended";
+                    individual.protectionEventChild = individual.protectionChild;
+                    individual.protectionEventThreat = individual.protectionThreat;
+                    individual.protectionChild = individual.protectionThreat = 0;
+                }
+            }
             // 親代優先照顧可見幼體；即時威脅及自身緊急補給優先。
             bool danger = individual.perception.Any(value => value.visible && value.species != individual.species &&
                 Vector2.Distance(position, new Vector2(value.x, value.y)) <= config.scanThreatRadius);
@@ -142,7 +236,7 @@ namespace Ecosystem
             Vector2.Distance(CombatRules.Position(individual), new Vector2(food.x, food.y)) +
             (food.visible ? 0 : Mathf.Min((world.State.time - food.lastSeenAt) / world.Config.foodMemorySeconds, 2f) * world.Config.observationRadius);
 
-        private static int ChooseSkill(World world, IndividualState individual, EntityObservation enemy, ref Vector2 aim)
+        private static int ChooseSkill(World world, IndividualState individual, EntityObservation enemy, ref Vector2 aim, bool protection = false)
         {
             var c = world.Config.combat;
             float growth = CombatRules.Growth(world.Config, individual);
@@ -152,6 +246,7 @@ namespace Ecosystem
             {
                 int slot = (world.State.step / 60 + individual.individual + offset) % 2;
                 if (individual.skillCooldowns[slot] > 0 || individual.mana < SkillRules.ManaCost(c, individual.loadout[slot])) continue;
+                if (protection && (individual.loadout[slot] == WorldSkill.Cultivate || individual.loadout[slot] == WorldSkill.Sow)) continue;
                 switch (individual.loadout[slot])
                 {
                     case WorldSkill.Charge: if (distance > Mathf.Min(1.5f, c.chargeDistance * growth * 0.5f) && distance <= c.chargeDistance * growth) return slot; break;

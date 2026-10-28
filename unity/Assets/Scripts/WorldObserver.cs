@@ -207,6 +207,7 @@ namespace Ecosystem
             GUILayout.Label($"營養恢復 {string.Join(" / ", individual.recoveryStatus)}\n基礎 {individual.basalSpent:F1}　進食 {individual.foodReceived:F1}　營養支出 {individual.nutritionSpent:F1}\n活動體力 {individual.activityStaminaSpent:F1}　技能魔力 {individual.skillManaSpent:F1}　繁殖 {individual.reproductionSpent:F1}");
             GUILayout.Label($"決策 {DecisionName(individual.decisionReason)}　{(individual.hasFoodTarget ? $"食物 {individual.foodTargetX:F1},{individual.foodTargetY:F1}" : "")}");
             GUILayout.Label($"觀測 {individual.observedSeconds:F1}s　{(individual.initialAdult ? "起始成年" : "本輪出生")}");
+            if (individual.protectionChild != 0) GUILayout.Label($"保護 #{individual.protectionChild}　威脅 #{individual.protectionThreat}");
             GUILayout.Label($"餵養 {(individual.careTarget != 0 ? $"#{individual.careTarget}" : individual.careReceivedFrom != 0 ? $"來自 #{individual.careReceivedFrom}" : "無")}　付出 {individual.careGiven:F1}　取得 {individual.careReceived:F1}");
             DrawLedger(individual.ledger);
             DrawRecoveries(individual.automaticRecovered, individual.nutritionRecovered);
@@ -346,6 +347,7 @@ namespace Ecosystem
 
         private static string DecisionName(string reason) => reason switch
         {
+            "protect_child" => "保護子女", "protection_retreat" => "保護撤退",
             "search_child" => "尋找子女",
             "approach_parent" => "靠近親代",
             "care_feed" => "餵養", "explore" => "探索", "food_prediction" => "回訪推測", "food_lost" => "來源耗盡", "forage" => "覓食", "feed" => "進食",

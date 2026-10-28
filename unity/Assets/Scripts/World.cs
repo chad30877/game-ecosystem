@@ -52,6 +52,7 @@ namespace Ecosystem
         public int areaMemoryLimit = 64;
         public float areaMemorySeconds = 30f;
         public float familySearchSatiety = 40f;
+        public float protectionRadius = 2.5f, protectionEngageHealth = 0.45f, protectionRetreatHealth = 0.25f, protectionLoss = 0.2f;
         public float careRadius = 0.7f, careRate = 5f, careReserve = 30f, careStart = 40f, careStop = 60f;
         public int foodMemoryLimit = 32;
         public float foodMemorySeconds = 30f;
@@ -124,6 +125,9 @@ namespace Ecosystem
                 halfExtent * 2 / explorationCellSize > 64 ||
                 areaMemoryLimit < 1 || areaMemoryLimit > 256 || foodMemoryLimit < 1 || foodMemoryLimit > 128 ||
                 !float.IsFinite(familySearchSatiety) || familySearchSatiety < 0 || familySearchSatiety > 100 ||
+                !float.IsFinite(protectionRadius) || protectionRadius <= 0 ||
+                !float.IsFinite(protectionEngageHealth) || !float.IsFinite(protectionRetreatHealth) || !float.IsFinite(protectionLoss) ||
+                protectionRetreatHealth < 0 || protectionEngageHealth <= protectionRetreatHealth || protectionEngageHealth > 1 || protectionLoss <= 0 || protectionLoss > 1 ||
                 !float.IsFinite(careRadius) || careRadius <= 0 || !float.IsFinite(careRate) || careRate <= 0 ||
                 !float.IsFinite(careReserve) || careReserve < 0 || careReserve > 100 ||
                 !float.IsFinite(careStart) || careStart < 0 || !float.IsFinite(careStop) || careStop <= careStart || careStop > 100 ||
@@ -195,6 +199,10 @@ namespace Ecosystem
         public bool initialAdult = true;
         public int parentId;
         public int careTarget, careReceivedFrom;
+        public int protectionChild, protectionThreat, protectionEventChild, protectionEventThreat;
+        public float protectionDamageStart;
+        public bool protectionRetreat;
+        public string protectionEvent = "";
         public float careGiven, careReceived, careEstimatedSatiety;
         public List<FamilyMemory> children = new List<FamilyMemory>();
         public float observedStart, observedSeconds;
@@ -326,6 +334,7 @@ namespace Ecosystem
     public sealed class EntityObservation
     {
         public string species;
+        public int individual;
         public float x, y;
         public bool visible;
         public float velocityX, velocityY;
@@ -360,6 +369,7 @@ namespace Ecosystem
         public int food;
         public float amount;
         public int parent;
+        public int child;
         public string species;
         public string cause;
         public float age;
@@ -697,6 +707,13 @@ namespace Ecosystem
                 individual.fedSourceX = individual.fedSourceY = 0;
             }
             State.events.Clear();
+            foreach (var individual in State.individuals)
+            {
+                if (string.IsNullOrEmpty(individual.protectionEvent)) continue;
+                State.events.Add(new WorldEvent { kind = individual.protectionEvent, individual = individual.individual,
+                    target = individual.protectionEventThreat, child = individual.protectionEventChild });
+                individual.protectionEvent = "";
+            }
             State.rewards.Clear();
             float time = (State.step + 1) * Config.stepSeconds;
             AdvanceFood(time);
@@ -1106,9 +1123,9 @@ namespace Ecosystem
                         child.x = target.x; child.y = target.y; child.age = target.age; child.satiety = target.satiety;
                         child.lastSeenAt = State.time; child.visible = true; child.confirmedDead = false; child.searched = false;
                         child.threatened = State.individuals.Exists(enemy => enemy.health > 0 && enemy.species != observer.species &&
-                            CanSee(observer, enemy) && Vector2.Distance(CombatRules.Position(target), CombatRules.Position(enemy)) <= 2.5f);
+                            CanSee(observer, enemy) && Vector2.Distance(CombatRules.Position(target), CombatRules.Position(enemy)) <= Config.protectionRadius);
                     }
-                    observer.perception.Add(new EntityObservation { species = target.species, x = target.x, y = target.y,
+                    observer.perception.Add(new EntityObservation { individual = target.individual, species = target.species, x = target.x, y = target.y,
                         visible = true, velocityX = target.velocityX, velocityY = target.velocityY,
                         feeding = target.feeding && CanSeePoint(observer, new Vector2(target.fedSourceX, target.fedSourceY)),
                         sourceX = target.feeding && CanSeePoint(observer, new Vector2(target.fedSourceX, target.fedSourceY)) ? target.fedSourceX : 0,
