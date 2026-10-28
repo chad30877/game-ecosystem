@@ -4,7 +4,7 @@
 
 **Blocked by:** [04：親子觀察、記憶與失聯搜尋](04-family-memory-and-search.md)。
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 ## 驗收條件
 
@@ -19,3 +19,4 @@
 ## 討論紀錄
 
 ## 完成紀錄
+
