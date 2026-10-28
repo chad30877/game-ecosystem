@@ -27,12 +27,14 @@ namespace Ecosystem
                 individual.windupActiveThisStep || state.time < individual.cultivateUntil) return false;
             var c = config.combat;
             float mana = ManaCost(c, skill);
+            float growth = CombatRules.Growth(config, individual);
             Vector2 direction = CombatRules.AimDirection(individual, action);
             switch (skill)
             {
                 case WorldSkill.Charge:
                     if (direction.sqrMagnitude == 0 || !Spend(state, individual, slot, mana, c.chargeCooldown, "charge")) return false;
-                    individual.chargeRemaining = c.chargeDistance;
+                    individual.chargeRemaining = c.chargeDistance * growth;
+                    individual.chargeGrowth = growth;
                     individual.aimX = direction.x;
                     individual.aimY = direction.y;
                     individual.chargeActiveThisStep = true;
@@ -43,10 +45,11 @@ namespace Ecosystem
                     var target = CombatRules.FirstHit(state, individual.species, CombatRules.Position(individual),
                         CombatRules.Position(individual) + direction * c.hotStrikeRange, c.hitRadius, out _);
                     if (target == null || !Spend(state, individual, slot, mana, c.hotStrikeCooldown, "hot_strike")) return false;
-                    CombatRules.Damage(config, state, individual, target, c.hotStrikeDamage, "hot_strike_hit", state.time);
+                    CombatRules.Damage(config, state, individual, target, c.hotStrikeDamage * growth, "hot_strike_hit", state.time);
                     return true;
                 case WorldSkill.Shield:
                     if (!Spend(state, individual, slot, mana, c.shieldCooldown, "shield")) return false;
+                    individual.shieldGrowth = growth;
                     individual.shieldUntil = state.time + c.shieldDuration;
                     return true;
                 case WorldSkill.IntimidatingRoar:
@@ -54,7 +57,7 @@ namespace Ecosystem
                         Vector2.Distance(CombatRules.Position(individual), CombatRules.Position(value)) <= c.roarRange);
                     if (enemies.Count == 0 || !Spend(state, individual, slot, mana, c.roarCooldown, "roar")) return false;
                     foreach (var enemy in enemies)
-                        ControlEffects.AddBias(state, enemy, skill, CombatRules.Position(enemy) - CombatRules.Position(individual), c.roarDuration);
+                        ControlEffects.AddBias(state, enemy, skill, CombatRules.Position(enemy) - CombatRules.Position(individual), c.roarDuration * growth, growth);
                     return true;
                 case WorldSkill.FrostbindArrow:
                 case WorldSkill.PiercingIceArrow:
@@ -63,6 +66,7 @@ namespace Ecosystem
                         skill == WorldSkill.FrostbindArrow ? c.frostbindCooldown : c.piercingCooldown,
                         skill == WorldSkill.FrostbindArrow ? "frostbind_windup" : "piercing_windup")) return false;
                     individual.windupSkill = skill;
+                    individual.skillGrowth = growth;
                     individual.windupUntil = state.time + c.iceWindup;
                     individual.windupActiveThisStep = true;
                     individual.aimX = direction.x;
@@ -70,7 +74,7 @@ namespace Ecosystem
                     individual.lastCombatAt = state.time;
                     return true;
                 case WorldSkill.ColdMistDash:
-                    float dashDistance = Mathf.Min(c.dashDistance, Vector2.Distance(CombatRules.Position(individual), action.aim));
+                    float dashDistance = Mathf.Min(c.dashDistance * growth, Vector2.Distance(CombatRules.Position(individual), action.aim));
                     Vector2 landing = CombatRules.Position(individual) + direction * dashDistance;
                     if (state.time < individual.rootUntil || direction.sqrMagnitude == 0 || !LegalPoint(config, individual, landing, c.dashDistance + 0.0001f) ||
                         !Spend(state, individual, slot, mana, c.dashCooldown, "mist_dash")) return false;
@@ -83,7 +87,7 @@ namespace Ecosystem
                     if (!LegalPoint(config, individual, action.aim, c.trapRange) ||
                         state.areas.Exists(value => value.skill == skill && Vector2.Distance(new Vector2(value.x, value.y), action.aim) < c.trapRadius * 2) ||
                         !Spend(state, individual, slot, mana, c.trapCooldown, "trap_placed")) return false;
-                    AddArea(state, individual, skill, action.aim, c.trapRadius, c.trapDuration);
+                    AddArea(state, individual, skill, action.aim, c.trapRadius, c.trapDuration, growth);
                     return true;
                 case WorldSkill.Sow:
                     if (!LegalPoint(config, individual, action.aim, c.sowRange) || state.foods.Count >= config.foodSourceLimit ||
@@ -105,11 +109,11 @@ namespace Ecosystem
                     var rootedEnemies = state.individuals.FindAll(value => value.health > 0 && value.species != individual.species &&
                         Vector2.Distance(CombatRules.Position(value), CombatRules.Position(individual)) <= c.rootsRange);
                     if (rootedEnemies.Count == 0 || !Spend(state, individual, slot, mana, c.rootsCooldown, "roots")) return false;
-                    foreach (var enemy in rootedEnemies) ControlEffects.Root(state, enemy, state.time, c.rootsDuration);
+                    foreach (var enemy in rootedEnemies) ControlEffects.Root(state, enemy, state.time, c.rootsDuration * growth);
                     return true;
                 case WorldSkill.SporeSmoke:
                     if (!Spend(state, individual, slot, mana, c.smokeCooldown, "spore_smoke")) return false;
-                    AddArea(state, individual, skill, CombatRules.Position(individual), c.smokeRadius, c.smokeDuration);
+                    AddArea(state, individual, skill, CombatRules.Position(individual), c.smokeRadius * growth, c.smokeDuration, growth);
                     return true;
                 case WorldSkill.Cultivate:
                     FoodState foodTarget = null;
@@ -124,6 +128,7 @@ namespace Ecosystem
                     }
                     if (foodTarget == null || !Spend(state, individual, slot, mana, c.cultivateCooldown, "cultivate")) return false;
                     individual.cultivatingFood = foodTarget.food;
+                    individual.cultivateGrowth = growth;
                     individual.cultivateUntil = state.time + c.cultivateDuration;
                     state.events[state.events.Count - 1].food = foodTarget.food;
                     return true;
@@ -135,9 +140,9 @@ namespace Ecosystem
             Mathf.Abs(point.x) <= config.halfExtent && Mathf.Abs(point.y) <= config.halfExtent &&
             Vector2.Distance(CombatRules.Position(individual), point) <= range;
 
-        private static void AddArea(WorldState state, IndividualState individual, WorldSkill skill, Vector2 point, float radius, float duration) =>
+        private static void AddArea(WorldState state, IndividualState individual, WorldSkill skill, Vector2 point, float radius, float duration, float growth) =>
             state.areas.Add(new AreaState { area = ++state.nextArea, owner = individual.individual, species = individual.species,
-                skill = skill, x = point.x, y = point.y, radius = radius, until = state.time + duration });
+                skill = skill, x = point.x, y = point.y, radius = radius, until = state.time + duration, growth = growth });
 
         private static bool Spend(WorldState state, IndividualState individual, int slot, float mana, float cooldown, string kind)
         {
