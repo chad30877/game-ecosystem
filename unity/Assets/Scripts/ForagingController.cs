@@ -18,7 +18,7 @@ namespace Ecosystem
             var competitors = individual.perception.Where(value => value.visible && value.feeding && value.species != individual.species).ToList();
             EntityObservation enemy = target == null ? null : competitors.Where(value => SamePoint(value.sourceX, value.sourceY, target.x, target.y))
                 .OrderBy(value => Vector2.Distance(position, new Vector2(value.x, value.y))).FirstOrDefault();
-            float health = individual.health / CombatRules.MaxHealth(individual.species);
+            float health = individual.health / CombatRules.CurrentMaxHealth(config, individual);
             bool wasContesting = individual.decisionReason == "contest" || individual.decisionReason == "contest_approach";
             bool costly = wasContesting && individual.contestHealth - health >= config.aiCombatLoss;
             bool weak = health < config.aiWeakHealth || (individual.species == "Flame" && individual.stamina < 2) ||
