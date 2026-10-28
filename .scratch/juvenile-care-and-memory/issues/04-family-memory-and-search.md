@@ -24,3 +24,5 @@
 - 可見死亡記為確認死亡；視野外死亡維持未確認。固定老化情境中最後已知年齡 29、兩秒後推測 31；停用老化則仍為 29。威脅只由親代可見異種判斷。
 - Unity 建置、正式世界固定場景、Python bridge（含 -2 子女與 -3 可見親代列）、v9/v10/v11 回放跳轉通過；合併任務 02 初步程式後重新建置及核對出生與失聯。配置、日誌及回放保存在 `artifacts/juvenile-family-20261028/`（不納入 Git）。
 - 人工操作：使用 `scripts/world.ps1 -Mode forage -WorldConfig artifacts/juvenile-family-20261028/config.json -Scenario artifacts/juvenile-family-20261028/scenario.json -Visible`，選取親代檢視最後觀察及推測；以 `-Mode replay -Visible -ReplayFrom <回放路徑>` 前後切換，核對當時記憶。搜尋示例可加 `-Controller rules` 使用 `search-config.json` 與 `search.json`。
+
+- 整合審查修正：純規則固定場景中，幼體能看見親代但附近同時有可見異種時，舊版連續 10 步選擇 `approach_parent`；修正後第 1 步選擇探索，無危險對照仍選擇靠近。搜尋失聯子女與靠近親代共用可見危險及近期受擊的優先檢查。配置與逐步回放位於 `artifacts/juvenile-review-20261028/`；人工核對可使用 `scripts/world.ps1 -Mode forage -Controller rules -WorldConfig artifacts/juvenile-review-20261028/danger-config.json -Scenario artifacts/juvenile-review-20261028/danger.json -Visible`，比較 `no-danger.json`。

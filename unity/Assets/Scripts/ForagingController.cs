@@ -59,9 +59,7 @@ namespace Ecosystem
             {
                 if (individual.protectionChild != 0)
                 {
-                    individual.protectionEvent = "protection_retreat";
-                    individual.protectionEventChild = individual.protectionChild;
-                    individual.protectionEventThreat = attacker.individual;
+                    SetProtectionEvent(individual, "protection_retreat", individual.protectionChild, attacker.individual);
                     individual.protectionRetreat = true;
                     individual.protectionChild = individual.protectionThreat = 0;
                 }
@@ -82,9 +80,7 @@ namespace Ecosystem
             {
                 if (individual.protectionChild != 0)
                 {
-                    individual.protectionEvent = "protection_ended";
-                    individual.protectionEventChild = individual.protectionChild;
-                    individual.protectionEventThreat = individual.protectionThreat;
+                    SetProtectionEvent(individual, "protection_ended", individual.protectionChild, individual.protectionThreat);
                 }
                 individual.protectionChild = individual.protectionThreat = 0;
                 individual.protectionRetreat = false;
@@ -100,9 +96,7 @@ namespace Ecosystem
                 {
                     if (!individual.protectionRetreat)
                     {
-                        individual.protectionEvent = "protection_retreat";
-                        individual.protectionEventChild = threatened.child.child;
-                        individual.protectionEventThreat = threat.individual;
+                        SetProtectionEvent(individual, "protection_retreat", threatened.child.child, threat.individual);
                     }
                     individual.protectionRetreat = true;
                     individual.protectionChild = individual.protectionThreat = 0;
@@ -115,15 +109,11 @@ namespace Ecosystem
                     if (individual.protectionChild == 0)
                     {
                         individual.protectionDamageStart = individual.combatDamageTaken;
-                        individual.protectionEvent = "protection_started";
-                        individual.protectionEventChild = threatened.child.child;
-                        individual.protectionEventThreat = threat.individual;
+                        SetProtectionEvent(individual, "protection_started", threatened.child.child, threat.individual);
                     }
                     else if (individual.protectionChild != threatened.child.child || individual.protectionThreat != threat.individual)
                     {
-                        individual.protectionEvent = "protection_changed";
-                        individual.protectionEventChild = threatened.child.child;
-                        individual.protectionEventThreat = threat.individual;
+                        SetProtectionEvent(individual, "protection_changed", threatened.child.child, threat.individual);
                     }
                     individual.protectionChild = threatened.child.child;
                     individual.protectionThreat = threat.individual;
@@ -140,59 +130,12 @@ namespace Ecosystem
                 }
                 if (individual.protectionChild != 0)
                 {
-                    individual.protectionEvent = "protection_ended";
-                    individual.protectionEventChild = individual.protectionChild;
-                    individual.protectionEventThreat = individual.protectionThreat;
+                    SetProtectionEvent(individual, "protection_ended", individual.protectionChild, individual.protectionThreat);
                     individual.protectionChild = individual.protectionThreat = 0;
                 }
             }
-            // 親代優先照顧可見幼體；即時威脅及自身緊急補給優先。
-            bool danger = individual.perception.Any(value => value.visible && value.species != individual.species &&
-                Vector2.Distance(position, new Vector2(value.x, value.y)) <= config.scanThreatRadius);
-            bool justHit = individual.lastCombatDamageAt >= 0 && individual.lastCombatDamageAt >= world.State.time - config.stepSeconds;
-            if (!config.disableCare && !danger && !justHit && individual.satiety >= config.aiUrgentSatiety && individual.satiety > config.careReserve)
-            {
-                var child = individual.children.Where(value => (value.visible || value.child == individual.careTarget) && !value.confirmedDead && value.predictedAge < config.maturityAge &&
-                    (value.visible ? value.satiety : individual.careEstimatedSatiety) < (individual.careTarget == value.child ? config.careStop : config.careStart))
-                    .OrderBy(value => value.child == individual.careTarget ? 0 : 1).ThenBy(value => value.satiety)
-                    .ThenBy(value => Vector2.Distance(position, new Vector2(value.x, value.y))).FirstOrDefault();
-                if (child != null)
-                {
-                    Vector2 deltaChild = new Vector2(child.x, child.y) - position;
-                    individual.decisionReason = "care_feed";
-                    return new WorldAction(deltaChild.magnitude <= config.careRadius * 0.8f ? Vector2.zero : deltaChild.normalized,
-                        turn: Turn(individual, deltaChild), feedChild: child.child);
-                }
-            }
-            if (!config.disableCare && individual.satiety >= config.aiUrgentSatiety && (target == null || !target.visible))
-            {
-                var child = individual.children.Where(value => !value.visible && !value.confirmedDead && !value.searched &&
-                    value.predictedAge < config.maturityAge && (value.predictedSatiety < config.familySearchSatiety || value.threatened))
-                    .OrderBy(value => Vector2.Distance(position, new Vector2(value.x, value.y))).FirstOrDefault();
-                if (child != null)
-                {
-                    var deltaChild = new Vector2(child.x, child.y) - position;
-                    if (deltaChild.magnitude <= config.forageRadius) child.searched = true;
-                    else
-                    {
-                        individual.decisionReason = "search_child";
-                        return new WorldAction(deltaChild.normalized, true, turn: Turn(individual, deltaChild));
-                    }
-                }
-                if (individual.age < config.maturityAge && individual.parentId != 0)
-                {
-                    var parent = world.State.individuals.Find(value => value.individual == individual.parentId && world.CanSee(individual, value));
-                    if (parent != null)
-                    {
-                        var deltaParent = CombatRules.Position(parent) - position;
-                        if (deltaParent.magnitude > config.forageRadius)
-                        {
-                            individual.decisionReason = "approach_parent";
-                            return new WorldAction(deltaParent.normalized, true, turn: Turn(individual, deltaParent));
-                        }
-                    }
-                }
-            }
+            var care = ChooseCare(world, individual, target, position);
+            if (care.HasValue) return care.Value;
             if (target == null)
             {
                 individual.decisionReason = lostTarget ? "food_lost" : "explore";
@@ -228,6 +171,66 @@ namespace Ecosystem
             return new WorldAction(movement, true, skillAim, attack, turn: Turn(individual, delta), skillSlot: skillSlot,
                 run: individual.runPreferred && delta.magnitude > config.forageRadius * 2 &&
                     (enemy != null || individual.satiety < config.aiUrgentSatiety));
+        }
+
+        private static WorldAction? ChooseCare(World world, IndividualState individual, FoodMemory target, Vector2 position)
+        {
+            var config = world.Config;
+            // 親代優先照顧可見幼體；即時威脅及自身緊急補給優先。
+            bool danger = individual.perception.Any(value => value.visible && value.species != individual.species &&
+                Vector2.Distance(position, new Vector2(value.x, value.y)) <= config.scanThreatRadius);
+            bool justHit = individual.lastCombatDamageAt >= 0 && individual.lastCombatDamageAt >= world.State.time - config.stepSeconds;
+            if (!config.disableCare && !danger && !justHit && individual.satiety >= config.aiUrgentSatiety && individual.satiety > config.careReserve)
+            {
+                var child = individual.children.Where(value => (value.visible || value.child == individual.careTarget) && !value.confirmedDead && value.predictedAge < config.maturityAge &&
+                    (value.visible ? value.satiety : individual.careEstimatedSatiety) < (individual.careTarget == value.child ? config.careStop : config.careStart))
+                    .OrderBy(value => value.child == individual.careTarget ? 0 : 1).ThenBy(value => value.satiety)
+                    .ThenBy(value => Vector2.Distance(position, new Vector2(value.x, value.y))).FirstOrDefault();
+                if (child != null)
+                {
+                    Vector2 deltaChild = new Vector2(child.x, child.y) - position;
+                    individual.decisionReason = "care_feed";
+                    return new WorldAction(deltaChild.magnitude <= config.careRadius * 0.8f ? Vector2.zero : deltaChild.normalized,
+                        turn: Turn(individual, deltaChild), feedChild: child.child);
+                }
+            }
+            if (!config.disableCare && !danger && !justHit && individual.satiety >= config.aiUrgentSatiety && (target == null || !target.visible))
+            {
+                var child = individual.children.Where(value => !value.visible && !value.confirmedDead && !value.searched &&
+                    value.predictedAge < config.maturityAge && (value.predictedSatiety < config.familySearchSatiety || value.threatened))
+                    .OrderBy(value => Vector2.Distance(position, new Vector2(value.x, value.y))).FirstOrDefault();
+                if (child != null)
+                {
+                    var deltaChild = new Vector2(child.x, child.y) - position;
+                    if (deltaChild.magnitude <= config.forageRadius) child.searched = true;
+                    else
+                    {
+                        individual.decisionReason = "search_child";
+                        return new WorldAction(deltaChild.normalized, true, turn: Turn(individual, deltaChild));
+                    }
+                }
+                if (individual.age < config.maturityAge && individual.parentId != 0)
+                {
+                    var parent = world.State.individuals.Find(value => value.individual == individual.parentId && world.CanSee(individual, value));
+                    if (parent != null)
+                    {
+                        var deltaParent = CombatRules.Position(parent) - position;
+                        if (deltaParent.magnitude > config.forageRadius)
+                        {
+                            individual.decisionReason = "approach_parent";
+                            return new WorldAction(deltaParent.normalized, true, turn: Turn(individual, deltaParent));
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+
+        private static void SetProtectionEvent(IndividualState individual, string kind, int child, int threat)
+        {
+            individual.protectionEvent = kind;
+            individual.protectionEventChild = child;
+            individual.protectionEventThreat = threat;
         }
 
         private static bool SamePoint(float x, float y, float otherX, float otherY) => Mathf.Abs(x - otherX) < 0.001f && Mathf.Abs(y - otherY) < 0.001f;
