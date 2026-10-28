@@ -72,7 +72,7 @@ namespace Ecosystem
                 return new WorldAction(away, turn: Turn(individual, away), run: individual.runPreferred);
             }
             // 僅使用親代當前可見的幼體與異種，最近的受威脅子女優先。
-            var threatened = individual.children.Where(child => child.visible && !child.confirmedDead && child.predictedAge < config.maturityAge)
+            var threatened = individual.children.Where(child => !config.disableCare && child.visible && !child.confirmedDead && child.predictedAge < config.maturityAge)
                 .Select(child => new { child, enemy = individual.perception.Where(other => other.visible && other.species != individual.species &&
                     Vector2.Distance(new Vector2(child.x, child.y), new Vector2(other.x, other.y)) <= config.protectionRadius)
                     .OrderBy(other => Vector2.Distance(position, new Vector2(other.x, other.y))).FirstOrDefault() })
@@ -150,7 +150,7 @@ namespace Ecosystem
             bool danger = individual.perception.Any(value => value.visible && value.species != individual.species &&
                 Vector2.Distance(position, new Vector2(value.x, value.y)) <= config.scanThreatRadius);
             bool justHit = individual.lastCombatDamageAt >= 0 && individual.lastCombatDamageAt >= world.State.time - config.stepSeconds;
-            if (!danger && !justHit && individual.satiety >= config.aiUrgentSatiety && individual.satiety > config.careReserve)
+            if (!config.disableCare && !danger && !justHit && individual.satiety >= config.aiUrgentSatiety && individual.satiety > config.careReserve)
             {
                 var child = individual.children.Where(value => (value.visible || value.child == individual.careTarget) && !value.confirmedDead && value.predictedAge < config.maturityAge &&
                     (value.visible ? value.satiety : individual.careEstimatedSatiety) < (individual.careTarget == value.child ? config.careStop : config.careStart))
@@ -164,7 +164,7 @@ namespace Ecosystem
                         turn: Turn(individual, deltaChild), feedChild: child.child);
                 }
             }
-            if (individual.satiety >= config.aiUrgentSatiety && (target == null || !target.visible))
+            if (!config.disableCare && individual.satiety >= config.aiUrgentSatiety && (target == null || !target.visible))
             {
                 var child = individual.children.Where(value => !value.visible && !value.confirmedDead && !value.searched &&
                     value.predictedAge < config.maturityAge && (value.predictedSatiety < config.familySearchSatiety || value.threatened))

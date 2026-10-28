@@ -51,6 +51,7 @@ namespace Ecosystem
         public float explorationCellSize = 2f;
         public int areaMemoryLimit = 64;
         public float areaMemorySeconds = 30f;
+        public bool disableCare, disableMemoryPrediction;
         public float familySearchSatiety = 40f;
         public float protectionRadius = 2.5f, protectionEngageHealth = 0.45f, protectionRetreatHealth = 0.25f, protectionLoss = 0.2f;
         public float careRadius = 0.7f, careRate = 5f, careReserve = 30f, careStart = 40f, careStop = 60f;
@@ -1136,8 +1137,8 @@ namespace Ecosystem
                 foreach (var child in observer.children)
                 {
                     float elapsed = Mathf.Max(0, State.time - child.lastSeenAt);
-                    child.predictedAge = child.age + (Config.disableAging ? 0 : elapsed);
-                    child.predictedSatiety = Mathf.Max(0, child.satiety - elapsed * Config.idleCost);
+                    child.predictedAge = child.age + (Config.disableAging || Config.disableMemoryPrediction ? 0 : elapsed);
+                    child.predictedSatiety = Config.disableMemoryPrediction ? child.satiety : Mathf.Max(0, child.satiety - elapsed * Config.idleCost);
                 }
                 var expired = new List<int>();
                 foreach (var pair in memory)
@@ -1220,7 +1221,7 @@ namespace Ecosystem
             foreach (var known in observer.foodMemory)
             {
                 known.visible = false;
-                known.possiblyAvailable = (!known.mature || known.phase != FoodPhase.Available) &&
+                known.possiblyAvailable = !Config.disableMemoryPrediction && (!known.mature || known.phase != FoodPhase.Available) &&
                     State.time - known.lastSeenAt >= Config.foodPredictionSeconds;
             }
             foreach (var food in State.foods)
