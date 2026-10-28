@@ -12,6 +12,10 @@ namespace Ecosystem
             var foods = individual.visibleFoods.Concat(individual.foodMemory.Where(value => !value.visible))
                 .Where(value => value.mature && value.phase == FoodPhase.Available && value.amount > 0.01f).ToList();
             var target = foods.OrderBy(value => FoodScore(world, individual, value)).FirstOrDefault();
+            // 推測只在沒有較可靠的食物情報時用作回訪目標。
+            if (target == null)
+                target = individual.foodMemory.Where(value => !value.visible && value.possiblyAvailable)
+                    .OrderBy(value => FoodScore(world, individual, value)).FirstOrDefault();
             var previous = foods.Find(value => SamePoint(value.x, value.y, individual.foodTargetX, individual.foodTargetY));
             if (individual.hasFoodTarget && previous != null && target != null &&
                 FoodScore(world, individual, previous) <= FoodScore(world, individual, target) + config.aiTargetMargin) target = previous;
@@ -26,7 +30,7 @@ namespace Ecosystem
             var alternative = target == null ? null : foods.Where(value => !SamePoint(value.x, value.y, target.x, target.y) &&
                 !competitors.Any(other => SamePoint(value.x, value.y, other.sourceX, other.sourceY)))
                 .OrderBy(value => FoodScore(world, individual, value)).FirstOrDefault();
-            string reason = target == null ? "explore" : "forage";
+            string reason = target == null ? "explore" : target.possiblyAvailable ? "food_prediction" : "forage";
             if (enemy != null && (weak || costly || health < config.aiRetreatHealth) && alternative != null)
             {
                 target = alternative; enemy = null; reason = "switch_food";
@@ -77,7 +81,7 @@ namespace Ecosystem
             {
                 individual.contestHealth = health;
                 if (movement == Vector2.zero) reason = individual.stamina <= config.aiRunStop ? "rest" : "feed";
-                else if (reason != "switch_food" && individual.stamina <= config.aiRunStop) reason = "walk_recover";
+                else if (reason != "switch_food" && reason != "food_prediction" && individual.stamina <= config.aiRunStop) reason = "walk_recover";
             }
             individual.decisionReason = reason;
             return new WorldAction(movement, true, skillAim, attack, turn: Turn(individual, delta), skillSlot: skillSlot,

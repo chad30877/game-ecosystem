@@ -53,6 +53,7 @@ namespace Ecosystem
         public float areaMemorySeconds = 30f;
         public int foodMemoryLimit = 32;
         public float foodMemorySeconds = 30f;
+        public float foodPredictionSeconds = 30f;
         public bool scanEnabled = true;
         public float scanFreshnessSeconds = 8f;
         public float scanThreatRadius = 2.5f;
@@ -122,6 +123,7 @@ namespace Ecosystem
                 areaMemoryLimit < 1 || areaMemoryLimit > 256 || foodMemoryLimit < 1 || foodMemoryLimit > 128 ||
                 !float.IsFinite(areaMemorySeconds) || areaMemorySeconds <= 0 ||
                 !float.IsFinite(foodMemorySeconds) || foodMemorySeconds <= 0 ||
+                !float.IsFinite(foodPredictionSeconds) || foodPredictionSeconds <= 0 ||
                 !float.IsFinite(scanFreshnessSeconds) || scanFreshnessSeconds <= 0 ||
                 !float.IsFinite(scanThreatRadius) || scanThreatRadius <= 0 ||
                 !float.IsFinite(scanEnergyThreshold) || scanEnergyThreshold < 0 || scanEnergyThreshold > 100 ||
@@ -280,6 +282,7 @@ namespace Ecosystem
         public FoodPhase phase;
         public bool visible;
         public float lastSeenAt;
+        public bool possiblyAvailable;
     }
 
     [Serializable]
@@ -1098,7 +1101,12 @@ namespace Ecosystem
         private void RefreshFoodMemory(IndividualState observer)
         {
             observer.visibleFoods.Clear();
-            foreach (var known in observer.foodMemory) known.visible = false;
+            foreach (var known in observer.foodMemory)
+            {
+                known.visible = false;
+                known.possiblyAvailable = (!known.mature || known.phase != FoodPhase.Available) &&
+                    State.time - known.lastSeenAt >= Config.foodPredictionSeconds;
+            }
             foreach (var food in State.foods)
             {
                 if (!CanSeePoint(observer, new Vector2(food.x, food.y))) continue;
@@ -1111,6 +1119,7 @@ namespace Ecosystem
                 known.mature = food.mature;
                 known.phase = food.phase;
                 known.visible = true;
+                known.possiblyAvailable = false;
                 known.lastSeenAt = State.time;
                 observer.visibleFoods.Add(known);
             }
@@ -1147,7 +1156,7 @@ namespace Ecosystem
                     Mathf.Clamp((food.y - individual.y) / (Config.halfExtent * 2), -1f, 1f), 0f,
                     Mathf.Clamp01((State.time - food.lastSeenAt) / Config.foodMemorySeconds),
                     food.mature && food.phase == FoodPhase.Available ? 1f : 0f,
-                    food.capacity > 0 ? food.amount / food.capacity : 0f, 0f, 0f, 0f };
+                    food.capacity > 0 ? food.amount / food.capacity : 0f, food.possiblyAvailable ? 1f : 0f, 0f, 0f };
             }
             foreach (var area in individual.areaMemory)
             {

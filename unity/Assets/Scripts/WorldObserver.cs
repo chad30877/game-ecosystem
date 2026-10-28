@@ -232,7 +232,7 @@ namespace Ecosystem
             var reward = world.State.rewards.Find(value => value.individual == selected);
             if (reward != null) GUILayout.Label($"探索 {individual.rewardedCells.Count} 格　累計 {individual.explorationRewardTotal:F4}　此步 {reward.exploration:F4}");
             foreach (var food in individual.visibleFoods.Concat(individual.foodMemory.Where(value => !value.visible)))
-                GUILayout.Label($"食物 ({food.x:F1}, {food.y:F1})　{(food.visible ? "可見" : world.State.time - food.lastSeenAt >= world.Config.foodMemorySeconds ? "舊情報" : "記憶")}　{(food.mature && food.phase == FoodPhase.Available ? "可採" : food.phase == FoodPhase.Resting ? "休養" : "成長中")}　{food.amount:F1}");
+                GUILayout.Label($"食物 ({food.x:F1}, {food.y:F1})　{(food.visible ? "可見" : world.State.time - food.lastSeenAt >= world.Config.foodMemorySeconds ? "舊情報" : "記憶")}　{(food.mature && food.phase == FoodPhase.Available ? "可採" : food.phase == FoodPhase.Resting ? "休養" : "成長中")}　{food.amount:F1}{(food.possiblyAvailable ? "　推測可能恢復" : "")}");
             foreach (var entity in individual.perception.Where(value => !value.visible))
                 GUILayout.Label($"{SpeciesName(entity.species)} 最後位置 ({entity.x:F1}, {entity.y:F1})　{entity.age:F1}s 前");
             foreach (var target in world.State.individuals.Where(value => world.CanSee(individual, value)))
@@ -342,7 +342,7 @@ namespace Ecosystem
 
         private static string DecisionName(string reason) => reason switch
         {
-            "explore" => "探索", "food_lost" => "來源耗盡", "forage" => "覓食", "feed" => "進食",
+            "explore" => "探索", "food_prediction" => "回訪推測", "food_lost" => "來源耗盡", "forage" => "覓食", "feed" => "進食",
             "contest" => "爭食", "contest_approach" => "接近補給", "switch_food" => "換點",
             "retreat" => "撤退", "rest" => "休息", "walk_recover" => "步行恢復", _ => reason
         };

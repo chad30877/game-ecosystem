@@ -4,7 +4,7 @@
 
 **Blocked by:** 無。
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 ## 驗收條件
 
@@ -18,3 +18,8 @@
 ## 討論紀錄
 
 ## 完成紀錄
+
+- 已實作依最後觀察與可調等待時間推測可能恢復，規則控制在缺少已知可採食來源時回訪；共同觀察、個體檢視及紀錄保留推測與最後觀察。新執行與模型版本為 survival-v10，回放支援 v9、v10。
+- Unity 建置成功；固定種子 1、0.1 秒步長、3 秒推測等待的正式世界場景中，食物第 1 步進入休養、最後於 2.3 秒看見，6 秒時推測、14 秒重見仍休養時清除推測並更新時間。恢復中及未成熟場景也在離開視野並等待後出現推測、重見後清除。來源 8 秒消失的對照場景於回訪時移除記憶；規則控制有 138 步選擇推測回訪。Python bridge 執行 128 步成功；v9 舊回放及 v10 新回放可前後跳轉，Python 拒絕未知版本。證據與場景位於 `artifacts/juvenile-food-memory-20261028/`（不納入版本庫）。
+- 人工測試：用 `scripts/world.ps1 -Mode forage -Visible -WorldConfig <config.json> -Scenario <scenario.json>` 執行證據目錄中的場景，點選個體觀察食物記憶及推測；以 `-Mode replay -Visible -ReplayFrom <episode-1.replay.jsonl>` 暫停並往返推測前後影格。
+- 尚待驗收：視野外被吃掉、食物與危險優先次序、失準後再次等待等完整固定情境，以及回放畫面人工核對。上述情境尚未驗證，任務維持 claimed。
