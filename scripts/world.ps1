@@ -100,7 +100,7 @@ if ($Mode -eq 'replay') {
     if ($ReloadRun) {
         if ($WorldConfig -or $Scenario -or $RulesSpecies -or $PSBoundParameters.ContainsKey('Seed') -or $PSBoundParameters.ContainsKey('Controller')) { throw 'ReloadRun 不可同時指定 WorldConfig、Scenario、Seed 或 Controller。' }
         $record = Get-Content -LiteralPath $ReloadRun -TotalCount 1 | ConvertFrom-Json
-        if ($record.kind -ne 'run' -or $record.rules -ne 'survival-v9' -or -not $record.config.foraging) { throw '不是相容的執行紀錄（須為 survival-v9）。' }
+        if ($record.kind -ne 'run' -or $record.rules -ne 'survival-v10' -or -not $record.config.foraging) { throw '不是相容的執行紀錄（須為 survival-v10）。' }
         $Seed = [int]$record.seed
         $Controller = $record.control
         $RulesSpecies = @($record.rulesSpecies | Where-Object { $_ }) -join ","
