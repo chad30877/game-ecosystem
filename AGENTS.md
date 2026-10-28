@@ -12,5 +12,11 @@
 ### Issue tracker
 需求與任務以本機 Markdown 管理；操作前讀取 `docs/agents/issue-tracker.md`。
 
+### Triage labels
+分流標籤及任務狀態見 `docs/agents/triage-labels.md`。
+
 ### Domain docs
 採 single-context；探索程式碼前讀取 `docs/agents/domain.md`。
+
+### 設計訪談
+使用 `grill-with-docs` 開始訪談時，先讀取 `docs/future-ideas.md`，提出與主題相關的未完成項目，由使用者決定是否納入；已延後的項目維持延後。訪談中產生延後構想，或既有構想被納入、完成或放棄時，依該文件的維護方式更新。
