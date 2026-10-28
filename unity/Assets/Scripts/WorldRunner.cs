@@ -548,7 +548,7 @@ namespace Ecosystem
             public string device;
             public string control;
             public string policyMode;
-            public string rules = "survival-v12";
+            public string rules = "survival-v13";
             public string[] rulesSpecies;
             public WorldConfig config;
             public WorldScenario scenario;
