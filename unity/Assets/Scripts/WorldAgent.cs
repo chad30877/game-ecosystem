@@ -1,3 +1,4 @@
+using System.Linq;
 using Unity.MLAgents;
 using Unity.MLAgents.Actuators;
 using Unity.MLAgents.Sensors;
@@ -23,9 +24,13 @@ namespace Ecosystem
         {
             var continuous = actions.ContinuousActions;
             var discrete = actions.DiscreteActions;
+            Vector2 aim = new Vector2(Individual.x, Individual.y) + new Vector2(continuous[2], continuous[3]) * (World.Config.halfExtent * 2f);
+            int child = discrete[5] == 0 ? 0 : Individual.careTarget != 0 ? Individual.careTarget :
+                Individual.children.Where(value => value.visible && !value.confirmedDead)
+                    .OrderBy(value => Vector2.Distance(aim, new Vector2(value.x, value.y))).Select(value => value.child).FirstOrDefault();
             Action = new WorldAction(new Vector2(continuous[0], continuous[1]), discrete[3] == 1,
-                new Vector2(Individual.x, Individual.y) + new Vector2(continuous[2], continuous[3]) * (World.Config.halfExtent * 2f), discrete[2] == 1,
-                turn: discrete[0] - 1, skillSlot: discrete[1] - 1, run: discrete[4] == 1);
+                aim, discrete[2] == 1,
+                turn: discrete[0] - 1, skillSlot: discrete[1] - 1, run: discrete[4] == 1, feedChild: child);
         }
 
         public override void Heuristic(in ActionBuffers actionsOut)
@@ -43,6 +48,7 @@ namespace Ecosystem
             discrete[2] = Input.GetKey(KeyCode.A) ? 1 : 0;
             discrete[3] = Input.GetKey(KeyCode.Space) ? 1 : 0;
             discrete[4] = Input.GetKey(KeyCode.LeftShift) ? 1 : 0;
+            discrete[5] = Input.GetKey(KeyCode.F) ? 1 : 0;
         }
 
     }

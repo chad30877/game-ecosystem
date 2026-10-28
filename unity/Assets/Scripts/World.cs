@@ -52,6 +52,7 @@ namespace Ecosystem
         public int areaMemoryLimit = 64;
         public float areaMemorySeconds = 30f;
         public float familySearchSatiety = 40f;
+        public float careRadius = 0.7f, careRate = 5f, careReserve = 30f, careStart = 40f, careStop = 60f;
         public int foodMemoryLimit = 32;
         public float foodMemorySeconds = 30f;
         public float foodPredictionSeconds = 30f;
@@ -123,6 +124,9 @@ namespace Ecosystem
                 halfExtent * 2 / explorationCellSize > 64 ||
                 areaMemoryLimit < 1 || areaMemoryLimit > 256 || foodMemoryLimit < 1 || foodMemoryLimit > 128 ||
                 !float.IsFinite(familySearchSatiety) || familySearchSatiety < 0 || familySearchSatiety > 100 ||
+                !float.IsFinite(careRadius) || careRadius <= 0 || !float.IsFinite(careRate) || careRate <= 0 ||
+                !float.IsFinite(careReserve) || careReserve < 0 || careReserve > 100 ||
+                !float.IsFinite(careStart) || careStart < 0 || !float.IsFinite(careStop) || careStop <= careStart || careStop > 100 ||
                 !float.IsFinite(areaMemorySeconds) || areaMemorySeconds <= 0 ||
                 !float.IsFinite(foodMemorySeconds) || foodMemorySeconds <= 0 ||
                 !float.IsFinite(foodPredictionSeconds) || foodPredictionSeconds <= 0 ||
@@ -190,6 +194,8 @@ namespace Ecosystem
         public float activityStaminaSpent, skillManaSpent, reproductionSpent;
         public bool initialAdult = true;
         public int parentId;
+        public int careTarget, careReceivedFrom;
+        public float careGiven, careReceived, careEstimatedSatiety;
         public List<FamilyMemory> children = new List<FamilyMemory>();
         public float observedStart, observedSeconds;
         public float combatDamageTaken, starvationDamageTaken, agingHealthLost;
@@ -404,7 +410,7 @@ namespace Ecosystem
         public bool initialAdult;
         public float observedSeconds, historyFromTime;
         public float combatDamage, starvationDamage, lastAteAt, lastReproducedAt, lastNutritionAt, lastCombatDamageAt;
-        public float basalSpent, activityStaminaSpent, skillManaSpent, reproductionSpent, foodReceived, nutritionSpent, agingHealthLost;
+        public float basalSpent, activityStaminaSpent, skillManaSpent, reproductionSpent, foodReceived, nutritionSpent, agingHealthLost, careGiven, careReceived;
         public float[] automaticRecovered, nutritionRecovered;
         public string lastCombatDamageKind, decisionReason;
         public int lastCombatDamageSource;
@@ -430,16 +436,18 @@ namespace Ecosystem
     {
         public readonly Vector2 movement;
         public readonly bool forage;
+        public readonly int feedChild;
         public readonly bool run;
         public readonly Vector2 aim;
         public readonly bool attack;
         public readonly WorldSkill skill;
         public readonly int turn;
         public readonly int skillSlot;
-        public WorldAction(Vector2 movement, bool forage = false, Vector2 aim = default, bool attack = false, WorldSkill skill = WorldSkill.None, int turn = 0, int skillSlot = -1, bool run = false)
+        public WorldAction(Vector2 movement, bool forage = false, Vector2 aim = default, bool attack = false, WorldSkill skill = WorldSkill.None, int turn = 0, int skillSlot = -1, bool run = false, int feedChild = 0)
         {
             this.movement = movement;
             this.forage = forage;
+            this.feedChild = feedChild;
             this.run = run;
             this.aim = aim;
             this.attack = attack;
@@ -598,11 +606,11 @@ namespace Ecosystem
             individual.observedSeconds = Mathf.Max(0, time - individual.observedStart);
             var account = new ResourceLedger { opening = individual.ledger.opening, closing = Resources(individual) };
             for (int i = 0; i < 3; i++) account.income[i] = individual.automaticRecovered[i] + individual.nutritionRecovered[i];
-            account.income[3] = individual.foodReceived;
+            account.income[3] = individual.foodReceived + individual.careReceived;
             account.expense[0] = individual.combatDamageTaken + individual.starvationDamageTaken + individual.agingHealthLost;
             account.expense[1] = individual.activityStaminaSpent;
             account.expense[2] = individual.skillManaSpent;
-            account.expense[3] = individual.basalSpent + individual.nutritionSpent + individual.reproductionSpent;
+            account.expense[3] = individual.basalSpent + individual.nutritionSpent + individual.reproductionSpent + individual.careGiven;
             for (int i = 0; i < 4; i++) account.residual[i] = account.closing[i] - (account.opening[i] + account.income[i] - account.expense[i]);
             individual.ledger = account;
             var history = individual.recentHistory;
@@ -676,8 +684,14 @@ namespace Ecosystem
                     !float.IsFinite(action.movement.x) || !float.IsFinite(action.movement.y) ||
                     !float.IsFinite(action.aim.x) || !float.IsFinite(action.aim.y) || (action.turn < -1 || action.turn > 1) || action.skillSlot < -1 || action.skillSlot > 1 || !Enum.IsDefined(typeof(WorldSkill), action.skill))
                     throw new ArgumentException("每隻個體都必須取得有限數值的動作。");
+            var priorCare = new Dictionary<int, int>();
+            var canStartCare = new HashSet<int>();
             foreach (var individual in State.individuals)
             {
+                priorCare[individual.individual] = individual.careTarget;
+                var child = State.individuals.Find(value => value.individual == actions[individual.individual].feedChild);
+                if (child != null && CanSee(individual, child)) canStartCare.Add(individual.individual);
+                individual.careTarget = individual.careReceivedFrom = 0;
                 individual.feeding = false;
                 individual.fedAmount = 0;
                 individual.fedSourceX = individual.fedSourceY = 0;
@@ -711,15 +725,46 @@ namespace Ecosystem
                 CombatRules.Resolve(Config, State, actions);
                 ControlEffects.Resolve(Config, State, effectRandom);
             }
+            if (Config.foraging)
+            {
+                // 先共同結算老化與基本消耗，再結算餵養，避免順序影響收支與採食互斥。
+                foreach (var individual in State.individuals)
+                {
+                    if (!Config.disableAging) individual.age = time - individual.bornAt;
+                    float basal = Mathf.Min(individual.satiety, Config.idleCost * Config.stepSeconds);
+                    individual.satiety -= basal; individual.basalSpent += basal;
+                }
+                foreach (var parent in State.individuals)
+                {
+                    var action = actions[parent.individual];
+                    var child = State.individuals.Find(value => value.individual == action.feedChild);
+                    bool continued = priorCare[parent.individual] == action.feedChild && action.feedChild != 0;
+                    if (child == null || child.parentId != parent.individual || parent.health <= 0 || child.health <= 0 ||
+                        (!Config.disableAging && (parent.age >= Config.lifespan || child.age >= Config.lifespan)) ||
+                        child.age >= Config.maturityAge || action.attack || action.skill != WorldSkill.None || action.skillSlot >= 0 ||
+                        (!continued && !canStartCare.Contains(parent.individual)) ||
+                        Vector2.Distance(CombatRules.Position(parent), CombatRules.Position(child)) > Config.careRadius) continue;
+                    float amount = Mathf.Min(Config.careRate * Config.stepSeconds, Mathf.Max(0, parent.satiety - Config.careReserve), 100f - child.satiety);
+                    if (amount <= 0) continue;
+                    parent.satiety -= amount; child.satiety += amount;
+                    parent.careGiven += amount; child.careReceived += amount;
+                    var knownChild = parent.children.Find(value => value.child == child.individual);
+                    if (knownChild != null && (!continued || knownChild.visible)) parent.careEstimatedSatiety = knownChild.satiety;
+                    parent.careEstimatedSatiety = Mathf.Min(100f, parent.careEstimatedSatiety + amount);
+                    parent.careTarget = child.individual; child.careReceivedFrom = parent.individual;
+                    if (!continued) State.events.Add(new WorldEvent { kind = "care_started", individual = parent.individual, target = child.individual });
+                    State.events.Add(new WorldEvent { kind = "care_feed", individual = parent.individual, target = child.individual, amount = amount });
+                }
+                foreach (var parent in State.individuals)
+                    if (priorCare[parent.individual] != 0 && priorCare[parent.individual] != parent.careTarget)
+                        State.events.Add(new WorldEvent { kind = "care_stopped", individual = parent.individual, target = priorCare[parent.individual] });
+            }
             foreach (var individual in State.individuals)
             {
                 if (!Config.foraging) continue;
-                if (!Config.disableAging) individual.age = time - individual.bornAt;
                 individual.reproductionCooldown = Mathf.Max(0, individual.nextReproductionTime - time);
                 float distance = distances[individual.individual];
-                float basal = Mathf.Min(individual.satiety, Config.idleCost * Config.stepSeconds);
-                individual.satiety -= basal; individual.basalSpent += basal;
-                if (individual.health > 0 && actions[individual.individual].forage)
+                if (individual.health > 0 && individual.careTarget == 0 && individual.careReceivedFrom == 0 && actions[individual.individual].forage)
                     foreach (var food in State.foods)
                         if (food.mature && food.phase == FoodPhase.Available && Vector2.Distance(CombatRules.Position(individual), new Vector2(food.x, food.y)) <= Config.forageRadius)
                         {
@@ -765,6 +810,7 @@ namespace Ecosystem
                         decisionReason = individual.decisionReason, ledger = individual.ledger, history = individual.recentHistory.ToArray(),
                         basalSpent = individual.basalSpent, activityStaminaSpent = individual.activityStaminaSpent, skillManaSpent = individual.skillManaSpent,
                         reproductionSpent = individual.reproductionSpent, foodReceived = individual.foodReceived, nutritionSpent = individual.nutritionSpent,
+                        careGiven = individual.careGiven, careReceived = individual.careReceived,
                         automaticRecovered = individual.automaticRecovered, nutritionRecovered = individual.nutritionRecovered, agingHealthLost = individual.agingHealthLost });
                     var statistics = Statistics(individual.species);
                     if (cause == "starved") statistics.starved++;
@@ -1216,6 +1262,10 @@ namespace Ecosystem
                     Mathf.Clamp((child.y - individual.y) / (Config.halfExtent * 2), -1f, 1f), child.visible ? 1f : 0f,
                     Mathf.Clamp01((State.time - child.lastSeenAt) / Config.maturityAge), child.predictedAge / Config.maturityAge,
                     child.predictedSatiety / 100f, child.confirmedDead ? 1f : 0f, child.threatened ? 1f : 0f, child.child };
+            if (individual.careTarget != 0 || individual.careReceivedFrom != 0)
+                yield return new[] { -4f, 0f, 0f, individual.careTarget != 0 ? 1f : 0f,
+                    individual.careReceivedFrom != 0 ? 1f : 0f, 0f, 0f, 0f, 0f,
+                    (float)(individual.careTarget != 0 ? individual.careTarget : individual.careReceivedFrom) };
             if (individual.parentId != 0)
             {
                 var parent = State.individuals.Find(value => value.individual == individual.parentId && CanSee(individual, value));

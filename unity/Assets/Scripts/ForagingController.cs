@@ -52,6 +52,24 @@ namespace Ecosystem
                 var away = new Vector2(individual.retreatX, individual.retreatY);
                 return new WorldAction(away, true, turn: Turn(individual, away), run: individual.runPreferred);
             }
+            // 親代優先照顧可見幼體；即時威脅及自身緊急補給優先。
+            bool danger = individual.perception.Any(value => value.visible && value.species != individual.species &&
+                Vector2.Distance(position, new Vector2(value.x, value.y)) <= config.scanThreatRadius);
+            bool justHit = individual.lastCombatDamageAt >= 0 && individual.lastCombatDamageAt >= world.State.time - config.stepSeconds;
+            if (!danger && !justHit && individual.satiety >= config.aiUrgentSatiety && individual.satiety > config.careReserve)
+            {
+                var child = individual.children.Where(value => (value.visible || value.child == individual.careTarget) && !value.confirmedDead && value.predictedAge < config.maturityAge &&
+                    (value.visible ? value.satiety : individual.careEstimatedSatiety) < (individual.careTarget == value.child ? config.careStop : config.careStart))
+                    .OrderBy(value => value.child == individual.careTarget ? 0 : 1).ThenBy(value => value.satiety)
+                    .ThenBy(value => Vector2.Distance(position, new Vector2(value.x, value.y))).FirstOrDefault();
+                if (child != null)
+                {
+                    Vector2 deltaChild = new Vector2(child.x, child.y) - position;
+                    individual.decisionReason = "care_feed";
+                    return new WorldAction(deltaChild.magnitude <= config.careRadius * 0.8f ? Vector2.zero : deltaChild.normalized,
+                        turn: Turn(individual, deltaChild), feedChild: child.child);
+                }
+            }
             if (individual.satiety >= config.aiUrgentSatiety && (target == null || !target.visible))
             {
                 var child = individual.children.Where(value => !value.visible && !value.confirmedDead && !value.searched &&

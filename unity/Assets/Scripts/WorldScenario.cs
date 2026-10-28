@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace Ecosystem
@@ -97,7 +98,7 @@ namespace Ecosystem
             {
                 var command = commands[i];
                 if (command.slot < 1 || command.slot > count || command.fromStep < 1 || command.toStep < command.fromStep ||
-                    (command.turn < -1 || command.turn > 1) || command.skillSlot < -1 || command.skillSlot > 1 || !float.IsFinite(command.moveX) || !float.IsFinite(command.moveY) ||
+                    (command.turn < -1 || command.turn > 1) || command.skillSlot < -1 || command.skillSlot > 1 || command.feedChild < 0 || command.feedChild > count || !float.IsFinite(command.moveX) || !float.IsFinite(command.moveY) ||
                     !float.IsFinite(command.aimX) || !float.IsFinite(command.aimY) ||
                     !Enum.TryParse<WorldSkill>(command.skill, out var skill) || !Enum.IsDefined(typeof(WorldSkill), skill))
                     throw new ArgumentException("指定動作的個體、步數、方向或技能無效。");
@@ -117,7 +118,7 @@ namespace Ecosystem
                 foreach (var command in commands)
                     if (command.slot == slot && step >= command.fromStep && step <= command.toStep)
                         return new WorldAction(new Vector2(command.moveX, command.moveY), command.forage,
-                            new Vector2(command.aimX, command.aimY), command.attack, Enum.Parse<WorldSkill>(command.skill), command.turn, command.skillSlot, command.run);
+                            new Vector2(command.aimX, command.aimY), command.attack, Enum.Parse<WorldSkill>(command.skill), command.turn, command.skillSlot, command.run, command.feedChild == 0 ? 0 : slots.First(value => value.Value == command.feedChild).Key);
             return new WorldAction(Vector2.zero);
         }
 
@@ -145,6 +146,7 @@ namespace Ecosystem
             public float aimX;
             public float aimY;
             public bool forage;
+            public int feedChild;
             public bool run;
             public bool attack;
             public int turn;

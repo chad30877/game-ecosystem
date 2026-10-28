@@ -68,8 +68,8 @@ def checkpoint_records(trainer: Path):
 
 def compatibility(player: Path, trainer_config):
     return {
-        "modelVersion": "survival-v11",
-        "rulesVersion": "survival-v11",
+        "modelVersion": "survival-v12",
+        "rulesVersion": "survival-v12",
         "worldAssembly": file_record(player.parent / "World_Data/Managed/Assembly-CSharp.dll")["sha256"],
         "packages": {name: version(name) for name in ("mlagents", "mlagents-envs", "torch")},
         "trainer": trainer_config,

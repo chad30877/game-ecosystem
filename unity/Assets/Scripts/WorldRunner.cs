@@ -199,7 +199,7 @@ namespace Ecosystem
             var behavior = body.AddComponent<BehaviorParameters>();
             behavior.BehaviorName = individual.species;
             behavior.BrainParameters.VectorObservationSize = 19;
-            behavior.BrainParameters.ActionSpec = new ActionSpec(4, new[] { 3, 3, 2, 2, 2 });
+            behavior.BrainParameters.ActionSpec = new ActionSpec(4, new[] { 3, 3, 2, 2, 2, 2 });
             var entities = body.AddComponent<BufferSensorComponent>();
             entities.SensorName = "Entities";
             entities.ObservableSize = 10;
@@ -548,7 +548,7 @@ namespace Ecosystem
             public string device;
             public string control;
             public string policyMode;
-            public string rules = "survival-v11";
+            public string rules = "survival-v12";
             public string[] rulesSpecies;
             public WorldConfig config;
             public WorldScenario scenario;

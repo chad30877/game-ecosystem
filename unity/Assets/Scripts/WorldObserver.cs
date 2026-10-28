@@ -207,6 +207,7 @@ namespace Ecosystem
             GUILayout.Label($"營養恢復 {string.Join(" / ", individual.recoveryStatus)}\n基礎 {individual.basalSpent:F1}　進食 {individual.foodReceived:F1}　營養支出 {individual.nutritionSpent:F1}\n活動體力 {individual.activityStaminaSpent:F1}　技能魔力 {individual.skillManaSpent:F1}　繁殖 {individual.reproductionSpent:F1}");
             GUILayout.Label($"決策 {DecisionName(individual.decisionReason)}　{(individual.hasFoodTarget ? $"食物 {individual.foodTargetX:F1},{individual.foodTargetY:F1}" : "")}");
             GUILayout.Label($"觀測 {individual.observedSeconds:F1}s　{(individual.initialAdult ? "起始成年" : "本輪出生")}");
+            GUILayout.Label($"餵養 {(individual.careTarget != 0 ? $"#{individual.careTarget}" : individual.careReceivedFrom != 0 ? $"來自 #{individual.careReceivedFrom}" : "無")}　付出 {individual.careGiven:F1}　取得 {individual.careReceived:F1}");
             DrawLedger(individual.ledger);
             DrawRecoveries(individual.automaticRecovered, individual.nutritionRecovered);
             GUILayout.Label($"年齡 {individual.age:F1}　成長 {CombatRules.Growth(world.Config, individual):P0}　{(individual.age < world.Config.maturityAge ? "成長期" : "成年")}　繁殖 {individual.reproductionCooldown:F1}s");
@@ -347,7 +348,7 @@ namespace Ecosystem
         {
             "search_child" => "尋找子女",
             "approach_parent" => "靠近親代",
-            "explore" => "探索", "food_prediction" => "回訪推測", "food_lost" => "來源耗盡", "forage" => "覓食", "feed" => "進食",
+            "care_feed" => "餵養", "explore" => "探索", "food_prediction" => "回訪推測", "food_lost" => "來源耗盡", "forage" => "覓食", "feed" => "進食",
             "contest" => "爭食", "contest_approach" => "接近補給", "switch_food" => "換點",
             "retreat" => "撤退", "rest" => "休息", "walk_recover" => "步行恢復", _ => reason
         };

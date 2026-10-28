@@ -81,7 +81,7 @@ def main():
                         signs = np.array([1 if int(agent_id) % 2 else -1 for agent_id in decisions.agent_id], dtype=np.float32)
                         env.set_actions(behavior, ActionTuple(
                             continuous=np.concatenate((signs[:, None] * direction, signs[:, None] * direction), axis=1),
-                            discrete=np.tile(np.array([2, 0, 0, 0, 0], dtype=np.int32), (expected, 1))))
+                            discrete=np.tile(np.array([2, 0, 0, 0, 0, 0], dtype=np.int32), (expected, 1))))
                 if step < args.steps:
                     env.step()
         elapsed = time.perf_counter() - started
