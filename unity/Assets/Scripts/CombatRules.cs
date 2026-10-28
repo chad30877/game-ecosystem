@@ -118,6 +118,9 @@ namespace Ecosystem
     public static class CombatRules
     {
         public static float MaxHealth(string species) => species == "Flame" ? 120f : species == "Frost" ? 70f : 90f;
+        public static float Growth(WorldConfig config, IndividualState individual) => !config.foraging ? 1f : Mathf.Lerp(config.newbornGrowth, 1f, Mathf.Clamp01(individual.age / config.maturityAge));
+        public static float CurrentMaxHealth(WorldConfig config, IndividualState individual) => MaxHealth(individual.species) * Growth(config, individual);
+
         public static Vector2 Position(IndividualState individual) => new Vector2(individual.x, individual.y);
 
         public static Vector2 AimDirection(IndividualState individual, WorldAction action) => (action.aim - Position(individual)).normalized;
@@ -140,7 +143,7 @@ namespace Ecosystem
                     state.projectiles.Add(new ProjectileState { projectile = ++state.nextProjectile, owner = individual.individual,
                         species = individual.species, skill = individual.windupSkill, x = individual.x, y = individual.y,
                         damage = individual.windupSkill == WorldSkill.FrostbindArrow ? config.combat.frostbindDamage
-                            : individual.windupSkill == WorldSkill.PiercingIceArrow ? config.combat.piercingDamage : config.combat.iceDamage,
+                            : individual.windupSkill == WorldSkill.PiercingIceArrow ? config.combat.piercingDamage : config.combat.iceDamage * individual.basicAttackGrowth,
                         directionX = individual.aimX, directionY = individual.aimY,
                         remaining = individual.windupSkill == WorldSkill.PiercingIceArrow ? config.combat.piercingRange : config.combat.iceRange });
                     individual.windupUntil = 0;
@@ -156,6 +159,7 @@ namespace Ecosystem
                     individual.mana -= config.combat.iceMana; individual.skillManaSpent += config.combat.iceMana;
                     individual.attackReadyAt = state.time + config.combat.iceCooldown;
                     individual.windupSkill = WorldSkill.None;
+                    individual.basicAttackGrowth = Growth(config, individual);
                     individual.windupUntil = state.time + config.combat.iceWindup;
                     individual.windupActiveThisStep = true;
                     individual.aimX = direction.x;
@@ -218,7 +222,7 @@ namespace Ecosystem
                 state.events.Add(new WorldEvent { kind = "melee", individual = individual.individual, amount = config.combat.meleeStamina });
                 var target = FirstHit(state, individual.species, Position(individual),
                     Position(individual) + AimDirection(individual, action) * config.combat.meleeRange, config.combat.hitRadius, out _);
-                if (target != null) Damage(config, state, individual, target, config.combat.meleeDamage, "melee_hit", state.time + config.stepSeconds);
+                if (target != null) Damage(config, state, individual, target, config.combat.meleeDamage * Growth(config, individual), "melee_hit", state.time + config.stepSeconds);
             }
             foreach (var projectile in state.projectiles)
             {

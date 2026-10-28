@@ -203,13 +203,13 @@ namespace Ecosystem
             GUILayout.BeginArea(inspector, GUI.skin.box);
             scroll = GUILayout.BeginScrollView(scroll);
             GUILayout.Label($"#{individual.individual}　{SpeciesName(individual.species)}");
-            GUILayout.Label($"健康 {individual.health:F1} / {CombatRules.MaxHealth(individual.species):g}　飽食度 {individual.satiety:F1} / 100\n{(individual.running ? "奔跑" : "走路")}　體力 {individual.stamina:F1}　魔力 {individual.mana:F1}");
+            GUILayout.Label($"健康 {individual.health:F1} / {CombatRules.CurrentMaxHealth(world.Config, individual):F1}　飽食度 {individual.satiety:F1} / 100\n{(individual.running ? "奔跑" : "走路")}　體力 {individual.stamina:F1}　魔力 {individual.mana:F1}");
             GUILayout.Label($"營養恢復 {string.Join(" / ", individual.recoveryStatus)}\n基礎 {individual.basalSpent:F1}　進食 {individual.foodReceived:F1}　營養支出 {individual.nutritionSpent:F1}\n活動體力 {individual.activityStaminaSpent:F1}　技能魔力 {individual.skillManaSpent:F1}　繁殖 {individual.reproductionSpent:F1}");
             GUILayout.Label($"決策 {DecisionName(individual.decisionReason)}　{(individual.hasFoodTarget ? $"食物 {individual.foodTargetX:F1},{individual.foodTargetY:F1}" : "")}");
             GUILayout.Label($"觀測 {individual.observedSeconds:F1}s　{(individual.initialAdult ? "起始成年" : "本輪出生")}");
             DrawLedger(individual.ledger);
             DrawRecoveries(individual.automaticRecovered, individual.nutritionRecovered);
-            GUILayout.Label($"年齡 {individual.age:F1}　{(individual.age < world.Config.maturityAge ? "成長期" : "成年")}　繁殖 {individual.reproductionCooldown:F1}s");
+            GUILayout.Label($"年齡 {individual.age:F1}　成長 {CombatRules.Growth(world.Config, individual):P0}　{(individual.age < world.Config.maturityAge ? "成長期" : "成年")}　繁殖 {individual.reproductionCooldown:F1}s");
             GUILayout.Label($"普通攻擊　{(individual.species == "Moss" ? "無" : individual.attackCooldown > 0 ? $"冷卻 {individual.attackCooldown:F1}s" : "就緒")}");
             for (int slot = 0; slot < individual.loadout.Length; slot++)
                 GUILayout.Label($"{slot + 1}　{SkillName(individual.loadout[slot])}　{Availability(individual, slot)}");
