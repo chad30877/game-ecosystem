@@ -12,7 +12,7 @@ namespace Ecosystem
                 if (state.time < individual.rootUntil) continue;
                 if (individual.trapSlowPending)
                 {
-                    Slow(state, individual, state.time, config.combat.trapSlowDuration);
+                    Slow(state, individual, state.time, individual.trapSlowDuration);
                     individual.trapSlowPending = false;
                 }
                 foreach (var bias in individual.movementBiases)
@@ -50,8 +50,9 @@ namespace Ecosystem
                 {
                     var target = state.individuals.Find(value => value.health > 0 && value.species != area.species && Inside(area, value));
                     if (target == null) continue;
-                    Root(state, target, time, config.combat.trapRootDuration);
+                    Root(state, target, time, config.combat.trapRootDuration * area.growth);
                     target.trapSlowPending = true;
+                    target.trapSlowDuration = config.combat.trapSlowDuration * area.growth;
                     area.until = state.time;
                     state.events.Add(new WorldEvent { kind = "trap_triggered", individual = area.owner, target = target.individual, x = area.x, y = area.y });
                 }
@@ -105,7 +106,7 @@ namespace Ecosystem
             bias.until = time + config.combat.smokeBiasDuration;
         }
 
-        public static void AddBias(WorldState state, IndividualState target, WorldSkill skill, Vector2 direction, float duration)
+        public static void AddBias(WorldState state, IndividualState target, WorldSkill skill, Vector2 direction, float duration, float strength)
         {
             if (state.time < target.rootUntil) return;
             var bias = target.movementBiases.Find(value => value.skill == skill);
@@ -115,6 +116,7 @@ namespace Ecosystem
                 target.movementBiases.Add(bias);
             }
             bias.until = state.time + duration;
+            bias.strength = strength;
             bias.angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
         }
 
@@ -125,7 +127,7 @@ namespace Ecosystem
             foreach (var bias in individual.movementBiases)
                 if (bias.until > state.time)
                     sum += new Vector2(Mathf.Cos(bias.angle * Mathf.Deg2Rad), Mathf.Sin(bias.angle * Mathf.Deg2Rad)) *
-                        (bias.skill == WorldSkill.SporeSmoke ? config.combat.smokeBias : config.combat.roarBias);
+                        (bias.skill == WorldSkill.SporeSmoke ? config.combat.smokeBias : config.combat.roarBias * bias.strength);
             return Vector2.ClampMagnitude(sum, config.combat.maxMovementBias);
         }
     }
