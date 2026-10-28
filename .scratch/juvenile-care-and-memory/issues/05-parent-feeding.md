@@ -25,3 +25,5 @@
 - 雙方同時選擇採食仍只發生餵養；幼體攻擊不阻斷，雙方移動超距中止，親代轉身離開視野但未超距仍持續。多名子女先選較低飽食度，相同選最近，已開始餵養則維持到停止條件；隔離場景以可調每秒 100 點加速，低於 40 開始、跨過 40 持續，超過 60 後停止。
 - Unity 建置、Python bridge、v11 舊回放及 v12 回放前後跳轉通過；v12 區分新動作與模型資料。固定配置、事件、回放與建置日誌保存在上述 artifacts 路徑（不納入 Git）。
 - 人工操作：使用 `scripts/world.ps1 -Mode forage -WorldConfig artifacts/juvenile-feeding-20261028/config.json -Scenario artifacts/juvenile-feeding-20261028/basic.json -Visible`，選取親代與子女檢視餵養對象及收支；以 `-Mode replay -ReplayFrom <回放路徑> -Visible` 前後切換核對歷史轉移。規則 AI 的隔離場景使用 `fast-config.json`、`rules-isolated.json` 並加上 `-Controller rules`。
+
+- 整合審查修正：指定動作固定場景中，霜羽第 1 步開始普通攻擊前搖，舊版第 2–24 步仍餵養；修正後前搖及發射當步均無轉移，第 25 步起可恢復。炎角衝鋒持續期間亦不轉移；純規則餵養轉保護及威脅解除後恢復餵養的既有場景通過，128 步 bridge 通過。場景與逐步回放位於 `artifacts/juvenile-review-20261028/`；人工核對可用 `scripts/world.ps1 -Mode forage -Controller scripted -WorldConfig artifacts/juvenile-review-20261028/windup-config.json -Scenario artifacts/juvenile-review-20261028/windup.json -Visible`，觀察前搖與餵養事件。

@@ -760,6 +760,7 @@ namespace Ecosystem
                     if (child == null || child.parentId != parent.individual || parent.health <= 0 || child.health <= 0 ||
                         (!Config.disableAging && (parent.age >= Config.lifespan || child.age >= Config.lifespan)) ||
                         child.age >= Config.maturityAge || action.attack || action.skill != WorldSkill.None || action.skillSlot >= 0 ||
+                        parent.windupActiveThisStep || parent.chargeActiveThisStep || parent.dashActiveThisStep ||
                         (!continued && !canStartCare.Contains(parent.individual)) ||
                         Vector2.Distance(CombatRules.Position(parent), CombatRules.Position(child)) > Config.careRadius) continue;
                     float amount = Mathf.Min(Config.careRate * Config.stepSeconds, Mathf.Max(0, parent.satiety - Config.careReserve), 100f - child.satiety);
