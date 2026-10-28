@@ -41,6 +41,8 @@ namespace Ecosystem
                 Header = JsonUtility.FromJson<Record>(line);
                 if (Header.kind != "replay" || Header.schemaVersion != 1 || (Header.rules != "survival-v9" && Header.rules != "survival-v10") || Header.config == null || !Header.config.foraging)
                     throw new InvalidDataException("回放版本或世界設定不相容。");
+                // 舊規則的幼體能力與成體相同，回放檢視不得套用新的成長上限。
+                if (Header.rules == "survival-v9") Header.config.newbornGrowth = 1f;
                 Header.config.Validate();
                 long position = 0;
                 bool complete = false;
