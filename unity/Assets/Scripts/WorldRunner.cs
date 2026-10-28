@@ -207,7 +207,7 @@ namespace Ecosystem
             entities.MaxNumObservables = world.Config.foraging
                 ? checked(Mathf.Max(world.Config.populationLimit, world.Config.individualsPerSpecies * 3) *
                     (Mathf.CeilToInt(5f / (world.Config.maturityAge >= 5f ? Mathf.Max(world.Config.stepSeconds, world.Config.reproductionCooldown) : world.Config.stepSeconds)) + 1) +
-                    world.Config.foodSourceLimit + world.Config.foodMemoryLimit + world.Config.areaMemoryLimit)
+                    world.Config.foodSourceLimit + world.Config.foodMemoryLimit + world.Config.areaMemoryLimit + Mathf.CeilToInt(world.Config.episodeSteps * world.Config.stepSeconds / Mathf.Max(world.Config.stepSeconds, world.Config.reproductionCooldown)) + 2)
                 : world.Config.individualsPerSpecies * 6;
             behavior.BehaviorType = control != "python" ? BehaviorType.HeuristicOnly : BehaviorType.Default;
             var agent = body.AddComponent<WorldAgent>();
@@ -548,7 +548,7 @@ namespace Ecosystem
             public string device;
             public string control;
             public string policyMode;
-            public string rules = "survival-v10";
+            public string rules = "survival-v11";
             public string[] rulesSpecies;
             public WorldConfig config;
             public WorldScenario scenario;

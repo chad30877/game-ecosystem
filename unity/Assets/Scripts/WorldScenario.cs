@@ -61,6 +61,19 @@ namespace Ecosystem
                     individual.loadout = skills;
                 }
             }
+            foreach (var placement in placements)
+            {
+                if (placement.parentSlot == 0) continue;
+                if (placement.parentSlot < 1 || placement.parentSlot > count || placement.parentSlot == placement.slot)
+                    throw new ArgumentException("場景親代無效。");
+                var child = world.State.individuals[placement.slot - 1];
+                var parent = world.State.individuals[placement.parentSlot - 1];
+                if (child.species != parent.species || child.age >= world.Config.maturityAge)
+                    throw new ArgumentException("場景親子需同物種且子女為幼體。");
+                child.parentId = parent.individual;
+                parent.children.Add(new FamilyMemory { child = child.individual, x = parent.x, y = parent.y,
+                    age = child.age, satiety = world.Config.newbornSatiety, lastSeenAt = world.State.time });
+            }
             var placedFoods = new HashSet<int>();
             foreach (var placement in foods)
             {
@@ -109,7 +122,7 @@ namespace Ecosystem
         }
 
         [Serializable]
-        public sealed class Placement { public int slot; public float x; public float y; public float facing; public bool setAge; public float age; public bool setSatiety; public float satiety; public bool[] nutritionActive; public bool setVitals; public float health, stamina, mana; public string[] loadout; }
+        public sealed class Placement { public int slot; public int parentSlot; public float x; public float y; public float facing; public bool setAge; public float age; public bool setSatiety; public float satiety; public bool[] nutritionActive; public bool setVitals; public float health, stamina, mana; public string[] loadout; }
         [Serializable]
         public sealed class FoodPlacement
         {
