@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def run(output: Path, baseline: bool = False, rules: bool = False) -> None:
+def run(output: Path, baseline: bool = False, rules: bool = False, edge: bool = False) -> None:
     output.mkdir(parents=True, exist_ok=False)
     config = json.loads((ROOT / "training/foraging.json").read_text(encoding="utf-8"))
     config.update(individualsPerSpecies=2, episodeSteps=650, disableReproduction=True,
@@ -17,6 +17,10 @@ def run(output: Path, baseline: bool = False, rules: bool = False) -> None:
         [(-3, 0), (0, 0), (-2, 5), (-8, -8), (2, 0), (2, 1)])]
     for placement in placements[4:]:
         placement["loadout"] = ["SporeSmoke", "Cultivate"]
+    if edge:
+        placements[0].update(x=0, y=0)
+        placements[4].update(x=2, y=4)
+        placements[5].update(x=2, y=5)
     scenario = dict(placements=placements, foods=[dict(food=1, relocate=True, x=0, y=0)], commands=[
         dict(slot=5, fromStep=1, toStep=1, skillSlot=0),
         dict(slot=6, fromStep=1, toStep=1, skillSlot=0),
@@ -54,5 +58,6 @@ if __name__ == "__main__":
     parser.add_argument("output", type=Path)
     parser.add_argument("--baseline", action="store_true")
     parser.add_argument("--rules", action="store_true")
+    parser.add_argument("--edge", action="store_true")
     args = parser.parse_args()
-    run(args.output.resolve(), args.baseline, args.rules)
+    run(args.output.resolve(), args.baseline, args.rules, args.edge)

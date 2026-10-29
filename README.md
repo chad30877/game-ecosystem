@@ -37,7 +37,7 @@
 ./scripts/world.ps1 -Mode forage -ReloadRun './artifacts/runs/<輸出>/world.jsonl'
 ```
 
-`-Controller idle` 停止移動、採食及技能，方便核對飢餓；`forage -Controller manual -Visible` 可用方向鍵走路、LeftShift奔跑、滑鼠瞄準、Q/E 轉向、空白鍵採食、A 攻擊（近戰／基本冰箭）、S/D 選擇兩欄技能，所有個體接收同一輸入，僅執行自己攜帶的技能。`-ReloadRun` 從 `survival-v9` 首筆紀錄重載完整配置、種子、控制模式及指定動作；規則、靜止及指定動作模式可重現執行序列，手動模式需再次輸入動作。此參數不能與 `-Seed`、`-Controller`、`-WorldConfig` 或 `-Scenario` 混用。舊版規則紀錄會拒絕重載。這不是歷史回放，也不承諾跨裝置逐影格一致。
+`-Controller idle` 停止移動、採食及技能，方便核對飢餓；`forage -Controller manual -Visible` 可用方向鍵走路、LeftShift奔跑、滑鼠瞄準、Q/E 轉向、空白鍵採食、A 攻擊（近戰／基本冰箭）、S/D 選擇兩欄技能，所有個體接收同一輸入，僅執行自己攜帶的技能。`-ReloadRun` 從 `survival-v14` 首筆紀錄重載完整配置、種子、控制模式及指定動作；規則、靜止及指定動作模式可重現執行序列，手動模式需再次輸入動作。此參數不能與 `-Seed`、`-Controller`、`-WorldConfig` 或 `-Scenario` 混用。舊版規則紀錄會拒絕重載。這不是歷史回放，也不承諾跨裝置逐影格一致。
 
 固定場景可直接觀看接敵與技能：
 

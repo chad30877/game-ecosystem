@@ -57,6 +57,6 @@ gamma 決定未來回報的折扣，不決定記憶保存多久，也不保證�
 
 ## 訪談結案
 
-- 使用者已確認功能決策、整體規格、驗收入口與五項拆分，並要求依 to-spec、to-tickets 正式發佈[規格與任務](../../.scratch/smoke-awareness-and-observer/README.md)；原 Q11 的僅觀察畫面收斂提案已由擴充後範圍取代。
+- 使用者已確認功能決策、整體規格、驗收入口與五項拆分，並要求依 to-spec、to-tickets 正式發佈[規格與任務](../../.scratch/archive/smoke-awareness-and-observer/README.md)；原 Q11 的僅觀察畫面收斂提案已由擴充後範圍取代。2026-10-29 已依 implement 完成實作、驗收及歸檔，正式知識見[煙幕感知與觀察](../smoke-awareness.md)。
 
 規格與五項任務已正式發佈為 ready-for-agent。使用者明確要求先不實作，沒有 claimed 或完成的功能任務；訪談結束不代表功能完成，功能資料夾保留活動狀態直到實作驗收結案。

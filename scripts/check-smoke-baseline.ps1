@@ -1,6 +1,7 @@
-param([string]$Base = 'fa55e382fd10d52e2f31144cbe1f24dfdcd1369e')
+param([string]$Base = 'fa55e382fd10d52e2f31144cbe1f24dfdcd1369e', [string]$Fixture = 'artifacts/smoke-validation/check')
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
+$fixturePath = (Resolve-Path -LiteralPath $Fixture).Path
 $generated = [IO.Path]::GetFullPath((Join-Path $root 'unity/Assets/Editor/SmokeBaselineValidation'))
 $allowed = [IO.Path]::GetFullPath((Join-Path $root 'unity/Assets/Editor')) + [IO.Path]::DirectorySeparatorChar
 if (-not $generated.StartsWith($allowed, [StringComparison]::OrdinalIgnoreCase)) { throw '基準原始碼路徑超出專案。' }
@@ -14,7 +15,7 @@ try {
     }
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'SmokeBaselineValidation.cs') -Destination $generated
     $log = Join-Path $root 'artifacts/smoke-validation/baseline-compare.log'
-    $process = Start-Process -FilePath (Join-Path $root '.tools/unity/6000.0.85f1/Editor/Unity.exe') -ArgumentList @('-batchmode', '-quit', '-projectPath', ('"{0}"' -f (Join-Path $root 'unity')), '-executeMethod', 'Ecosystem.Editor.SmokeBaselineValidation.Run', '-logFile', ('"{0}"' -f $log)) -WindowStyle Hidden -PassThru
+    $process = Start-Process -FilePath (Join-Path $root '.tools/unity/6000.0.85f1/Editor/Unity.exe') -ArgumentList @('-batchmode', '-quit', '-projectPath', ('"{0}"' -f (Join-Path $root 'unity')), '-executeMethod', 'Ecosystem.Editor.SmokeBaselineValidation.Run', '--smoke-fixture', ('"{0}"' -f $fixturePath), '-logFile', ('"{0}"' -f $log)) -WindowStyle Hidden -PassThru
     $process.WaitForExit()
     if ($process.ExitCode -ne 0) { throw "基準對照失敗：$log" }
     Write-Output $log

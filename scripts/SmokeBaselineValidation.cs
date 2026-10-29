@@ -21,13 +21,16 @@ namespace Ecosystem.Editor
         public static void Run()
         {
             ValidateSmoke.RunAvoidance();
-            string configText = File.ReadAllText("../artifacts/smoke-validation/current-perception/config.json");
+            var arguments = Environment.GetCommandLineArgs();
+            int fixtureArgument = Array.IndexOf(arguments, "--smoke-fixture");
+            string fixture = arguments[fixtureArgument + 1];
+            string configText = File.ReadAllText(Path.Combine(fixture, "config.json"));
             var config = JsonUtility.FromJson<WorldConfig>(configText);
             var oldConfig = JsonUtility.FromJson<SmokeBaseline.WorldConfig>(configText);
             var current = new World(config, 7);
             var baseline = new SmokeBaseline.World(oldConfig, 7);
             current.Reset(); baseline.Reset();
-            var scenario = JsonUtility.FromJson<WorldScenario>(File.ReadAllText("../artifacts/smoke-validation/current-perception/scenario.json"));
+            var scenario = JsonUtility.FromJson<WorldScenario>(File.ReadAllText(Path.Combine(fixture, "scenario.json")));
             scenario.Apply(current);
             // 使用相同世界配置、種子及指定動作；基準沒有場景適配器，套用相同起始狀態。
             JsonUtility.FromJsonOverwrite(JsonUtility.ToJson(current.State), baseline.State);

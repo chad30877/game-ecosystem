@@ -28,5 +28,3 @@ resolved
 ## 完成紀錄
 
 已由世界入口驗證相切、局部相交、未知背後、5 秒到期及重見消失；perception.log 通過。正式場景種子 7、6 個體、2 煙幕、651 影格完成跳轉逐欄比對；bridge 往返 20 步核對 200 筆煙幕列。即時與回放視窗已核對個體視野與情報顯示。欄位、版本、容量及人工重現方式見 docs/smoke-awareness.md；證據位於 artifacts/smoke-validation/。
-
-

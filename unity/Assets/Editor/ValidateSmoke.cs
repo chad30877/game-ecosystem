@@ -89,7 +89,21 @@ namespace Ecosystem.Editor
             world.State.areas[0].radius = 0.9f;
             world.RefreshPerception(true);
             escape = ForagingController.Decide(world, observer);
-            Require(observer.decisionReason == "smoke_cross" && escape.movement.x > 0.9f, "緊急撤退無安全方向才穿越");
+            Require(observer.decisionReason == "smoke_avoid" && escape.movement.x < 0.01f, "緩衝帶不能阻擋安全側向撤退");
+            observer.x = config.halfExtent;
+            world.State.areas[0].x = config.halfExtent - 1; world.State.areas[0].radius = 2;
+            world.RefreshPerception(true);
+            escape = ForagingController.Decide(world, observer);
+            Require(observer.decisionReason == "smoke_exit" && Mathf.Abs(escape.movement.y) > 0.9f, "邊界撤退優先安全側向離開");
+            observer.x = 0;
+            world.State.areas.Clear();
+            foreach (var center in new[] { new Vector2(1.2f, 0), new Vector2(0, 1.2f), new Vector2(0, -1.2f) })
+                world.State.areas.Add(new AreaState { area = world.State.areas.Count + 1, skill = WorldSkill.SporeSmoke,
+                    species = "Moss", x = center.x, y = center.y, radius = 1, until = 100 });
+            world.RefreshPerception(true);
+            escape = ForagingController.Decide(world, observer);
+            Require(observer.decisionReason == "smoke_cross" && escape.movement.x > 0.9f, "前方及兩側皆有煙幕時緊急穿越");
+            world.State.areas.RemoveRange(1, 2);
             world.State.areas[0].species = observer.species;
             world.RefreshPerception(true);
             escape = ForagingController.Decide(world, observer);
