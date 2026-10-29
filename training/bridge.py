@@ -17,7 +17,7 @@ def smoke_contract(args, config):
     """固定場景透過實際 ML-Agents 往返，比對共同煙幕觀察。"""
     args.output.mkdir(parents=True, exist_ok=False)
     channel = EngineConfigurationChannel()
-    channel.set_configuration_parameters(time_scale=20, width=960, height=540)
+    channel.set_configuration_parameters(time_scale=20, width=1280, height=720)
     log = args.output / "world.jsonl"
     env = UnityEnvironment(file_name=str(args.env.resolve()), seed=args.seed, no_graphics=True,
         side_channels=[channel], log_folder=str(args.output.resolve()), additional_args=[
@@ -79,7 +79,7 @@ def main():
         parser.error("steps 必須大於 addStep，才能驗證動態個體")
     args.output.mkdir(parents=True, exist_ok=False)
     channel = EngineConfigurationChannel()
-    channel.set_configuration_parameters(time_scale=1 if args.visible else 20, width=960, height=720)
+    channel.set_configuration_parameters(time_scale=1 if args.visible else 20, width=1280, height=720)
     env = UnityEnvironment(
         file_name=str(args.env.resolve()), seed=args.seed, no_graphics=not args.visible,
         side_channels=[channel], log_folder=str(args.output.resolve()),

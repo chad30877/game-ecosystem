@@ -57,6 +57,8 @@ namespace Ecosystem
         private void InitializeWorld()
         {
             Application.runInBackground = true;
+            if (!Application.isBatchMode && Argument("-screen-width", "") == "" && Argument("-screen-height", "") == "")
+                Screen.SetResolution(1280, 720, FullScreenMode.Windowed);
             string replayPath = Argument("--replay", "");
             if (replayPath != "") replay = new WorldReplay(replayPath);
             string configPath = Argument("--world-config", "");

@@ -25,7 +25,7 @@ namespace Ecosystem.Editor
             PlayerSettings.companyName = "Ecosystem";
             PlayerSettings.productName = "Ecosystem";
             PlayerSettings.defaultIsNativeResolution = false;
-            PlayerSettings.defaultScreenWidth = 960;
+            PlayerSettings.defaultScreenWidth = 1280;
             PlayerSettings.defaultScreenHeight = 720;
             PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
             PlayerSettings.resizableWindow = true;

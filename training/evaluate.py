@@ -181,6 +181,7 @@ def metrics(log: Path):
             "completedLives": len(ages), "extinct": stat["incompleteLives"] == 0,
             "incompleteAges": [age for b in buckets for age in b["incompleteAges"]],
             "meanObservedSeconds": statistics.mean([v for b in buckets for v in b["observedSeconds"]])}
+    assert half_extent is not None
     return {"steps": final["step"], "seconds": final["time"], "reason": final["endReason"],
             "explorationGridCells": math.ceil(half_extent * 2 / cell_size) ** 2,
             "speciesExploredCells": {species: len(species_coverage[species]) for species in SPECIES},
@@ -192,7 +193,7 @@ def rollout(args, output, seed, modes, weights, network, initial, capture):
     log = output / "world.jsonl"
     rules = ",".join(s for s in SPECIES if modes[s] == "rules")
     channel = EngineConfigurationChannel()
-    channel.set_configuration_parameters(time_scale=100, width=960, height=720)
+    channel.set_configuration_parameters(time_scale=100, width=1280, height=720)
     additional = ["--control", "python", "--policy-mode", "fixed", "--world-seed", str(seed),
                   "--world-config", str(args.config), "--world-log", str(log), "--summary-log", "true",
                   "--metrics-log", "true",

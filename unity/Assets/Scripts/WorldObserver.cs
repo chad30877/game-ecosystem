@@ -42,7 +42,7 @@ namespace Ecosystem
             bool details = selected != 0 && panelExpanded;
             float width = Mathf.Min(360, Screen.width * 0.32f);
             inspector = details ? new Rect(Screen.width - width - 8, toolbar.yMax + 8, width, Screen.height - toolbar.yMax - 16) : new Rect();
-            viewport = new Rect(8, toolbar.yMax + 8, Screen.width - 16 - (details ? width + 8 : 0), Screen.height - toolbar.yMax - 16);
+            viewport = new Rect(8, toolbar.yMax + 8, Screen.width - width - 24, Screen.height - toolbar.yMax - 16);
             worldCamera.pixelRect = new Rect(viewport.x, Screen.height - viewport.yMax, viewport.width, viewport.height);
             if (Selection == null && overviewFit)
             {
@@ -195,6 +195,9 @@ namespace Ecosystem
             GUI.skin.label.fontSize = 16;
             GUI.skin.label.wordWrap = true;
             UpdateLayout();
+            GUI.color = worldCamera.backgroundColor;
+            GUI.DrawTexture(new Rect(viewport.xMax, toolbar.yMax, Screen.width - viewport.xMax, Screen.height - toolbar.yMax), Texture2D.whiteTexture);
+            GUI.color = Color.white;
             GUILayout.BeginArea(toolbar, GUI.skin.box);
             GUILayout.BeginHorizontal();
             GUILayout.Label(ModeName(), GUILayout.Width(180));
@@ -300,13 +303,13 @@ namespace Ecosystem
             {
                 var point = worldCamera.WorldToScreenPoint(new Vector3(memory.x, memory.y, 0));
                 var rect = new Rect(point.x - 40, Screen.height - point.y - 12, 100, 24);
-                if (point.z > 0 && !toolbar.Overlaps(rect) && !inspector.Overlaps(rect)) GUI.Label(rect, $"◇ {SpeciesName(memory.species)}");
+                if (point.z > 0 && viewport.Contains(rect.min) && viewport.Contains(rect.max)) GUI.Label(rect, $"◇ {SpeciesName(memory.species)}");
             }
             foreach (var food in individual.foodMemory.Where(value => !value.visible))
             {
                 var point = worldCamera.WorldToScreenPoint(new Vector3(food.x, food.y, 0));
                 var rect = new Rect(point.x - 40, Screen.height - point.y - 12, 100, 24);
-                if (point.z > 0 && !toolbar.Overlaps(rect) && !inspector.Overlaps(rect)) GUI.Label(rect, "◇ 食物");
+                if (point.z > 0 && viewport.Contains(rect.min) && viewport.Contains(rect.max)) GUI.Label(rect, "◇ 食物");
             }
         }
 

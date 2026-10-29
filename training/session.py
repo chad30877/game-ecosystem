@@ -134,7 +134,7 @@ def observe_fixed(player, output, trainer, world_config, seed, args):
 
     torch.set_num_threads(1)
     channel = EngineConfigurationChannel()
-    channel.set_configuration_parameters(time_scale=1 if args.visible else 20, width=960, height=720)
+    channel.set_configuration_parameters(time_scale=1 if args.visible else 20, width=1280, height=720)
     additional = ["--world-log", str(output / "world.jsonl"), "--world-seed", str(seed),
                   "--world-config", str(output / "world-config.json"), "--control", "python", "--policy-mode", "fixed"]
     if args.world_steps:
@@ -259,7 +259,7 @@ def train(args):
     command = [sys.executable, str(ROOT / "training/trainer_capture.py"), str(output / "trainer.yaml"),
                "--env", str(player), "--run-id", trainer_id, "--results-dir", str(output),
                "--seed", str(seed), "--torch-device", "cpu", "--time-scale", "1" if args.visible else "20",
-               "--width", "960", "--height", "720", "--max-lifetime-restarts", "0"]
+               "--width", "1280", "--height", "720", "--max-lifetime-restarts", "0"]
     if previous:
         command.append("--resume")
     if args.observe:
