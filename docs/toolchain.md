@@ -80,3 +80,9 @@ Python 訓練使用 `torch-device=cpu`，PyTorch 為 `2.5.1+cpu`、CUDA false；
 當時將完整基底複製到共用 `C:/Toolchains/game-ecosystem/cpython-3.10.12-windows-x86_64-none`，更新既有虛擬環境的 home，保留套件；原設定備份為 `C:/Toolchains/game-ecosystem/runs/pyvenv-before-shared-runtime.cfg`。複製前 C 槽剩餘約 70.3 GiB，基底大小約 111.1 MiB。新執行檔的 Windows 實際路徑確認仍為 `C:/Toolchains`，Python 3.10.12、PyTorch 2.5.1+cpu 匯入及 42 個套件的相依檢查通過。後續再依使用者要求遷入專案，現行配置見上表。
 
 修復後透過 Windows PowerShell 5.1 完成可見 bridge 512 步，輸出為 `C:/Toolchains/game-ecosystem/runs/bridge-20261020-145451-63788c10`；使用者亦在原本出錯的 PowerShell 視窗重跑 `./scripts/world.ps1 -Mode bridge -Visible`，確認可以正常執行。
+
+## PowerShell 腳本編碼
+
+含繁體中文的 `.ps1` 檔案須保存為 UTF-8 BOM，遵循根目錄 `.editorconfig`。無 BOM 時，Windows PowerShell 5.1 可能以碼頁 950 讀取，導致中文亂碼及連鎖解析錯誤；此時尚未啟動 Unity，與虛擬環境無關。
+
+修改啟動腳本後執行 `powershell.exe -NoProfile -File scripts/check-world-script.ps1`，以 Windows PowerShell 實際解析檔案；亦可在 PowerShell 7 執行 `./scripts/check-world-script.ps1`。人工確認方式：在原本的 PowerShell 視窗執行 `./scripts/world.ps1 -Mode forage -Visible`，確認世界視窗開啟後關閉。

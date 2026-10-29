@@ -1,4 +1,4 @@
-param(
+﻿param(
     [ValidateSet('build', 'manual', 'bridge', 'train', 'forage', 'observe', 'replay', 'evaluate')][string]$Mode = 'manual',
     [string]$Editor = '',
     [string]$Python = '',
