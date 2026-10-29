@@ -5,6 +5,7 @@
 - 頁面文字應保持精簡；可由介面、操作流程或元件狀態直接理解的資訊，不要另外加入重複說明
 - 若有非本輪未來規劃可放到 `docs/future-ideas.md` 中
 - README、docs、註解及 Git commit message 使用繁體中文
+- 修改 `.ps1` 須保留 UTF-8 BOM，並以 PowerShell 5.1 執行 `scripts/check-world-script.ps1` 驗證。
 - 每次改動完成後建立 Git commit，並簡單說明人工測試方式。
 
 ## Agent skills
