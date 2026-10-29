@@ -10,7 +10,10 @@
 ## Agent skills
 
 ### Issue tracker
+
 需求與任務以本機 Markdown 管理；操作前讀取 `docs/agents/issue-tracker.md`。
+
+完成驗收與結案後，將功能資料夾整份移至 `.scratch/archive/`，更新相關引用，並將仍有效的知識整合至正式文件。日常搜尋排除歸檔，追查歷史時才讀取。
 
 ### Triage labels
 分流標籤及任務狀態見 `docs/agents/triage-labels.md`。
