@@ -1,4 +1,4 @@
-param([string]$Base = 'fa55e382fd10d52e2f31144cbe1f24dfdcd1369e', [string]$Fixture = 'artifacts/smoke-validation/check')
+﻿param([string]$Base = 'fa55e382fd10d52e2f31144cbe1f24dfdcd1369e', [string]$Fixture = 'artifacts/smoke-validation/check')
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 $fixturePath = (Resolve-Path -LiteralPath $Fixture).Path

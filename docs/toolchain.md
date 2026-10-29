@@ -85,4 +85,6 @@ Python 訓練使用 `torch-device=cpu`，PyTorch 為 `2.5.1+cpu`、CUDA false；
 
 含繁體中文的 `.ps1` 檔案須保存為 UTF-8 BOM，遵循根目錄 `.editorconfig`。無 BOM 時，Windows PowerShell 5.1 可能以碼頁 950 讀取，導致中文亂碼及連鎖解析錯誤；此時尚未啟動 Unity，與虛擬環境無關。
 
-修改啟動腳本後執行 `powershell.exe -NoProfile -File scripts/check-world-script.ps1`，以 Windows PowerShell 實際解析檔案；亦可在 PowerShell 7 執行 `./scripts/check-world-script.ps1`。人工確認方式：在原本的 PowerShell 視窗執行 `./scripts/world.ps1 -Mode forage -Visible`，確認世界視窗開啟後關閉。
+修改啟動腳本後執行 `./scripts/check-world-script.ps1`，預設檢查 scripts 內全部 `.ps1` 的 BOM 及語法；在 PowerShell 7 下會另外呼叫已安裝的 Windows PowerShell 5.1 實際解析。也可執行 `powershell.exe -NoProfile -File scripts/check-world-script.ps1`，或用 `-Path` 指定單一檔案。人工確認方式：在原本的 PowerShell 視窗執行 `./scripts/world.ps1 -Mode forage -Visible`，確認世界視窗開啟後關閉。
+
+2026-10-29 再次修復：先前以 `.NET UTF8Encoding(false)` 寫回 world.ps1，遺失既有 BOM；新建的 check-smoke-baseline.ps1 亦缺少 BOM。PowerShell 7 可解析而 5.1 以系統碼頁誤讀，僅驗證 7 因而漏掉回歸。兩份腳本只補回 BOM，原內容位元組保持一致；預設檢查已加入 BOM 判定與雙版本解析。已驗證缺 BOM 副本會明確失敗，三份腳本於 5.1／7 通過，並以 5.1 實際執行 `forage -Visible -Steps 2` 成功。證據存於 `artifacts/powershell-encoding/`；JSON、YAML 與日誌仍依各自格式使用無 BOM UTF-8，不套用 `.ps1` 規則。
