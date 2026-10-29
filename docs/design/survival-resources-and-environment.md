@@ -1,6 +1,6 @@
 # 生存資源與 Environment 訪談
 
-本文件保留設計訪談背景。使用者於 2026-10-23 完成整體確認；[正式規格與七張任務](../../.scratch/survival-resources-and-environment/README.md)已發佈為 ready-for-agent，尚未開始實作。實作與驗收以正式規格及逐張任務為準。
+本文件保留設計訪談背景。使用者於 2026-10-23 完成整體確認；[正式規格與七張任務](../../.scratch/archive/survival-resources-and-environment/README.md)已發佈為 ready-for-agent，尚未開始實作。實作與驗收以正式規格及逐張任務為準。
 
 ## 共同結論摘要（已確認）
 

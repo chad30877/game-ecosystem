@@ -1,6 +1,6 @@
 # 資源動態化與主動探索訪談
 
-本文件保留設計訪談背景；實作以[正式規格與任務](../../.scratch/dynamic-resources-and-exploration/README.md)為準。
+本文件保留設計訪談背景；實作以[正式規格與任務](../../.scratch/archive/dynamic-resources-and-exploration/README.md)為準。
 
 ## 已確認原則
 
@@ -40,7 +40,7 @@
 
 ## 訪談狀態
 
-Q1–Q24 的行為與範圍決策、驗證入口及七張任務拆分皆已由使用者確認。[正式規格與任務](../../.scratch/dynamic-resources-and-exploration/README.md)已發佈為 ready-for-agent；後續參數調整與量化驗收依正式規格記錄，變更已定案範圍時另行提出。
+Q1–Q24 的行為與範圍決策、驗證入口及七張任務拆分皆已由使用者確認。[正式規格與任務](../../.scratch/archive/dynamic-resources-and-exploration/README.md)已發佈為 ready-for-agent；後續參數調整與量化驗收依正式規格記錄，變更已定案範圍時另行提出。
 
 ## 實作與驗收需記錄
 

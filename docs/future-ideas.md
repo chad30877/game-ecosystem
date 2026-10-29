@@ -2,7 +2,7 @@
 
 收錄尚未納入本期的想法；本清單不是正式規格或可執行任務。每次 `grill-with-docs` 訪談先查看，與當前主題相關時提出討論，由使用者決定是否納入。
 
-已完成的生存資源與規則式 AI 工作見[正式規格與任務](../.scratch/survival-resources-and-environment/README.md)；各構想的目前狀態以個別條目為準。
+已完成的生存資源與規則式 AI 工作見[正式規格與任務](../.scratch/archive/survival-resources-and-environment/README.md)；各構想的目前狀態以個別條目為準。
 
 ## 待討論
 
@@ -24,15 +24,15 @@
 - 狀態：待討論，不代表已完成長期平衡。
 - 證據：[07生態觀察](ecosystem-observation.md)及 Git 中的數值結果；原始場次大檔依[本次清理](artifact-retention.md)淘汰，後續對照須重新執行。
 - 觀察：四來源配置在單體驗收足夠，但繁殖後仍可能出現幼體缺糧；苔靈的培育與播種可能擴大供給及後代數量。
-- 待釐清：區分繁殖壓力、食物再生與休養、來源空間分布、掃視及舊情報選擇的影響；以相同種子及技能配置做後續供給對照。觀察差異不直接證明單一原因；原生存資源輪未新增親代保護，新的養育規劃另見[正式規格](../.scratch/juvenile-care-and-memory/spec.md)。
+- 待釐清：區分繁殖壓力、食物再生與休養、來源空間分布、掃視及舊情報選擇的影響；以相同種子及技能配置做後續供給對照。觀察差異不直接證明單一原因；原生存資源輪未新增親代保護，新的養育規劃另見[正式規格](../.scratch/archive/juvenile-care-and-memory/spec.md)。
 
 ### 幼體與成體的能力差異
 
-- 狀態：已排入，[正式規格與任務](../.scratch/juvenile-care-and-memory/README.md)為後續實作依據；目前程式同物種幼體與成體攻擊規格仍相同。
-- 範圍：本期資源動態化、探索與掃視維持既有幼體戰力。
-- 待驗證：能力成長對幼體覓食、撤退與成活率的影響；已確認的設計見[訪談](design/juvenile-development.md)及正式規格。
-- 背景：[資源動態化與主動探索訪談](design/dynamic-resources-and-exploration.md)。
-- 最新決定：本輪納入幼體能力差異、親代保護、餵養及食物記憶推測；依正式任務驗證，未宣稱已實作。
+- 狀態：已完成並歸檔，[正式規格與任務](../.scratch/archive/juvenile-care-and-memory/README.md)的 01–07 均為 resolved。
+- 已交付：幼體能力成長、隨成長變化的技能、親代保護與餵養、食物及親子記憶推測。
+- 結果與限制：[幼體照顧與記憶推測](juvenile-ecology.md)記錄固定場景、18 場短程配對與效能結果；不代表養育必然改善存活或已完成長期平衡。
+- 後續：長期影響另見「幼體照顧的長期生態對照」，不重複排入已完成能力。
+- 背景：[幼體成長訪談](design/juvenile-development.md)。
 
 ### 同一個體內的規則接管
 
@@ -51,7 +51,7 @@
 ### PPO 與混合控制實驗
 
 - 狀態：延後（deferred），沒有啟動日期。
-- 既有任務：[07：探索與生存行為的多種子驗收](../.scratch/dynamic-resources-and-exploration/issues/07-behavior-evaluation.md)已從 claimed 改為 deferred；保留評估工具、成本摘要與短程未達標結果。歷史模型及 PPO 回放依[本次清理](artifact-retention.md)淘汰，尚缺三次獨立訓練及正式長期模型對照，恢復時須重新建立來源。
+- 既有任務：[07：探索與生存行為的多種子驗收](../.scratch/archive/dynamic-resources-and-exploration/issues/07-behavior-evaluation.md)已從 claimed 改為 deferred；保留評估工具、成本摘要與短程未達標結果。歷史模型及 PPO 回放依[本次清理](artifact-retention.md)淘汰，尚缺三次獨立訓練及正式長期模型對照，恢復時須重新建立來源。
 - 想法：環境完善並經持續觀察後，再以小規模 PPO、初始策略對照與按物種混合控制檢查學習效果。
 - 範圍：本輪不執行 PPO 訓練與成效比較，也不以學會生存作為本輪完成條件；沒有預定啟動日期，需待使用者另行決定。
 - 待釐清：環境何時適合開始訓練、實驗預算、對照方法與學習改善指標。
