@@ -10,7 +10,7 @@
 
 ## Status
 
-ready-for-agent
+claimed
 
 ## 驗收條件
 

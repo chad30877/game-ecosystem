@@ -139,7 +139,7 @@ namespace Ecosystem
                 observer = gameObject.AddComponent<WorldObserver>();
                 observer.Initialize(world, camera, policyMode,
                     () => { if (replay == null) resetRequested = true; else SeekReplay(0); },
-                    () => Application.Quit(), ApplyFocus, replay, SeekReplay);
+                    () => Application.Quit(), ApplyFocus, replay, SeekReplay, Argument("--observer-diagnostics", "false") == "true");
             }
         }
 
@@ -203,12 +203,12 @@ namespace Ecosystem
             var entities = body.AddComponent<BufferSensorComponent>();
             entities.SensorName = "Entities";
             entities.ObservableSize = 10;
-            // 張量預留人口、五秒警戒記憶、可見食物與有限探索記憶；當前可見生物不截斷。
+            // 張量另預留 64 列煙幕情報；與規則使用相同截斷結果。
             entities.MaxNumObservables = world.Config.foraging
                 ? checked(Mathf.Max(world.Config.populationLimit, world.Config.individualsPerSpecies * 3) *
                     (Mathf.CeilToInt(5f / (world.Config.maturityAge >= 5f ? Mathf.Max(world.Config.stepSeconds, world.Config.reproductionCooldown) : world.Config.stepSeconds)) + 1) +
-                    world.Config.foodSourceLimit + world.Config.foodMemoryLimit + world.Config.areaMemoryLimit + Mathf.CeilToInt(world.Config.episodeSteps * world.Config.stepSeconds / Mathf.Max(world.Config.stepSeconds, world.Config.reproductionCooldown)) + 2)
-                : world.Config.individualsPerSpecies * 6;
+                    world.Config.foodSourceLimit + world.Config.foodMemoryLimit + world.Config.areaMemoryLimit + Mathf.CeilToInt(world.Config.episodeSteps * world.Config.stepSeconds / Mathf.Max(world.Config.stepSeconds, world.Config.reproductionCooldown)) + 66)
+                : world.Config.individualsPerSpecies * 6 + 64;
             behavior.BehaviorType = control != "python" ? BehaviorType.HeuristicOnly : BehaviorType.Default;
             var agent = body.AddComponent<WorldAgent>();
             agent.World = world;
@@ -330,10 +330,9 @@ namespace Ecosystem
         {
             while (areaViews.Count < world.State.areas.Count)
             {
-                var view = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                var view = GameObject.CreatePrimitive(PrimitiveType.Quad);
                 Destroy(view.GetComponent<Collider>());
-                view.transform.rotation = Quaternion.Euler(90, 0, 0);
-                view.GetComponent<Renderer>().sharedMaterial = new Material(Resources.Load<Material>("WorldMaterial"));
+                view.GetComponent<Renderer>().sharedMaterial = new Material(Resources.Load<Shader>("WorldArea"));
                 areaViews.Add(view);
             }
             for (int i = 0; i < areaViews.Count; i++)
@@ -343,9 +342,9 @@ namespace Ecosystem
                 if (!active) continue;
                 var area = world.State.areas[i];
                 areaViews[i].transform.position = new Vector3(area.x, area.y, 0.2f);
-                areaViews[i].transform.localScale = new Vector3(area.radius * 2, 0.02f, area.radius * 2);
+                areaViews[i].transform.localScale = new Vector3(area.radius * 2, area.radius * 2, 1);
                 areaViews[i].GetComponent<Renderer>().sharedMaterial.color = area.skill == WorldSkill.FrostTrap
-                    ? new Color(0.3f, 0.8f, 1f, 0.55f) : new Color(0.65f, 0.4f, 0.8f, 0.25f);
+                    ? new Color(0.3f, 0.8f, 1f, 0.55f) : new Color(0.75f, 0.5f, 0.9f, 0.18f);
             }
         }
 
@@ -453,9 +452,22 @@ namespace Ecosystem
                 foodViews[i].GetComponent<Renderer>().forceRenderingOff = selected != null &&
                     !world.CanSeePoint(selected, new Vector2(food.x, food.y));
             }
-            for (int i = 0; i < areaViews.Count; i++)
-                areaViews[i].GetComponent<Renderer>().forceRenderingOff = selected != null && i < world.State.areas.Count &&
-                    !world.CanSeePoint(selected, new Vector2(world.State.areas[i].x, world.State.areas[i].y));
+            for (int i = 0; i < areaViews.Count && i < world.State.areas.Count; i++)
+            {
+                var area = world.State.areas[i];
+                var renderer = areaViews[i].GetComponent<Renderer>();
+                bool smoke = area.skill == WorldSkill.SporeSmoke;
+                renderer.forceRenderingOff = selected != null && (smoke
+                    ? !world.CanSeeCircle(selected, new Vector2(area.x, area.y), area.radius)
+                    : !world.CanSeePoint(selected, new Vector2(area.x, area.y)));
+                var material = renderer.sharedMaterial;
+                material.SetFloat("_Focused", smoke && selected != null ? 1 : 0);
+                if (selected != null)
+                {
+                    material.SetVector("_View", new Vector4(selected.x, selected.y, world.Config.observationRadius, 0));
+                    material.SetVector("_Facing", new Vector4(Mathf.Cos(selected.facing * Mathf.Deg2Rad), Mathf.Sin(selected.facing * Mathf.Deg2Rad), 0, 0));
+                }
+            }
             for (int i = 0; i < projectileViews.Count; i++)
                 projectileViews[i].GetComponent<Renderer>().forceRenderingOff = selected != null && i < world.State.projectiles.Count &&
                     !world.CanSeePoint(selected, new Vector2(world.State.projectiles[i].x, world.State.projectiles[i].y));
@@ -548,7 +560,7 @@ namespace Ecosystem
             public string device;
             public string control;
             public string policyMode;
-            public string rules = "survival-v13";
+            public string rules = "survival-v14";
             public string[] rulesSpecies;
             public WorldConfig config;
             public WorldScenario scenario;

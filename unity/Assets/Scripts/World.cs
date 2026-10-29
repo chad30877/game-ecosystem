@@ -233,6 +233,8 @@ namespace Ecosystem
         public WorldSkill lastSkill;
         public float skillFlashUntil;
         public List<EntityObservation> perception = new List<EntityObservation>();
+        public bool smokeKnowledgeAvailable;
+        public List<SmokeSighting> smokeKnowledge = new List<SmokeSighting>();
         public float attackCooldown;
         public float skillCooldown;
         public float dashRemaining;
@@ -1088,6 +1090,54 @@ namespace Ecosystem
                 && (delta.sqrMagnitude == 0 || Vector2.Angle(facing, delta) <= 60f);
         }
 
+        public bool CanSeeCircle(IndividualState observer, Vector2 center, float radius)
+        {
+            Vector2 delta = center - CombatRules.Position(observer);
+            float distance = delta.magnitude;
+            float reach = Config.observationRadius;
+            if (distance > reach + radius + 0.00001f) return false;
+            float angle = Mathf.Abs(Mathf.DeltaAngle(observer.facing, Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg));
+            if (angle <= 60f) return distance <= reach + radius + 0.00001f;
+            // 圓心在扇形外時，最近點位於兩條徑向線段之一（包含原點與圓弧端點）。
+            for (int sign = -1; sign <= 1; sign += 2)
+            {
+                float edge = (observer.facing + sign * 60f) * Mathf.Deg2Rad;
+                Vector2 direction = new Vector2(Mathf.Cos(edge), Mathf.Sin(edge));
+                Vector2 nearest = direction * Mathf.Clamp(Vector2.Dot(delta, direction), 0, reach);
+                if ((delta - nearest).sqrMagnitude <= radius * radius + 0.00001f) return true;
+            }
+            return false;
+        }
+
+        private void RefreshSmokeKnowledge(IndividualState observer)
+        {
+            observer.smokeKnowledgeAvailable = true;
+            foreach (var known in observer.smokeKnowledge) known.visible = false;
+            foreach (var area in State.areas)
+            {
+                if (area.skill != WorldSkill.SporeSmoke || area.until <= State.time ||
+                    !CanSeeCircle(observer, new Vector2(area.x, area.y), area.radius)) continue;
+                var known = observer.smokeKnowledge.Find(value => value.area == area.area);
+                if (known == null) observer.smokeKnowledge.Add(known = new SmokeSighting { area = area.area });
+                known.x = area.x; known.y = area.y; known.radius = area.radius;
+                known.harmful = area.species != observer.species;
+                known.visible = true; known.lastSeenAt = State.time;
+            }
+            observer.smokeKnowledge.RemoveAll(value => !value.visible && (State.time - value.lastSeenAt >= 5f ||
+                CanSeeCircle(observer, new Vector2(value.x, value.y), value.radius)));
+            // 共同觀察與規則使用同一份有界情報；依可見、有害、距離、時間排序。
+            observer.smokeKnowledge.Sort((a, b) =>
+            {
+                int order = b.visible.CompareTo(a.visible);
+                if (order == 0) order = b.harmful.CompareTo(a.harmful);
+                if (order == 0) order = Vector2.SqrMagnitude(new Vector2(a.x - observer.x, a.y - observer.y))
+                    .CompareTo(Vector2.SqrMagnitude(new Vector2(b.x - observer.x, b.y - observer.y)));
+                if (order == 0) order = b.lastSeenAt.CompareTo(a.lastSeenAt);
+                return order == 0 ? a.area.CompareTo(b.area) : order;
+            });
+            if (observer.smokeKnowledge.Count > 64) observer.smokeKnowledge.RemoveRange(64, observer.smokeKnowledge.Count - 64);
+        }
+
         public void RefreshPerception(bool clearMemory = false, bool awardExploration = false)
         {
             if (clearMemory)
@@ -1097,6 +1147,7 @@ namespace Ecosystem
                 {
                     individual.areaMemory.Clear();
                     individual.foodMemory.Clear();
+                    individual.smokeKnowledge.Clear();
                     individual.visibleFoods.Clear();
                     individual.rewardedCells.Clear();
                     individual.explorationRewardTotal = individual.explorationRewardPending = 0;
@@ -1109,6 +1160,7 @@ namespace Ecosystem
             foreach (var observer in State.individuals)
             {
                 alive.Add(observer.individual);
+                RefreshSmokeKnowledge(observer);
                 if (!enemyMemory.TryGetValue(observer.individual, out var memory))
                     enemyMemory.Add(observer.individual, memory = new Dictionary<int, EnemySighting>());
                 observer.perception.Clear();
@@ -1253,6 +1305,11 @@ namespace Ecosystem
 
         public IEnumerable<float[]> ObserveEntities(IndividualState individual)
         {
+            foreach (var smoke in individual.smokeKnowledge)
+                yield return new[] { -5f, Mathf.Clamp((smoke.x - individual.x) / (Config.halfExtent * 2), -1f, 1f),
+                    Mathf.Clamp((smoke.y - individual.y) / (Config.halfExtent * 2), -1f, 1f),
+                    smoke.radius / (Config.halfExtent * 2), smoke.harmful ? 1f : 0f, smoke.visible ? 1f : 0f,
+                    Mathf.Clamp01((State.time - smoke.lastSeenAt) / 5f), 0f, 0f, 0f };
             foreach (var entity in individual.perception)
                 yield return new[] { (SpeciesIndex(entity.species) + 1) / 3f,
                     (entity.x - individual.x) / Config.observationRadius, (entity.y - individual.y) / Config.observationRadius,

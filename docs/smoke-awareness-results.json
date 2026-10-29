@@ -1,0 +1,21 @@
+{
+    "seed": 7,
+    "individuals": 120,
+    "smoke": 32,
+    "iterations": 50,
+    "fixedActionSteps": 650,
+    "oldPerceptionMs": 10.885456000000002,
+    "newPerceptionMs": 19.09584,
+    "oldRulesMs": 0.9886280000000001,
+    "newRulesMs": 6.898966000000001,
+    "render960": [
+        1.0975240000000002,
+        1.00622,
+        0.733348
+    ],
+    "render1280": [
+        0.657992,
+        0.750468,
+        0.64774
+    ]
+}

@@ -6,6 +6,9 @@ namespace Ecosystem
     public static class ForagingController
     {
         public static WorldAction Decide(World world, IndividualState individual)
+            => SmokeAvoidance.Adjust(world, individual, Choose(world, individual));
+
+        private static WorldAction Choose(World world, IndividualState individual)
         {
             var config = world.Config;
             var position = CombatRules.Position(individual);

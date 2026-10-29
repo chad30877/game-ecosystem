@@ -18,7 +18,7 @@ def pack(source: Path, destination: Path, episode: int, model=None):
     complete = False
     with source.open(encoding="utf-8-sig") as log, temporary.open("xb") as output:
         run = json.loads(next(log))
-        if run.get("kind") != "run" or run.get("rules") not in ("survival-v9", "survival-v10", "survival-v11", "survival-v12", "survival-v13") or not run["config"]["foraging"]:
+        if run.get("kind") != "run" or run.get("rules") not in ("survival-v9", "survival-v10", "survival-v11", "survival-v12", "survival-v13", "survival-v14") or not run["config"]["foraging"]:
             raise ValueError("記錄缺少相容的世界設定。")
         header = {"kind": "replay", "schemaVersion": 1, "rules": run["rules"],
                   "config": run["config"], "seed": run["seed"], "episode": episode,
@@ -66,7 +66,7 @@ def validate(path: Path):
     with path.open("rb") as source:
         raw = next(source)
         header = json.loads(raw)
-        if header.get("kind") != "replay" or header.get("schemaVersion") != 1 or header.get("rules") not in ("survival-v9", "survival-v10", "survival-v11", "survival-v12", "survival-v13"):
+        if header.get("kind") != "replay" or header.get("schemaVersion") != 1 or header.get("rules") not in ("survival-v9", "survival-v10", "survival-v11", "survival-v12", "survival-v13", "survival-v14"):
             raise ValueError("不相容的回放版本。")
         digest.update(raw)
         for raw in source:

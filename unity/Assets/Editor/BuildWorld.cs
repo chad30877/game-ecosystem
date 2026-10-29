@@ -28,6 +28,7 @@ namespace Ecosystem.Editor
             PlayerSettings.defaultScreenWidth = 960;
             PlayerSettings.defaultScreenHeight = 720;
             PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
+            PlayerSettings.resizableWindow = true;
             AssetDatabase.SaveAssets();
             var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
             {

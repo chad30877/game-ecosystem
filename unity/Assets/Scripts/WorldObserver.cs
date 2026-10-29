@@ -30,14 +30,52 @@ namespace Ecosystem
         private Rect toolbar;
         private Rect inspector;
         private Vector2 scroll;
+        private Rect viewport;
+        private bool panelExpanded = true;
+        private bool overviewFit = true;
+        private bool diagnostics;
+        private string lastLayout = "";
 
-        public void Initialize(World source, Camera camera, string controlMode, Action onRebuild, Action onQuit, Action<IndividualState> onFocus, WorldReplay history = null, Action<int> onSeek = null)
+        private void UpdateLayout()
+        {
+            toolbar = new Rect(8, 8, Screen.width - 16, replay == null ? 108 : 148);
+            bool details = selected != 0 && panelExpanded;
+            float width = Mathf.Min(360, Screen.width * 0.32f);
+            inspector = details ? new Rect(Screen.width - width - 8, toolbar.yMax + 8, width, Screen.height - toolbar.yMax - 16) : new Rect();
+            viewport = new Rect(8, toolbar.yMax + 8, Screen.width - 16 - (details ? width + 8 : 0), Screen.height - toolbar.yMax - 16);
+            worldCamera.pixelRect = new Rect(viewport.x, Screen.height - viewport.yMax, viewport.width, viewport.height);
+            if (Selection == null && overviewFit)
+            {
+                worldCamera.transform.position = new Vector3(0, 0, -10);
+                worldCamera.orthographicSize = (world.Config.halfExtent + 1) * Mathf.Max(1, viewport.height / viewport.width);
+            }
+            if (diagnostics)
+            {
+                string layout = JsonUtility.ToJson(new LayoutRecord { width = Screen.width, height = Screen.height,
+                    selected = selected, expanded = panelExpanded, viewport = viewport, toolbar = toolbar, inspector = inspector,
+                    center = worldCamera.transform.position, scale = worldCamera.orthographicSize });
+                if (layout != lastLayout) { Debug.Log("observer_layout " + layout); lastLayout = layout; }
+            }
+        }
+
+        [Serializable]
+        private sealed class LayoutRecord
+        {
+            public int width, height, selected;
+            public bool expanded;
+            public Rect viewport, toolbar, inspector;
+            public Vector3 center;
+            public float scale;
+        }
+
+        public void Initialize(World source, Camera camera, string controlMode, Action onRebuild, Action onQuit, Action<IndividualState> onFocus, WorldReplay history = null, Action<int> onSeek = null, bool logLayout = false)
         {
             world = source;
             replay = history;
             seek = onSeek;
             worldCamera = camera;
             mode = controlMode;
+            diagnostics = logLayout;
             rebuild = onRebuild;
             quit = onQuit;
             focus = onFocus;
@@ -72,12 +110,14 @@ namespace Ecosystem
         private void Update()
         {
             if (world == null) return;
+            UpdateLayout();
             if (Input.GetKeyDown(KeyCode.P)) SetPaused(!paused);
             var pointer = new Vector2(Input.mousePosition.x, Screen.height - Input.mousePosition.y);
-            if (toolbar.Contains(pointer) || (selected != 0 && inspector.Contains(pointer))) return;
+            if (!viewport.Contains(pointer)) return;
             float wheel = Input.mouseScrollDelta.y;
             if (wheel != 0)
             {
+                overviewFit = false;
                 var before = worldCamera.ScreenToWorldPoint(Input.mousePosition);
                 worldCamera.orthographicSize = Mathf.Clamp(worldCamera.orthographicSize * Mathf.Pow(0.85f, wheel), 1f, (world.Config.halfExtent + 1) * 2);
                 worldCamera.transform.position += before - worldCamera.ScreenToWorldPoint(Input.mousePosition);
@@ -88,6 +128,7 @@ namespace Ecosystem
             var nearest = world.State.individuals.Where(value => current == null || value == current || world.CanSee(current, value))
                 .OrderBy(value => Vector2.Distance(CombatRules.Position(value), point)).FirstOrDefault();
             selected = nearest != null && Vector2.Distance(CombatRules.Position(nearest), point) <= 0.8f ? nearest.individual : 0;
+            if (selected == 0) overviewFit = true;
             feedback = "";
             scroll = Vector2.zero;
         }
@@ -95,6 +136,7 @@ namespace Ecosystem
         private void LateUpdate()
         {
             if (world == null) return;
+            UpdateLayout();
             if (episode != world.State.episode)
             {
                 episode = world.State.episode;
@@ -152,7 +194,7 @@ namespace Ecosystem
             GUI.skin.font = font;
             GUI.skin.label.fontSize = 16;
             GUI.skin.label.wordWrap = true;
-            toolbar = new Rect(8, 8, Screen.width - 16, replay == null ? 100 : 140);
+            UpdateLayout();
             GUILayout.BeginArea(toolbar, GUI.skin.box);
             GUILayout.BeginHorizontal();
             GUILayout.Label(ModeName(), GUILayout.Width(180));
@@ -177,7 +219,9 @@ namespace Ecosystem
                 worldCamera.transform.position = new Vector3(0, 0, -10);
                 worldCamera.orthographicSize = world.Config.halfExtent + 1;
                 selected = 0;
+                overviewFit = true;
             }
+            if (selected != 0 && GUILayout.Button(panelExpanded ? "收合資料" : "展開資料", GUILayout.Width(80))) panelExpanded = !panelExpanded;
             if (GUILayout.Button(replay == null ? "重建世界" : "回到開頭", GUILayout.Width(88))) rebuild();
             if (GUILayout.Button(mode == "training" ? "保存並結束" : "結束", GUILayout.Width(100))) quit();
             GUILayout.EndHorizontal();
@@ -193,13 +237,14 @@ namespace Ecosystem
             }
             GUILayout.EndArea();
             var individual = Selection;
-            inspector = new Rect(Screen.width - Mathf.Min(360, Screen.width - 16) - 8, toolbar.yMax + 8, Mathf.Min(360, Screen.width - 16), Screen.height - toolbar.yMax - 16);
             if (individual == null)
             {
                 var death = world.State.deaths.Find(value => value.individual == selected);
-                if (death != null) DrawDeath(death);
+                if (death != null && panelExpanded) DrawDeath(death);
                 return;
             }
+            if (panelExpanded)
+            {
             GUILayout.BeginArea(inspector, GUI.skin.box);
             scroll = GUILayout.BeginScrollView(scroll);
             GUILayout.Label($"#{individual.individual}　{SpeciesName(individual.species)}");
@@ -231,6 +276,9 @@ namespace Ecosystem
             else if (individual.scanDeferred) GUILayout.Label($"掃視暫緩　{ScanReason(individual.scanReason)}　{individual.scanDeferredSeconds:F1}s");
             else if (individual.rawTurn != 0) GUILayout.Label($"主動轉向　{individual.rawTurn}");
             GUILayout.Label($"可見 {individual.perception.Count(value => value.visible)}　警戒記憶 {individual.perception.Count(value => !value.visible)}　區域 {individual.areaMemory.Count}");
+            if (!individual.smokeKnowledgeAvailable) GUILayout.Label("煙幕情報未記錄");
+            foreach (var smoke in individual.smokeKnowledge)
+                GUILayout.Label($"煙幕 {(smoke.visible ? "可見" : "記憶")}・{(smoke.harmful ? "有害" : "無毒")} ({smoke.x:F1}, {smoke.y:F1}) r{smoke.radius:F1}　{world.State.time - smoke.lastSeenAt:F1}s");
             var reward = world.State.rewards.Find(value => value.individual == selected);
             if (reward != null) GUILayout.Label($"探索 {individual.rewardedCells.Count} 格　累計 {individual.explorationRewardTotal:F4}　此步 {reward.exploration:F4}");
             if (individual.parentId != 0) GUILayout.Label($"親代 #{individual.parentId}");
@@ -247,6 +295,7 @@ namespace Ecosystem
             }
             GUILayout.EndScrollView();
             GUILayout.EndArea();
+            }
             foreach (var memory in individual.perception.Where(value => !value.visible))
             {
                 var point = worldCamera.WorldToScreenPoint(new Vector3(memory.x, memory.y, 0));
@@ -347,6 +396,7 @@ namespace Ecosystem
 
         private static string DecisionName(string reason) => reason switch
         {
+            "smoke_exit" => "離開煙幕", "smoke_avoid" => "繞避煙幕", "smoke_cross" => "緊急穿越",
             "protect_child" => "保護子女", "protection_retreat" => "保護撤退",
             "search_child" => "尋找子女",
             "approach_parent" => "靠近親代",

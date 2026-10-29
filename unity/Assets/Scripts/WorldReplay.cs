@@ -39,7 +39,7 @@ namespace Ecosystem
                 using var hash = SHA256.Create();
                 string line = reader.ReadLine() ?? throw new InvalidDataException("回放是空檔案。");
                 Header = JsonUtility.FromJson<Record>(line);
-                if (Header.kind != "replay" || Header.schemaVersion != 1 || (Header.rules != "survival-v9" && Header.rules != "survival-v10" && Header.rules != "survival-v11" && Header.rules != "survival-v12" && Header.rules != "survival-v13") || Header.config == null || !Header.config.foraging)
+                if (Header.kind != "replay" || Header.schemaVersion != 1 || (Header.rules != "survival-v9" && Header.rules != "survival-v10" && Header.rules != "survival-v11" && Header.rules != "survival-v12" && Header.rules != "survival-v13" && Header.rules != "survival-v14") || Header.config == null || !Header.config.foraging)
                     throw new InvalidDataException("回放版本或世界設定不相容。");
                 // 舊規則的幼體能力與成體相同，回放檢視不得套用新的成長上限。
                 if (Header.rules == "survival-v9") Header.config.newbornGrowth = 1f;
@@ -82,7 +82,17 @@ namespace Ecosystem
             Index = index;
             source.Seek(offsets[index], SeekOrigin.Begin);
             using var reader = new StreamReader(source, Encoding.UTF8, false, 65536, true);
-            return JsonUtility.FromJson<Record>(reader.ReadLine()).state;
+            var state = JsonUtility.FromJson<Record>(reader.ReadLine()).state;
+            foreach (var individual in state.individuals)
+            {
+                individual.smokeKnowledge ??= new List<SmokeSighting>();
+                if (Header.rules != "survival-v14")
+                {
+                    individual.smokeKnowledgeAvailable = false;
+                    individual.smokeKnowledge.Clear();
+                }
+            }
+            return state;
         }
 
         public void Dispose() => source.Dispose();

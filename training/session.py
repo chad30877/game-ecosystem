@@ -68,8 +68,8 @@ def checkpoint_records(trainer: Path):
 
 def compatibility(player: Path, trainer_config):
     return {
-        "modelVersion": "survival-v13",
-        "rulesVersion": "survival-v13",
+        "modelVersion": "survival-v14",
+        "rulesVersion": "survival-v14",
         "worldAssembly": file_record(player.parent / "World_Data/Managed/Assembly-CSharp.dll")["sha256"],
         "packages": {name: version(name) for name in ("mlagents", "mlagents-envs", "torch")},
         "trainer": trainer_config,
@@ -212,6 +212,7 @@ def train(args):
     output.mkdir(parents=True, exist_ok=False)
     trainer_id = previous["trainerRunId"] if previous else run_id
     if trainer_source:
+        assert source is not None
         shutil.copytree(trainer_source, output / trainer_id)
         shutil.copytree(source / "initial-policies", output / "initial-policies")
     else:
@@ -233,6 +234,7 @@ def train(args):
         settings["max_steps"] = args.steps
     (output / "trainer.yaml").write_text(yaml.safe_dump(trainer_template), encoding="utf-8")
     if args.observe:
+        assert previous is not None
         try:
             manifest["resources"] = observe_fixed(player, output, output / trainer_id, world_config, seed, args)
             manifest["checkpoints"] = checkpoint_records(output / trainer_id)
