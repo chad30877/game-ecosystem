@@ -202,6 +202,14 @@ namespace Ecosystem.Editor
             Debug.Log("播種二百五十種子大型數：" + large);
         }
 
+        public static void RunRegression()
+        {
+            ValidateFruitCycle.Run();
+            ValidateSourcePlacement.Run();
+            ValidateFruitOperations.Run();
+            ValidateFruitTransfer.Run();
+            Run();
+        }
         public static void Run()
         {
             var world = Make(); var actor = world.State.individuals[0];
