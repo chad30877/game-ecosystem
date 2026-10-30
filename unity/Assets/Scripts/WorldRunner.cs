@@ -33,6 +33,7 @@ namespace Ecosystem
         private bool resetRequested;
         private readonly List<GameObject> foodViews = new List<GameObject>();
         private WorldObserver observer;
+        private FruitWorldView fruitView;
         private string policyMode;
         private WorldScenario scenario;
         private readonly List<GameObject> projectileViews = new List<GameObject>();
@@ -302,6 +303,16 @@ namespace Ecosystem
 
         private void UpdateFoodViews()
         {
+            if (world.State.fruitInformationAvailable)
+            {
+                if (Application.isBatchMode) return;
+                foreach (var oldView in foodViews) oldView.SetActive(false);
+                if (fruitView == null) fruitView = new GameObject("FruitWorld").AddComponent<FruitWorldView>();
+                fruitView.gameObject.SetActive(true);
+                fruitView.Refresh(world);
+                return;
+            }
+            if (fruitView != null) fruitView.gameObject.SetActive(false);
             while (foodViews.Count < world.State.foods.Count)
             {
                 var food = world.State.foods[foodViews.Count];
@@ -448,7 +459,8 @@ namespace Ecosystem
             foreach (var view in views.Values)
                 foreach (var renderer in view.GetComponentsInChildren<Renderer>())
                     renderer.forceRenderingOff = selected != null && view.Individual != selected && !world.CanSee(selected, view.Individual);
-            for (int i = 0; i < world.State.foods.Count; i++)
+            if (fruitView != null && world.State.fruitInformationAvailable) fruitView.SetFocus(selected);
+            for (int i = 0; i < world.State.foods.Count && !world.State.fruitInformationAvailable; i++)
             {
                 var food = world.State.foods[i];
                 foodViews[i].GetComponent<Renderer>().forceRenderingOff = selected != null &&
