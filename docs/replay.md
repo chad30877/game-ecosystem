@@ -1,38 +1,20 @@
-# 指定場次記錄與歷史回放
+# 同建置快照回放
 
-> 2026-10-23 保存狀態更新：本文 artifacts 路徑保留為歷史驗證來源；大型原始紀錄與舊模型已淘汰，摘要及指定短回放的保存範圍見[產物清理紀錄](artifact-retention.md)。歷史操作範例須改用仍存在或新產生的來源。
+操作與保留以[記錄契約](recording.md)為準。啟動前加 `Record`，所有世界輪次各產生 `episode-N.replay.jsonl`，正常提前停止也可封裝。完整成功後移除 `record-source.jsonl`；失敗時保留已寫來源，不產生整次成功狀態。
 
-現行煙幕感知、19 維自身／10 維 Entities、六分支動作與 `survival-v14` 相容性見[煙幕感知與觀察](smoke-awareness.md)；四資源見[四資源觀察與死亡診斷](survival-resources.md)。以下保留既有介面與驗證歷史。
-
-`RecordEpisodes` 以逗號指定輪次，適用規則／指定動作展示及固定模型觀察。每輪須完整結束，才會封裝可播放的檔案；中途關閉保留原始記錄，並回報場次不完整。
+回放標頭保存實際建置識別、配置、種子、控制、場景、規則／動作／格式與輪次停止原因。影格從 0 連續保存，結尾含影格數與 SHA-256；全批核對各輪末步、結束記錄、分段數及來源後才標成功。只接受同建置，未知來源、v9–v14、毀損、缺漏及未完成整次錄製明確拒絕，沒有歷史轉換或殘檔修復。
 
 ```powershell
-./scripts/world.ps1 -Mode forage -Visible -RecordEpisodes '1'
-./scripts/world.ps1 -Mode observe -ResumeFrom './artifacts/runs/<已保存模型>' -Visible -RecordEpisodes '2,3'
-./scripts/world.ps1 -Mode replay -ReplayFrom './artifacts/runs/<此次輸出>/episode-1.replay.jsonl' -Visible
+./scripts/world.ps1 -Mode forage -Visible -Record
+./scripts/world.ps1 -Mode replay -ReplayFrom '.simulation/<執行>/episode-1.replay.jsonl' -Visible
+./scripts/world.ps1 -Mode replay -ReplayFrom '.simulation/<執行>/episode-1.replay.jsonl' -SeekFrames '0,last,0'
 ```
 
-可見 `forage` 自然結束後停留；要記下一輪，按「重建世界」。固定模型觀察會自動跨輪，持續到關閉或指定 `Steps`；觀察期間不更新策略。`Steps` 是世界步上限，不是輪次數；須足以涵蓋指定輪次。
+一般播放不另存逐步快照；明確 `SeekFrames` 是診斷匯出，輸出所選影格以便驗證。播放器索引檔案位移，跳轉才讀取該張快照，不重跑世界、模型或感知。保留世界真值與個體當時情報的區別。播放租約與清理共用管理鎖，播放結束後依現有政策處理。
 
-回放操作列顯示「歷史回放・唯讀」、目前影格／總影格與 MB。拖動下方時間軸可前後移動；P 暫停／恢復、速度與縮放沿用即時觀察。「回到開頭」保留目前暫停狀態。選取個體可讀取該影格的健康、年齡、兩技能、冷卻、效果及局部視野。個體尚未出生或已死亡時不會保留成幽靈；往回拖可重新選取當時存在的個體。
+`ReloadRun` 從 `source.json` 重跑配置，與讀快照不同；不承諾跨建置重現結果。
 
-回放只讀取記錄，不建立 ML-Agents agent、不執行世界步或模型。每個影格包含完整個體、食物、投射物、地面區域、效果、記憶及事件；不存在的個體與食物會同步移除。跳轉清除視覺拖尾與過期回饋，避免後來的效果污染較早影格。
-
-## 格式與容量
-
-`record-source.jsonl` 只擷取指定輪次的完整資料；一般 `world.jsonl` 改為精簡事件、族群採樣及生命週期紀錄，供分析使用。封裝產生各輪獨立的 `episode-N.replay.jsonl` 及容量／SHA-256 側錄 `.json`。中間來源與封裝檔皆保留，計算磁碟預算時須同時計入。
-
-回放第一筆保存 schema、規則、完整世界配置、種子、來源執行與控制模式；固定模型觀察另保存實驗、checkpoint 雜湊與相容性資訊。影格從該輪第 0 步連續保存，末筆包含影格數及前面全部內容的 SHA-256。載入會拒絕缺幀、截斷、竄改、未知版本與不相容配置。Unity 只索引各影格的檔案位移，跳轉時才解析該影格，不將整場的狀態物件全部常駐記憶體。
-
-既有完整 `world.jsonl` 也可明確封裝指定輪次：
-
-```powershell
-./.venv/Scripts/python.exe training/recording.py '<world.jsonl>' --output '<episode.replay.jsonl>' --episode 1
-./.venv/Scripts/python.exe training/recording.py '<episode.replay.jsonl>'
-./scripts/world.ps1 -Mode replay -ReplayFrom '<episode.replay.jsonl>' -SeekFrames '0,250,last,100,0'
-```
-
-省略 `Visible` 時只讀取並輸出指定影格的外部狀態，預設順序為 `0,last,0`，用於比對歷史資料。輸出寫入新的執行目錄，不改寫來源。這與 `ReloadRun` 重新執行同條件世界不同。
+下列是歷史驗收紀錄，原始檔可能已依清理政策淘汰；不代表目前仍支援舊格式。
 
 ## 驗證紀錄
 

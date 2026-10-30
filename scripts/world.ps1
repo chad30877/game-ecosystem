@@ -67,7 +67,7 @@ if ($Mode -eq 'replay') {
     if ($LASTEXITCODE -ne 0) { throw '回放驗證失敗。' }
     New-Item -ItemType Directory $output | Out-Null
     $arguments = @('--replay', ('"{0}"' -f $ReplayFrom), '--world-log', ('"{0}"' -f (Join-Path $output 'world.jsonl')), '-logFile', ('"{0}"' -f (Join-Path $output 'player.log')))
-    if (-not $Visible -and -not $SeekFrames) { $SeekFrames = '0,last,0' }
+    if (-not $Visible -and -not $SeekFrames) { $SeekFrames = '0,last,0'; $arguments += @('--replay-export', 'false') }
     if ($SeekFrames) { $arguments += @('--replay-seek', $SeekFrames) }
     if (-not $Visible) { $arguments += @('-batchmode', '-nographics') }
     $launch = @{ FilePath = $player; ArgumentList = $arguments; Wait = $true; PassThru = $true }

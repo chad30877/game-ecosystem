@@ -16,6 +16,7 @@ namespace Ecosystem
         private WorldReplay replay;
         private float replayClock;
         private string replaySeek;
+        private bool exportReplaySnapshots;
         private readonly Dictionary<int, WorldIndividualView> views = new Dictionary<int, WorldIndividualView>();
         private RunJournal journal;
         private ArtifactStore store;
@@ -71,6 +72,7 @@ namespace Ecosystem
             world = new World(config, seed);
             control = replay != null ? "replay" : Argument("--control", "manual");
             replaySeek = Argument("--replay-seek", "");
+            exportReplaySnapshots = Argument("--replay-export", replaySeek == "" ? "false" : "true") == "true";
             summaryLog = Argument("--summary-log", "false") == "true";
             metricsLog = Argument("--metrics-log", "false") == "true";
             singleEpisode = Argument("--single-episode", "false") == "true";
@@ -493,7 +495,7 @@ namespace Ecosystem
         private void Record(string kind, IndividualState individual = null, int unityObject = 0)
         {
             journal?.Observe(kind, world.State);
-            if (detailedLog || (kind == "snapshot" && Argument("--replay-seek", "") != "")) journal?.WriteDiagnostic(JsonUtility.ToJson(new StepRecord
+            if (detailedLog || (kind == "snapshot" && exportReplaySnapshots)) journal?.WriteDiagnostic(JsonUtility.ToJson(new StepRecord
                 { run = runId, kind = kind, totalSteps = totalSteps, state = world.State, individual = individual, unityObject = unityObject }));
             if (metricsLog && kind == "step")
                 journal?.WriteDiagnostic(JsonUtility.ToJson(new MetricRecord { step = world.State.step, time = world.State.time,

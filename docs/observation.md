@@ -34,7 +34,7 @@
 
 `observe` 必須指定 `-ResumeFrom`，沿用保存的配置與種子；也可指定不同 `-Seed`。來源相容性檢查與續訓相同，詳見[保存與續訓](resume-training.md)。包含本次畫面變更的重新建置會改變世界組件雜湊，舊組件模型會被保守拒絕；請保留原資料，使用目前建置另開新實驗。
 
-固定觀察將模型複製到新的輸出目錄，以 ML-Agents inference 執行，結束時檢查三物種 checkpoint 的容量、SHA-256 與累計步數維持原值。`training.json` 標記 `operation: observe`、世界步數上限與來源；`world.jsonl` 標記 `policyMode: fixed`。來源檔案保留，世界由新一輪開始。
+固定觀察將模型複製到新的輸出目錄，以 ML-Agents inference 執行，結束時檢查三物種 checkpoint 的容量、SHA-256 與累計步數維持原值。`training.json` 標記 `operation: observe`、世界步數上限與來源；受管 `source.json` 標記 `policyMode: fixed`，預設只寫群體資料；模型輸出的 `simulation.json` 指向 `.simulation/<執行>`。完整錄製加 `Record`，政策見[記錄契約](recording.md)。來源檔案保留，世界由新一輪開始。
 
 可見觀察預設持續到關閉；無畫面預設 512 世界步。`-Steps 128` 可限制兩者的世界步數，`-Steps 0` 僅適用可見模式。可見 Python 控制容許最長 24 小時無新決策，供長時間暫停檢視。
 

@@ -24,6 +24,11 @@ namespace Ecosystem.Editor
             }
             new ArtifactStore(root, "build-b").Cleanup();
             Require(Directory.GetDirectories(root).Length == 0, "舊建置結束後可淘汰");
+            var existing = store.Begin(); existing.Dispose();
+            string original = File.ReadAllText(Path.Combine(existing.DirectoryPath, "run.json"));
+            bool rejected = false;
+            try { using var collision = store.Begin(existing.DirectoryPath); } catch (IOException) { rejected = true; }
+            Require(rejected && File.ReadAllText(Path.Combine(existing.DirectoryPath, "run.json")) == original, "重用輸出須拒絕且保留原始來源");
             Debug.Log("產物建置與執行識別驗收通過");
         }
         public static void Recording()
@@ -130,9 +135,10 @@ namespace Ecosystem.Editor
             try { new ArtifactStore(Path.Combine(boundary, "alias"), "paths").Adopt(); } catch (IOException) { rejected = true; }
             Require(rejected && File.ReadAllText(Path.Combine(boundary, "outside/preserve.txt")) == "preserve", "受管根路徑不可經連結越界");
             var store = new ArtifactStore(Path.Combine(boundary, "managed"), "paths"); store.Adopt();
-            var run = store.Begin(Path.Combine(boundary, "custom")); run.Dispose();
+            string custom = Path.Combine(boundary, "custom-" + Guid.NewGuid().ToString("N"));
+            var run = store.Begin(custom); run.Dispose();
             new ArtifactStore(store.Root, "next").Adopt();
-            Require(File.Exists(Path.Combine(boundary, "custom/run.json")), "自訂輸出不可被自動淘汰");
+            Require(File.Exists(Path.Combine(custom, "run.json")), "自訂輸出不可被自動淘汰");
             Debug.Log("連結、越界及自訂輸出驗收通過");
         }
         public static void All() { Identity(); Recording(); Failures(); Retention(); Paths(); ValidateFruitReplay.RunContracts(); ValidateFruitReplay.RunScenarioGeometry(); ValidateFruitReplay.RunInputBoundaries(); ValidateProductionAI.RunAll(); }

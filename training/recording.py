@@ -30,8 +30,9 @@ def require_complete(directory: Path, full=False):
         paths = list(directory.glob("episode-*.replay.jsonl"))
         if not info.get("recordingComplete") or not paths or len(paths) != info.get("segments") or len(paths) != len(summary["episodes"]):
             raise ValueError("整次錄製分段不完整。")
-        for path in paths:
-            validate(path)
+        episodes = {validate(path)["episode"] for path in paths}
+        if episodes != {episode["episode"] for episode in summary["episodes"]} or len(episodes) != len(paths):
+            raise ValueError("錄製輪次與摘要不符。")
     return summary
 CURRENT_RULES = "survival-v15"
 

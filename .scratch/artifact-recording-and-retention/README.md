@@ -1,7 +1,7 @@
 # 產物記錄、保留與同建置回放任務
 
 - 正式需求：[spec.md](spec.md)。已確認背景：[共同理解](../../docs/design/artifact-recording-and-retention-summary.md)、[訪談](../../docs/design/artifact-recording-and-retention.md)、[ADR 0001](../../docs/adr/0001-build-scoped-recording.md)。
-- 2026-10-30 使用者確認共同理解，授權整理本機正式規格與任務，明確要求先不實作。所有任務僅發佈為 ready-for-agent，尚無實作、建置、清理或驗收結果。
+- 2026-10-30 使用者確認共同理解，授權整理本機正式規格與任務，明確要求先不實作。當時僅發佈為 ready-for-agent；後續本輪implement授權與交付進度見下方。
 - ready-for-agent 不是執行授權；後續取得實作授權且前置全部 resolved，才可將任務改為 claimed。逐張任務的 Status、討論與完成紀錄為狀態依據。
 - 遵守[本機追蹤器](../../docs/agents/issue-tracker.md)及[狀態規範](../../docs/agents/triage-labels.md)，不建立 GitHub issues。
 
@@ -41,3 +41,7 @@
 ## 後續人工驗收方向
 
 一般啟動查看只有輕量資料；明確錄製後重建世界並提前停止，核對每段可跳轉；連跑超過五次、完成／失敗錄製及更換建置後核對保留；模擬記錄失敗時核對畫面繼續且資料標示不完整。確切命令與實際結果由各任務交付，本次未執行。
+
+## 2026-10-30實作進度
+
+本輪使用者以implement授權實作。01–06完成驗收，證據見[正式報告](../../docs/recording-results.md)。07已盤點，但實際刪除被自動核准審查拒絕，改為ready-for-human；08前置未完成，功能留在原位，不宣稱全部結案。

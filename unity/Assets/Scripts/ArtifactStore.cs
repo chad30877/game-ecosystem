@@ -168,7 +168,16 @@ namespace Ecosystem
             {
                 DirectoryPath = directory; Info = info;
                 lease = new FileStream(Path.Combine(directory, ".lease"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
-                if (create) { try { Save(); } catch { Dispose(); throw; } }
+                if (create)
+                {
+                    try
+                    {
+                        if (new[] { "run.json", "source.json", "summary.json", "world.jsonl", "record-source.jsonl" }.Any(name => File.Exists(Path.Combine(directory, name))) || Directory.GetFiles(directory, "episode-*.replay.jsonl*").Length != 0)
+                            throw new IOException("輸出目錄已有執行資料，不覆寫原始來源。");
+                        Save();
+                    }
+                    catch { Dispose(); throw; }
+                }
             }
             public void Save() => WriteJson(Path.Combine(DirectoryPath, "run.json"), Info);
             public void Dispose() { lease?.Dispose(); lease = null; }

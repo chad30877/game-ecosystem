@@ -1,6 +1,6 @@
 # 果實規則資料契約
 
-目前規則為 `survival-v15`，動作版本為 `2`，回放格式為 `2`。三者分開記錄；v9–v14 的格式 1 回放仍可讀取，不能用來重載新世界或控制新動作。舊模型相容性簽章會明確拒絕，未新增 PPO 實驗。
+目前規則為 `survival-v15`，動作版本為 `2`，回放格式為 `2`。三者分開記錄；回放另核對實際建置識別；v9–v14 專用讀取已退役，未知或不同建置拒絕播放。舊模型相容性簽章會明確拒絕，未新增 PPO 實驗。
 
 ## 動作入口
 
@@ -28,13 +28,13 @@ ML-Agents 使用四個連續值及七個離散分支，分支大小為 `3,3,2,2,
 
 完整快照原樣保存來源週期、果實期限／位置／持有者、暫占、容量預留、操作、培育及當時的粗略觀察。回放只讀快照，不重新感知或決策。世界真值與個體最後觀察／推測分區呈現。
 
-`fruitInformationAvailable=true` 是新規則快照的必要標記。舊回放強制為 false，保留原食物外觀，新資訊顯示未提供，不補造果實。v14 的煙幕情報保留，新規則也保留煙幕情報。
+`fruitInformationAvailable=true` 是果實快照的必要標記，煙幕與果實情報均保留當時快照，不重新感知。
 
-`SingleEpisode` 在第一輪終止時結束；`SummaryLog` 保存事件、果實帳及存量／人口摘要，`MetricsLog` 另存每步個體營養、決策及培育樣本。`lastProductionStopReason` 是最近一次停止理由的樣本，不可逐步當作新停止事件累加；實際費用使用事件及累計 `skillManaSpent`，培育階段可由 `cultivatingFood/cultivateStartedAt` 核對。原始 run 保存步數、單場與記錄旗標，ReloadRun 沿用未明確覆寫的旗標。
+`SingleEpisode` 在第一輪終止時結束。日常記錄、完整錄製與詳細診斷旗標以[記錄契約](recording.md)為準；`MetricsLog` 明確輸出每步個體樣本，`lastProductionStopReason` 是狀態而非新事件，不能重複累計。
 
 
 固定外觀診斷快照可用 `ValidateFruitVisuals.WriteFixture` 匯出，再以 `training/fruit_recording_validation.py --showcase-folder <快照目錄> --run-log <當次 v15 執行紀錄> --output <新回放> --seed 101` 封裝。此工具透過正式封裝器產生格式 2，明確標記 `diagnostic=true`，不能作為生態試跑或自然結束證據；10 號階段的過渡 v14 標頭診斷檔不是歷史代表回放。
 
 回放診斷執行的 `rules/actionVersion` 跟隨原始回放；另以 `runtimeRules/runtimeActionVersion` 記錄檢視器版本，`replayRules/replaySchemaVersion/replayActionVersion` 保留來源識別。歷史回放未提供的動作版本為 0，避免把 v9 快照誤認成 v15 模擬結果。
 
-驗收摘要見 [資料契約結果](fruit-data-contract-results.json)，原始證據保存在 `artifacts/fruit-supply/11/`。
+驗收摘要見 [資料契約結果](fruit-data-contract-results.json)，原始證據當時位於 `artifacts/fruit-supply/11/`，後續依[清理紀錄](artifact-retention.md)處理；Git 結果保留原結論。
