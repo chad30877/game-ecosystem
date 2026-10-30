@@ -67,7 +67,7 @@ namespace Ecosystem
             int turn = best == Vector2.zero ? action.turn : Mathf.DeltaAngle(individual.facing, Mathf.Atan2(best.y, best.x) * Mathf.Rad2Deg) >= 0 ? 1 : -1;
             return new WorldAction(best, !inside && action.forage, action.aim, !inside && action.attack,
                 !inside && !unsafeSkill ? action.skill : WorldSkill.None, turn,
-                !inside && !unsafeSkill ? action.skillSlot : -1, action.run, !inside ? action.feedChild : 0, action.foodAction, action.fruit, action.recipient);
+                !inside && !unsafeSkill ? action.skillSlot : -1, action.run, !inside ? action.feedChild : 0, action.foodAction, action.fruit, action.recipient, action.productionSource);
         }
 
         private static bool InBounds(Vector2 point, float extent) => Mathf.Abs(point.x) <= extent + 0.00001f && Mathf.Abs(point.y) <= extent + 0.00001f;
