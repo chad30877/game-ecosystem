@@ -212,6 +212,10 @@ namespace Ecosystem
         public bool initialAdult = true;
         public int parentId;
         public int careTarget, careReceivedFrom;
+        public List<int> foodCareChildren = new List<int>();
+        public bool foodUnloading;
+        public float foodAvoidRefillUntil;
+        public List<FoodDiscardMemory> foodDiscarded = new List<FoodDiscardMemory>();
         public int protectionChild, protectionThreat, protectionEventChild, protectionEventThreat;
         public float protectionDamageStart;
         public bool protectionRetreat;
@@ -560,6 +564,7 @@ namespace Ecosystem
     {
         public static readonly IReadOnlyList<string> Species = Array.AsReadOnly(new[] { "Flame", "Frost", "Moss" });
         public WorldConfig Config { get; }
+        public int Seed { get; }
         public WorldState State { get; private set; }
         private readonly System.Random random;
         private readonly System.Random effectRandom;
@@ -581,6 +586,7 @@ namespace Ecosystem
         {
             config.Validate();
             Config = config;
+            Seed = seed;
             random = new System.Random(seed);
             effectRandom = new System.Random(seed ^ 0x43f214);
             sourceRandom = new System.Random(seed ^ 0x17c924);
