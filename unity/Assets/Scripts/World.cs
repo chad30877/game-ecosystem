@@ -288,6 +288,11 @@ namespace Ecosystem
         public List<AreaMemory> areaMemory = new List<AreaMemory>();
         public List<FoodMemory> foodMemory = new List<FoodMemory>();
         public List<FoodMemory> visibleFoods = new List<FoodMemory>();
+        public List<FruitObservation> ownFruits = new List<FruitObservation>();
+        public List<FruitObservation> groundFruitMemory = new List<FruitObservation>();
+        public List<FoodInteractionObservation> foodInteractions = new List<FoodInteractionObservation>();
+        public bool fruitKnowledgeAvailable;
+        public List<FruitFreshnessMemory> fruitFreshnessMemory = new List<FruitFreshnessMemory>();
         public List<int> rewardedCells = new List<int>();
         public float explorationRewardTotal;
         public float explorationRewardPending;
@@ -318,6 +323,7 @@ namespace Ecosystem
         public float x, y, age, satiety, lastSeenAt;
         public float predictedAge, predictedSatiety;
         public bool visible, confirmedDead, threatened, searched;
+        public FoodInteractionObservation food;
     }
 
     [Serializable]
@@ -333,6 +339,9 @@ namespace Ecosystem
         public bool visible;
         public float lastSeenAt;
         public bool possiblyAvailable;
+        public bool stale;
+        public FoodGrowthType growthType;
+        public List<FruitObservation> fruits = new List<FruitObservation>();
     }
 
     [Serializable]
@@ -349,6 +358,7 @@ namespace Ecosystem
     [Serializable]
     public sealed class EntityObservation
     {
+        public FoodInteractionObservation food;
         public string species;
         public int individual;
         public float x, y;
@@ -1077,6 +1087,10 @@ namespace Ecosystem
                     individual.foodMemory.Clear();
                     individual.smokeKnowledge.Clear();
                     individual.visibleFoods.Clear();
+                    individual.ownFruits.Clear();
+                    individual.groundFruitMemory.Clear();
+                    individual.foodInteractions.Clear();
+                    individual.fruitFreshnessMemory.Clear();
                     individual.rewardedCells.Clear();
                     individual.explorationRewardTotal = individual.explorationRewardPending = 0;
                     Array.Clear(individual.directionLastSeenAt, 0, individual.directionLastSeenAt.Length);
@@ -1136,6 +1150,7 @@ namespace Ecosystem
                 if (Config.foraging)
                 {
                     RefreshFoodMemory(observer);
+
                     RefreshAreaMemory(observer, awardExploration);
                     for (int sector = 0; sector < observer.directionLastSeenAt.Length; sector++)
                         if (Mathf.Abs(Mathf.DeltaAngle(observer.facing, sector * 45f)) <= 60f)
@@ -1196,43 +1211,24 @@ namespace Ecosystem
             return area.lastSeenAt + (usefulFood ? Config.areaMemorySeconds : 0) + (threat ? Config.areaMemorySeconds : 0);
         }
 
-        private void RefreshFoodMemory(IndividualState observer)
-        {
-            observer.visibleFoods.Clear();
-            foreach (var known in observer.foodMemory)
-            {
-                known.visible = false;
-                known.possiblyAvailable = !Config.disableMemoryPrediction && (!known.mature || known.phase != FoodPhase.Available) &&
-                    State.time - known.lastSeenAt >= Config.foodPredictionSeconds;
-            }
-            foreach (var food in State.foods)
-            {
-                if (!CanSeePoint(observer, new Vector2(food.x, food.y))) continue;
-                var known = observer.foodMemory.Find(value => value.food == food.food);
-                if (known == null) observer.foodMemory.Add(known = new FoodMemory { food = food.food });
-                known.x = food.x;
-                known.y = food.y;
-                known.amount = food.amount;
-                known.capacity = food.capacity;
-                known.mature = food.mature;
-                known.phase = food.phase;
-                known.visible = true;
-                known.possiblyAvailable = false;
-                known.lastSeenAt = State.time;
-                observer.visibleFoods.Add(known);
-            }
-            observer.foodMemory.RemoveAll(value => !value.visible && CanSeePoint(observer, new Vector2(value.x, value.y)));
-            if (observer.foodMemory.Count <= Config.foodMemoryLimit) return;
-            observer.foodMemory.Sort((a, b) => FoodPriority(a).CompareTo(FoodPriority(b)));
-            observer.foodMemory.RemoveRange(0, observer.foodMemory.Count - Config.foodMemoryLimit);
-        }
-
-        private float FoodPriority(FoodMemory food) => food.lastSeenAt +
-            (food.visible ? Config.foodMemorySeconds : 0) +
-            (food.mature && food.phase == FoodPhase.Available && food.amount > 0 ? Config.foodMemorySeconds : 0);
+        private void RefreshFoodMemory(IndividualState observer) => FruitPerception.Refresh(this, observer);
 
         public IEnumerable<float[]> ObserveEntities(IndividualState individual)
         {
+            foreach (var fruit in individual.ownFruits)
+                yield return new[] { -6f, 0f, 0f, 1f, fruit.freshness == FruitFreshness.NearRot ? 1f : 0f,
+                    fruit.EstimateRemaining(State.time) / 40f, 0f, 0f, 0f, 0f };
+            foreach(var fruit in individual.groundFruitMemory)
+                yield return new[] { -7f, (fruit.x-individual.x)/(Config.halfExtent*2),
+                    (fruit.y-individual.y)/(Config.halfExtent*2), fruit.visible ? 1f : 0f,
+                    fruit.freshness==FruitFreshness.NearRot ? 1f : 0f, fruit.EstimateRemaining(State.time)/40f,
+                    fruit.claimed ? 1f : 0f, Mathf.Clamp01((State.time-fruit.lastSeenAt)/10f), 0f, 0f };
+            foreach(var known in individual.foodInteractions)
+                yield return new[] { -8f, (known.x-individual.x)/(Config.halfExtent*2),
+                    (known.y-individual.y)/(Config.halfExtent*2), known.visible ? 1f : 0f, known.carriedCount/3f,
+                    (float)known.operation/6f, known.deliveryInviteTo!=0 ? 1f : 0f,
+                    known.offeredFruit==null ? -1f : (float)known.offeredFruit.freshness,
+                    known.cultivationStrength, Mathf.Clamp01((State.time-known.lastSeenAt)/5f) };
             foreach (var smoke in individual.smokeKnowledge)
                 yield return new[] { -5f, Mathf.Clamp((smoke.x - individual.x) / (Config.halfExtent * 2), -1f, 1f),
                     Mathf.Clamp((smoke.y - individual.y) / (Config.halfExtent * 2), -1f, 1f),
@@ -1245,21 +1241,17 @@ namespace Ecosystem
                     entity.visible && entity.feeding ? 1f : 0f,
                     entity.visible && entity.feeding ? (entity.sourceX - individual.x) / (Config.halfExtent * 2) : 0f,
                     entity.visible && entity.feeding ? (entity.sourceY - individual.y) / (Config.halfExtent * 2) : 0f };
-            foreach (var food in State.foods)
-            {
-                var delta = new Vector2(food.x - individual.x, food.y - individual.y);
-                if (!CanSeePoint(individual, new Vector2(food.x, food.y))) continue;
-                yield return new[] { 0f, delta.x / (Config.halfExtent * 2), delta.y / (Config.halfExtent * 2),
-                    1f, 0f, food.mature && food.phase == FoodPhase.Available ? 1f : 0f, food.amount / food.capacity, 0f, 0f, 0f };
-            }
             foreach (var food in individual.foodMemory)
             {
-                if (food.visible) continue;
-                yield return new[] { 0f, Mathf.Clamp((food.x - individual.x) / (Config.halfExtent * 2), -1f, 1f),
-                    Mathf.Clamp((food.y - individual.y) / (Config.halfExtent * 2), -1f, 1f), 0f,
-                    Mathf.Clamp01((State.time - food.lastSeenAt) / Config.foodMemorySeconds),
-                    food.mature && food.phase == FoodPhase.Available ? 1f : 0f,
-                    food.capacity > 0 ? food.amount / food.capacity : 0f, food.possiblyAvailable ? 1f : 0f, 0f, 0f };
+                yield return new[] { 0f, Mathf.Clamp((food.x-individual.x)/(Config.halfExtent*2),-1f,1f),
+                    Mathf.Clamp((food.y-individual.y)/(Config.halfExtent*2),-1f,1f), food.visible ? 1f : 0f,
+                    Mathf.Clamp01((State.time-food.lastSeenAt)/Config.foodMemorySeconds), (float)food.phase/3f,
+                    food.amount/7f, food.stale ? 1f : 0f, (float)food.growthType, 0f };
+                foreach(var fruit in food.fruits)
+                    yield return new[] { -9f, (food.x-individual.x)/(Config.halfExtent*2),
+                        (food.y-individual.y)/(Config.halfExtent*2), food.visible ? 1f : 0f,
+                        fruit.freshness==FruitFreshness.NearRot ? 1f : 0f, fruit.EstimateRemaining(State.time)/40f,
+                        fruit.claimed ? 1f : 0f, 0f, 0f, 0f };
             }
             foreach (var child in individual.children)
                 yield return new[] { -2f, Mathf.Clamp((child.x - individual.x) / (Config.halfExtent * 2), -1f, 1f),
