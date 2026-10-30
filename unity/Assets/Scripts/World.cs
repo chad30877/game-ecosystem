@@ -202,6 +202,7 @@ namespace Ecosystem
         public bool feeding;
         public FoodAction foodOperation;
         public int operationFruit, operationTarget, reservedCapacity;
+        public int deliveryInviteTo, deliveryInviteFruit;
         public float operationStartedAt, operationProgress;
         public float fedSourceX, fedSourceY, fedAmount;
         public bool hasFoodTarget, runPreferred;
@@ -662,7 +663,7 @@ namespace Ecosystem
         public void RemoveIndividual(int individual)
         {
             var actor = State.individuals.Find(value => value.individual == individual);
-            if (actor != null) FoodOperations.Cancel(State, actor);
+            if (actor != null) FoodOperations.DropAll(State, actor, State.time);
             if (State.individuals.RemoveAll(value => value.individual == individual) != 1)
                 throw new ArgumentException("個體不存在。");
         }
@@ -801,7 +802,7 @@ namespace Ecosystem
                 {
                     if (cause == "old_age") individual.agingHealthLost += individual.health;
                     individual.health = 0;
-                    FoodOperations.Cancel(State, individual);
+                    FoodOperations.DropAll(State, individual, time);
                     individual.feeding = false;
                     CaptureDiagnostics(individual, time);
                     State.events.Add(new WorldEvent { kind = cause, individual = individual.individual,
