@@ -14,7 +14,7 @@ namespace Ecosystem
             WorldSkill.Shield => config.shieldMana, WorldSkill.IntimidatingRoar => config.roarMana,
             WorldSkill.FrostbindArrow => config.frostbindMana, WorldSkill.PiercingIceArrow => config.piercingMana,
             WorldSkill.ColdMistDash => config.dashMana, WorldSkill.FrostTrap => config.trapMana,
-            WorldSkill.Cultivate => config.cultivateMana, WorldSkill.Sow => config.sowMana,
+            WorldSkill.Cultivate => 0, WorldSkill.Sow => config.sowMana,
             WorldSkill.EntanglingRoots => config.rootsMana, WorldSkill.SporeSmoke => config.smokeMana,
             _ => float.PositiveInfinity
         };
@@ -24,7 +24,7 @@ namespace Ecosystem
             WorldSkill skill = action.skillSlot >= 0 ? individual.loadout[action.skillSlot] : action.skill;
             int slot = Array.IndexOf(individual.loadout, skill);
             if (slot < 0 || state.time < individual.skillReadyTimes[slot] || individual.chargeRemaining > 0 || individual.dashRemaining > 0 ||
-                individual.windupActiveThisStep || state.time < individual.cultivateUntil) return false;
+                individual.windupActiveThisStep) return false;
             var c = config.combat;
             float mana = ManaCost(c, skill);
             float growth = CombatRules.Growth(config, individual);
@@ -89,22 +89,7 @@ namespace Ecosystem
                         !Spend(state, individual, slot, mana, c.trapCooldown, "trap_placed")) return false;
                     AddArea(state, individual, skill, action.aim, c.trapRadius, c.trapDuration, growth);
                     return true;
-                case WorldSkill.Sow:
-                    if (!LegalPoint(config, individual, action.aim, c.sowRange) || state.foods.Count >= config.foodSourceLimit ||
-                        state.foods.Exists(value => Vector2.Distance(new Vector2(value.x, value.y), action.aim) < c.sowSpacing) ||
-                        state.individuals.Exists(value => value.health > 0 && Vector2.Distance(CombatRules.Position(value), action.aim) <= c.hitRadius) ||
-                        state.areas.Exists(value => value.skill == WorldSkill.FrostTrap && value.until > state.time &&
-                            Vector2.Distance(new Vector2(value.x, value.y), action.aim) <= value.radius) ||
-                        !Spend(state, individual, slot, mana, c.sowCooldown, "sow")) return false;
-                    var seed = new FoodState { food = ++state.nextFood, x = action.aim.x, y = action.aim.y,
-                        growthType = FoodGrowthType.Small, capacity = config.smallFood.capacity,
-                        phase = FoodPhase.Recovering, mature = false, matureAt = state.time + c.sowMaturity,
-                        bornAt = state.time };
-                    state.foods.Add(seed);
-                    state.events[state.events.Count - 1].food = seed.food;
-                    state.events[state.events.Count - 1].x = seed.x;
-                    state.events[state.events.Count - 1].y = seed.y;
-                    return true;
+                case WorldSkill.Sow: return false;
                 case WorldSkill.EntanglingRoots:
                     var rootedEnemies = state.individuals.FindAll(value => value.health > 0 && value.species != individual.species &&
                         Vector2.Distance(CombatRules.Position(value), CombatRules.Position(individual)) <= c.rootsRange);
@@ -115,23 +100,7 @@ namespace Ecosystem
                     if (!Spend(state, individual, slot, mana, c.smokeCooldown, "spore_smoke")) return false;
                     AddArea(state, individual, skill, CombatRules.Position(individual), c.smokeRadius * growth, c.smokeDuration, growth);
                     return true;
-                case WorldSkill.Cultivate:
-                    FoodState foodTarget = null;
-                    float nearest = c.cultivateRange;
-                    foreach (var food in state.foods)
-                    {
-                        float distance = Vector2.Distance(CombatRules.Position(individual), new Vector2(food.x, food.y));
-                        if (distance > nearest || !World.InView(config, individual, new Vector2(food.x, food.y)) ||
-                            !food.mature || food.phase == FoodPhase.Resting || food.amount >= food.capacity) continue;
-                        nearest = distance;
-                        foodTarget = food;
-                    }
-                    if (foodTarget == null || !Spend(state, individual, slot, mana, c.cultivateCooldown, "cultivate")) return false;
-                    individual.cultivatingFood = foodTarget.food;
-                    individual.cultivateGrowth = growth;
-                    individual.cultivateUntil = state.time + c.cultivateDuration;
-                    state.events[state.events.Count - 1].food = foodTarget.food;
-                    return true;
+                case WorldSkill.Cultivate: return false;
                 default: return false;
             }
         }

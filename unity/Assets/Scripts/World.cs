@@ -282,6 +282,7 @@ namespace Ecosystem
         public float cultivateUntil;
         public float cultivateRemaining;
         public int cultivatingFood;
+        public float cultivateStartedAt;
         public List<MovementBiasState> movementBiases = new List<MovementBiasState>();
         public List<AreaMemory> areaMemory = new List<AreaMemory>();
         public List<FoodMemory> foodMemory = new List<FoodMemory>();
@@ -375,6 +376,8 @@ namespace Ecosystem
         public float matureAt;
         public bool cycleInitialized;
         public float phaseProgress, lastAdvancedAt, lastFruitAt = -1000f, waitUntil;
+        public float growthBoostUntil, cultivatedSeconds;
+        public int cultivator;
         public int cycle, nextMaturity;
         public float[] maturitySchedule = Array.Empty<float>();
         public float growthMultiplier = 1f;
@@ -468,19 +471,19 @@ namespace Ecosystem
         public readonly bool forage;
         public readonly int feedChild;
         public readonly FoodAction foodAction;
-        public readonly int fruit, recipient;
+        public readonly int fruit, recipient, productionSource;
         public readonly bool run;
         public readonly Vector2 aim;
         public readonly bool attack;
         public readonly WorldSkill skill;
         public readonly int turn;
         public readonly int skillSlot;
-        public WorldAction(Vector2 movement, bool forage = false, Vector2 aim = default, bool attack = false, WorldSkill skill = WorldSkill.None, int turn = 0, int skillSlot = -1, bool run = false, int feedChild = 0, FoodAction foodAction = FoodAction.None, int fruit = 0, int recipient = 0)
+        public WorldAction(Vector2 movement, bool forage = false, Vector2 aim = default, bool attack = false, WorldSkill skill = WorldSkill.None, int turn = 0, int skillSlot = -1, bool run = false, int feedChild = 0, FoodAction foodAction = FoodAction.None, int fruit = 0, int recipient = 0, int productionSource = 0)
         {
             this.movement = movement;
             this.forage = forage;
             this.feedChild = feedChild;
-            this.foodAction = foodAction; this.fruit = fruit; this.recipient = recipient;
+            this.foodAction = foodAction; this.fruit = fruit; this.recipient = recipient; this.productionSource = productionSource;
             this.run = run;
             this.aim = aim;
             this.attack = attack;
@@ -549,7 +552,7 @@ namespace Ecosystem
         public WorldState State { get; private set; }
         private readonly System.Random random;
         private readonly System.Random effectRandom;
-        private readonly System.Random foodRandom, sourceRandom, positionRandom;
+        private readonly System.Random foodRandom, sourceRandom, positionRandom, productionRandom;
         private int episode;
         private int nextIndividual;
         private readonly int[] loadoutCycle = new int[3];
@@ -572,6 +575,7 @@ namespace Ecosystem
             sourceRandom = new System.Random(seed ^ 0x17c924);
             positionRandom = new System.Random(seed ^ 0x2bc851);
             foodRandom = new System.Random(seed ^ 0x167d2b);
+            productionRandom = new System.Random(seed ^ 0x19734a);
         }
 
         internal void ReadSnapshot(WorldState snapshot) => State = snapshot;
@@ -738,7 +742,6 @@ namespace Ecosystem
                 if (FoodOperations.Requested(State, actor, actions[actor.individual]) != FoodAction.None &&
                     actions[actor.individual].skill == WorldSkill.None && actions[actor.individual].skillSlot < 0)
                 { actor.cultivatingFood = 0; actor.cultivateUntil = actor.cultivateRemaining = 0; }
-            AdvanceFood(time);
             if (Config.foraging)
             {
                 CombatRules.BeginStep(Config, State, actions);
@@ -763,6 +766,8 @@ namespace Ecosystem
             {
                 CombatRules.Resolve(Config, State, actions);
                 ControlEffects.Resolve(Config, State, effectRandom);
+                // 位移與傷害先確定施法者有效，再推進來源；腐爛仍先於所有食物操作完成。
+                AdvanceFood(time, actions);
             }
             if (Config.foraging)
             {
@@ -929,9 +934,9 @@ namespace Ecosystem
 
         private FoodGrowthConfig Growth(FoodState food) => food.growthType == FoodGrowthType.Large ? Config.largeFood : Config.smallFood;
 
-        private void AdvanceFood(float time)
+        private void AdvanceFood(float time, IReadOnlyDictionary<int, WorldAction> actions)
         {
-            FruitRules.Advance(Config, State, sourceRandom, time);
+            ProductionRules.Advance(this, actions, sourceRandom, productionRandom, time);
             if (Config.foraging && time >= State.nextNaturalSpawnAt)
             {
                 State.nextNaturalSpawnAt = time + Config.naturalSpawnInterval;
