@@ -13,7 +13,7 @@ namespace Ecosystem
             var config = world.Config;
             var position = CombatRules.Position(individual);
             var foods = individual.visibleFoods.Concat(individual.foodMemory.Where(value => !value.visible))
-                .Where(value => value.mature && value.phase == FoodPhase.Available && value.amount > 0.01f).ToList();
+                .Where(value => value.visible && value.fruits.Count > 0).ToList();
             var target = foods.OrderBy(value => FoodScore(world, individual, value)).FirstOrDefault();
             // 推測只在沒有較可靠的食物情報時用作回訪目標。
             if (target == null)
@@ -22,8 +22,9 @@ namespace Ecosystem
             var previous = foods.Find(value => SamePoint(value.x, value.y, individual.foodTargetX, individual.foodTargetY));
             if (individual.hasFoodTarget && previous != null && target != null &&
                 FoodScore(world, individual, previous) <= FoodScore(world, individual, target) + config.aiTargetMargin) target = previous;
-            var competitors = individual.perception.Where(value => value.visible && value.feeding && value.species != individual.species).ToList();
-            EntityObservation enemy = target == null ? null : competitors.Where(value => SamePoint(value.sourceX, value.sourceY, target.x, target.y))
+            var competitors = individual.perception.Where(value => value.visible && value.food != null && value.food.hasSource &&
+                (value.food.operation == FoodAction.Gather || value.food.operation == FoodAction.Pickup) && value.species != individual.species).ToList();
+            EntityObservation enemy = target == null ? null : competitors.Where(value => SamePoint(value.food.sourceX, value.food.sourceY, target.x, target.y))
                 .OrderBy(value => Vector2.Distance(position, new Vector2(value.x, value.y))).FirstOrDefault();
             float health = individual.health / CombatRules.CurrentMaxHealth(config, individual);
             bool wasContesting = individual.decisionReason == "contest" || individual.decisionReason == "contest_approach";
@@ -31,7 +32,7 @@ namespace Ecosystem
             bool weak = health < config.aiWeakHealth || (individual.species == "Flame" && individual.stamina < 2) ||
                 (individual.species == "Frost" && individual.mana < config.combat.iceMana);
             var alternative = target == null ? null : foods.Where(value => !SamePoint(value.x, value.y, target.x, target.y) &&
-                !competitors.Any(other => SamePoint(value.x, value.y, other.sourceX, other.sourceY)))
+                !competitors.Any(other => SamePoint(value.x, value.y, other.food.sourceX, other.food.sourceY)))
                 .OrderBy(value => FoodScore(world, individual, value)).FirstOrDefault();
             string reason = target == null ? "explore" : target.possiblyAvailable ? "food_prediction" : "forage";
             if (enemy != null && (weak || costly || health < config.aiRetreatHealth) && alternative != null)
@@ -53,7 +54,7 @@ namespace Ecosystem
             {
                 individual.decisionReason = "retreat";
                 var away = new Vector2(individual.retreatX, individual.retreatY);
-                return new WorldAction(away, true, turn: Turn(individual, away), run: individual.runPreferred);
+                return FoodCareController.Escape(world, individual, away);
             }
             // 近期受擊且看見攻擊者時先脫離自身危險，之後再評估照顧。
             var attacker = individual.lastCombatDamageAt >= 0 && individual.lastCombatDamageAt >= world.State.time - config.stepSeconds
@@ -70,7 +71,7 @@ namespace Ecosystem
                 individual.retreatUntil = world.State.time + 2f;
                 individual.retreatX = away.x; individual.retreatY = away.y;
                 individual.decisionReason = "retreat";
-                return new WorldAction(away, turn: Turn(individual, away), run: individual.runPreferred);
+                return FoodCareController.Escape(world, individual, away);
             }
             // 僅使用親代當前可見的幼體與異種，最近的受威脅子女優先。
             var threatened = individual.children.Where(child => !config.disableCare && child.visible && !child.confirmedDead && child.predictedAge < config.maturityAge)
@@ -105,7 +106,7 @@ namespace Ecosystem
                     individual.protectionChild = individual.protectionThreat = 0;
                     individual.decisionReason = "protection_retreat";
                     Vector2 away = -deltaThreat.normalized;
-                    return new WorldAction(away, turn: Turn(individual, away), run: individual.runPreferred);
+                    return FoodCareController.Escape(world, individual, away, "protection_retreat");
                 }
                 if (individual.protectionChild != 0 || health >= config.protectionEngageHealth)
                 {
@@ -137,96 +138,35 @@ namespace Ecosystem
                     individual.protectionChild = individual.protectionThreat = 0;
                 }
             }
-            var care = ChooseCare(world, individual, target, position);
-            if (care.HasValue) return care.Value;
-            if (target == null)
+            var closeThreat = FoodCareController.CloseThreat(world, individual);
+            if (closeThreat != null && (individual.ownFruits.Count > 1 || individual.satiety <= 65 ||
+                individual.foodCareChildren.Count > 0 || individual.foodOperation != FoodAction.None))
             {
-                individual.decisionReason = lostTarget ? "food_lost" : "explore";
-                individual.contestHealth = health;
-                var exploration = Explore(world, individual, position);
-                Vector2 aim = position;
-                int support = ChooseSkill(world, individual, null, ref aim);
-                return new WorldAction(exploration.movement, true, aim, turn: exploration.turn, skillSlot: support,
-                    run: individual.runPreferred && individual.satiety < config.aiUrgentSatiety);
+                Vector2 away = (position - new Vector2(closeThreat.x, closeThreat.y)).normalized;
+                individual.retreatUntil = world.State.time + 2;
+                individual.retreatX = away.x; individual.retreatY = away.y;
+                return FoodCareController.Escape(world, individual, away);
             }
-            Vector2 delta = new Vector2(target.x, target.y) - position;
-            bool canEat = individual.feeding && SamePoint(individual.fedSourceX, individual.fedSourceY, target.x, target.y) &&
-                individual.fedAmount >= config.forageRate * config.stepSeconds * 0.5f;
-            if (canEat || individual.satiety >= 80f) enemy = null;
-            Vector2 movement = delta.magnitude <= config.forageRadius * 0.9f ? Vector2.zero : delta.normalized;
-            Vector2 skillAim = enemy == null ? position : new Vector2(enemy.x, enemy.y);
-            int skillSlot = ChooseSkill(world, individual, enemy, ref skillAim);
-            bool attack = false;
-            if (enemy != null)
+            var fruitAction = FoodCareController.Choose(world, individual);
+            if (fruitAction.HasValue) return fruitAction.Value;
+            if (enemy != null && target != null)
             {
+                var delta = new Vector2(target.x, target.y) - position;
+                Vector2 aim = new Vector2(enemy.x, enemy.y);
+                int skill = ChooseSkill(world, individual, enemy, ref aim);
+                individual.decisionReason = weak ? "contest_approach" : "contest";
                 if (!wasContesting) individual.contestHealth = health;
-                bool capable = !weak;
-                attack = capable && individual.species != "Moss";
-                reason = capable ? "contest" : "contest_approach";
+                return new WorldAction(delta.magnitude > config.forageRadius*.9f ? delta.normalized : Vector2.zero,
+                    aim: aim, attack: !weak && individual.species != "Moss", turn: Turn(individual, delta), skillSlot: skill,
+                    run: individual.runPreferred && delta.magnitude > config.forageRadius*2);
             }
-            else
-            {
-                individual.contestHealth = health;
-                if (movement == Vector2.zero) reason = individual.stamina <= config.aiRunStop ? "rest" : "feed";
-                else if (reason != "switch_food" && reason != "food_prediction" && individual.stamina <= config.aiRunStop) reason = "walk_recover";
-            }
-            individual.decisionReason = reason;
-            return new WorldAction(movement, true, skillAim, attack, turn: Turn(individual, delta), skillSlot: skillSlot,
-                run: individual.runPreferred && delta.magnitude > config.forageRadius * 2 &&
-                    (enemy != null || individual.satiety < config.aiUrgentSatiety));
-        }
-
-        private static WorldAction? ChooseCare(World world, IndividualState individual, FoodMemory target, Vector2 position)
-        {
-            var config = world.Config;
-            // 親代優先照顧可見幼體；即時威脅及自身緊急補給優先。
-            bool danger = individual.perception.Any(value => value.visible && value.species != individual.species &&
-                Vector2.Distance(position, new Vector2(value.x, value.y)) <= config.scanThreatRadius);
-            bool justHit = individual.lastCombatDamageAt >= 0 && individual.lastCombatDamageAt >= world.State.time - config.stepSeconds;
-            if (!config.disableCare && !danger && !justHit && individual.satiety >= config.aiUrgentSatiety && individual.satiety > config.careReserve)
-            {
-                var child = individual.children.Where(value => (value.visible || value.child == individual.careTarget) && !value.confirmedDead && value.predictedAge < config.maturityAge &&
-                    (value.visible ? value.satiety : individual.careEstimatedSatiety) < (individual.careTarget == value.child ? config.careStop : config.careStart))
-                    .OrderBy(value => value.child == individual.careTarget ? 0 : 1).ThenBy(value => value.satiety)
-                    .ThenBy(value => Vector2.Distance(position, new Vector2(value.x, value.y))).FirstOrDefault();
-                if (child != null)
-                {
-                    Vector2 deltaChild = new Vector2(child.x, child.y) - position;
-                    individual.decisionReason = "care_feed";
-                    return new WorldAction(deltaChild.magnitude <= config.careRadius * 0.8f ? Vector2.zero : deltaChild.normalized,
-                        turn: Turn(individual, deltaChild), feedChild: child.child);
-                }
-            }
-            if (!config.disableCare && !danger && !justHit && individual.satiety >= config.aiUrgentSatiety && (target == null || !target.visible))
-            {
-                var child = individual.children.Where(value => !value.visible && !value.confirmedDead && !value.searched &&
-                    value.predictedAge < config.maturityAge && (value.predictedSatiety < config.familySearchSatiety || value.threatened))
-                    .OrderBy(value => Vector2.Distance(position, new Vector2(value.x, value.y))).FirstOrDefault();
-                if (child != null)
-                {
-                    var deltaChild = new Vector2(child.x, child.y) - position;
-                    if (deltaChild.magnitude <= config.forageRadius) child.searched = true;
-                    else
-                    {
-                        individual.decisionReason = "search_child";
-                        return new WorldAction(deltaChild.normalized, true, turn: Turn(individual, deltaChild));
-                    }
-                }
-                if (individual.age < config.maturityAge && individual.parentId != 0)
-                {
-                    var parent = world.State.individuals.Find(value => value.individual == individual.parentId && world.CanSee(individual, value));
-                    if (parent != null)
-                    {
-                        var deltaParent = CombatRules.Position(parent) - position;
-                        if (deltaParent.magnitude > config.forageRadius)
-                        {
-                            individual.decisionReason = "approach_parent";
-                            return new WorldAction(deltaParent.normalized, true, turn: Turn(individual, deltaParent));
-                        }
-                    }
-                }
-            }
-            return null;
+            individual.decisionReason = lostTarget ? "food_lost" : "explore";
+            individual.contestHealth = health;
+            var exploration = Explore(world, individual, position);
+            Vector2 supportAim = position;
+            int support = ChooseSkill(world, individual, null, ref supportAim);
+            return new WorldAction(exploration.movement, aim: supportAim, turn: exploration.turn, skillSlot: support,
+                run: individual.runPreferred && individual.satiety < config.aiUrgentSatiety);
         }
 
         private static void SetProtectionEvent(IndividualState individual, string kind, int child, int threat)
