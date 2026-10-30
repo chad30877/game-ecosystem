@@ -90,6 +90,7 @@ if ($Mode -eq 'replay') {
     if ($NewExperiment -and $ResumeFrom) { throw 'NewExperiment 與 ResumeFrom 不可同時使用。' }
     if ($Mode -eq 'observe' -and -not $ResumeFrom) { throw 'observe 須以 ResumeFrom 指定已保存模型。' }
     $arguments = @((Join-Path $root 'training/session.py'), '--player', $player, '--output', $OutputRoot, '--steps', $TrainSteps)
+    if ($managedDefault) { $arguments += '--managed-records' }
     if ($Mode -eq 'observe') {
         if (-not $PSBoundParameters.ContainsKey('Steps')) { $Steps = if ($Visible) { 0 } else { 512 } }
         $arguments += @('--observe', '--world-steps', $Steps)
@@ -151,5 +152,9 @@ if ($Mode -eq 'replay') {
     if ($Record) { $arguments += @('--record', 'true') }
     if ($DiagnosticLog) { $arguments += @('--diagnostic-log', 'true') }
     & $player @arguments
+}
+if ($Mode -in @('manual', 'forage', 'replay')) {
+    & $Python (Join-Path $root 'training/recording.py') $output --check-run | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw '模擬資料不完整。' }
 }
 Write-Output $output

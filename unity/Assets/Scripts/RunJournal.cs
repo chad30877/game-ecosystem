@@ -180,6 +180,7 @@ namespace Ecosystem
             if (Result.episodes.Count == 0) throw new InvalidDataException("錄製沒有有效輪次。");
             var expected = Result.episodes.Select(e => e.episode).ToArray();
             int segment = -1, count = 0;
+            bool segmentEnded = false, observationEnded = false;
             StreamWriter writer = null;
             SHA256 hash = null;
             string temporary = null, destination = null;
@@ -190,7 +191,8 @@ namespace Ecosystem
             void CloseSegment()
             {
                 if (writer == null) return;
-                if (count == 0) throw new InvalidDataException("錄製缺少初始狀態。");
+                if (count == 0 || count != Result.episodes[segment].end.step + 1 || !segmentEnded)
+                    throw new InvalidDataException("錄製缺少初始或結束狀態。");
                 hash.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
                 writer.WriteLine("{\"kind\":\"complete\",\"frames\":" + count + ",\"sha256\":\"" + BitConverter.ToString(hash.Hash).Replace("-", "").ToLowerInvariant() + "\"}");
                 writer.Dispose(); writer = null; hash.Dispose(); hash = null;
@@ -208,16 +210,25 @@ namespace Ecosystem
                         if (segment >= expected.Length || frame.state.episode != expected[segment]) throw new InvalidDataException("輪次不連續。");
                         destination = Path.Combine(directory, "episode-" + expected[segment] + ".replay.jsonl"); temporary = destination + ".partial";
                         writer = new StreamWriter(new FileStream(temporary, FileMode.CreateNew), new UTF8Encoding(false)) { NewLine = "\n" };
-                        hash = SHA256.Create(); count = 0;
+                        hash = SHA256.Create(); count = 0; segmentEnded = false;
                         string header = sourceHeader.Substring(0, sourceHeader.Length - 1).Replace("\"kind\":\"run\"", "\"kind\":\"replay\"");
                         Write(header + ",\"schemaVersion\":" + WorldRules.ReplaySchema + ",\"episode\":" + expected[segment] + ",\"stopReason\":\"" + Result.episodes[segment].reason + "\"}");
                     }
-                    if (frame.kind != "reset" && frame.kind != "step") continue;
+                    if (frame.kind == "episode_end" || frame.kind == "observation_end")
+                    {
+                        if (segment < 0 || frame.state.episode != expected[segment] || frame.state.step != count - 1)
+                            throw new InvalidDataException("錄製結束狀態與影格不符。");
+                        segmentEnded = true;
+                        if (frame.kind == "observation_end") observationEnded = true;
+                        continue;
+                    }
+                    if (frame.kind != "reset" && frame.kind != "step") throw new InvalidDataException("未知錄製記錄。");
+                    if (segmentEnded && frame.kind == "step") throw new InvalidDataException("輪次結束後仍有影格。");
                     if (writer == null || frame.state.episode != expected[segment] || frame.state.step != count) throw new InvalidDataException("錄製影格缺漏。");
                     Write(JsonUtility.ToJson(new Frame { kind = "frame", state = frame.state })); count++;
                 }
                 CloseSegment();
-                if (segment + 1 != expected.Length) throw new InvalidDataException("錄製缺少必要分段。");
+                if (segment + 1 != expected.Length || !observationEnded) throw new InvalidDataException("錄製缺少必要分段或執行結尾。");
             }
             finally { writer?.Dispose(); hash?.Dispose(); }
         }

@@ -38,11 +38,10 @@ namespace Ecosystem
             expectedBuild ??= ArtifactStore.Identity.build;
             string directory = Path.GetDirectoryName(Path.GetFullPath(path));
             string runPath = Path.Combine(directory, "run.json");
-            if (File.Exists(runPath) && !path.EndsWith(".partial", StringComparison.Ordinal))
+            bool managed = File.Exists(Path.Combine(Path.GetDirectoryName(directory), "current.json"));
+            if ((File.Exists(runPath) || managed) && !path.EndsWith(".partial", StringComparison.Ordinal))
             {
-                var info = JsonUtility.FromJson<ArtifactStore.RunInfo>(File.ReadAllText(runPath));
-                lease = new ArtifactStore.RunLease(directory, info, false);
-                if (info.status != "complete" || !info.recordingComplete) { lease.Dispose(); throw new InvalidDataException("整次錄製尚未成功完成。"); }
+                lease = ArtifactStore.AcquirePlayback(directory);
             }
             try { source = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read); }
             catch { lease?.Dispose(); throw; }

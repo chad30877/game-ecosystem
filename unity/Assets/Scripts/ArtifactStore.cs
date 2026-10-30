@@ -34,6 +34,20 @@ namespace Ecosystem
             }
         }
         public static ArtifactStore Current => new ArtifactStore(Identity.root, Identity.build);
+        public static RunLease AcquirePlayback(string directory)
+        {
+            // 受管播放與刪除共用根鎖，避免清理釋放租約後被新播放器插入。
+            var store = new ArtifactStore(Path.GetDirectoryName(directory), "playback");
+            using (store.Gate())
+            {
+                SafePath(directory);
+                var info = JsonUtility.FromJson<RunInfo>(File.ReadAllText(Path.Combine(directory, "run.json")));
+                var lease = new RunLease(directory, info, false);
+                if (info.status != "complete" || !info.recordingComplete)
+                { lease.Dispose(); throw new InvalidDataException("整次錄製尚未成功完成。"); }
+                return lease;
+            }
+        }
         public static void SafePath(string path)
         {
             for (var item = new DirectoryInfo(Path.GetFullPath(path)); item != null; item = item.Parent)
@@ -76,7 +90,11 @@ namespace Ecosystem
             foreach (string path in Directory.GetFileSystemEntries(directory))
             {
                 if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0) return false;
-                if (Directory.Exists(path) && !TreeSafe(path)) return false;
+                if (Directory.Exists(path)) return false;
+                string name = Path.GetFileName(path);
+                var known = new[] { ".lease", "run.json", "run.json.tmp", "source.json", "summary.json", "summary.json.tmp", "world.jsonl",
+                    "record-source.jsonl", "world-config.json", "scenario.json", "player.log", "Player-0.log", "connection.jsonl", "bridge.json" };
+                if (!known.Contains(name) && !System.Text.RegularExpressions.Regex.IsMatch(name, @"^episode-[1-9][0-9]*\.replay\.jsonl(\.partial)?$")) return false;
             }
             return true;
         }
@@ -130,7 +148,11 @@ namespace Ecosystem
                         if (Path.GetDirectoryName(target) != Root) throw new IOException("清理目標越界。");
                         SafePath(target);
                         run.Dispose();
-                        Directory.Delete(target, true);
+                        // 刪除途中失敗時保留歸屬，下一次仍可重試。
+                        foreach (string file in Directory.GetFiles(target).Where(file => Path.GetFileName(file) != "run.json" && Path.GetFileName(file) != ".lease")) File.Delete(file);
+                        File.Delete(Path.Combine(target, ".lease"));
+                        File.Delete(Path.Combine(target, "run.json"));
+                        Directory.Delete(target);
                     }
                 }
                 finally { foreach (var run in candidates) run.Dispose(); }

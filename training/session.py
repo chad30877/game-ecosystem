@@ -20,7 +20,7 @@ import torch
 import yaml
 
 from summarize import summarize
-from recording import pack
+from recording import pack, simulation_directory, require_complete
 from resources import peak_memory, unity_child
 
 
@@ -125,7 +125,7 @@ def copy_output(output: Path, destination_root: Path):
     return {"path": str(destination), "bytes": required}
 
 
-def observe_fixed(player, output, trainer, world_config, seed, args):
+def observe_fixed(player, output, trainer, world_config, seed, args, simulation):
     from mlagents.trainers.policy.torch_policy import TorchPolicy
     from mlagents.trainers.settings import NetworkSettings
     from mlagents.trainers.torch_entities.networks import SimpleActor
@@ -136,14 +136,15 @@ def observe_fixed(player, output, trainer, world_config, seed, args):
     torch.set_num_threads(1)
     channel = EngineConfigurationChannel()
     channel.set_configuration_parameters(time_scale=1 if args.visible else 20, width=1280, height=720)
-    additional = ["--world-log", str(output / "world.jsonl"), "--world-seed", str(seed),
+    additional = ["--world-log", str(simulation / "world.jsonl"), "--world-seed", str(seed),
                   "--world-config", str(output / "world-config.json"), "--control", "python", "--policy-mode", "fixed"]
     if args.world_steps:
         additional += ["--world-steps", str(args.world_steps)]
     if args.record or args.record_episodes:
         additional += ["--record", "true"]
     env = UnityEnvironment(file_name=str(player), seed=seed, no_graphics=not args.visible,
-                           side_channels=[channel], log_folder=str(output), additional_args=additional)
+                           side_channels=[channel], log_folder=str(simulation), additional_args=additional,
+                           timeout_wait=86400 if args.visible or args.record or args.record_episodes else 60)
     started = time.perf_counter()
     unity_peak = 0
     steps = 0
@@ -175,8 +176,9 @@ def observe_fixed(player, output, trainer, world_config, seed, args):
                 unity_peak = max(unity_peak, peak_memory(env._process.pid) or 0)
     finally:
         env.close()
+    require_complete(simulation, args.record or bool(args.record_episodes))
     world_steps = 0
-    with (output / "world.jsonl").open(encoding="utf-8-sig") as log:
+    with (simulation / "world.jsonl").open(encoding="utf-8-sig") as log:
         for line in log:
             row = json.loads(line)
             if row.get("kind") == "episode_end": world_steps += row["step"]
@@ -207,6 +209,7 @@ def train(args):
     if any(path == output.parent or path == output or output in path.parents for path in destinations):
         raise ValueError("備份／歷史目錄須與活躍輸出分開，且不能位於本次輸出內。")
     output.mkdir(parents=True, exist_ok=False)
+    simulation = simulation_directory(output, args.managed_records)
     trainer_id = previous["trainerRunId"] if previous else run_id
     if trainer_source:
         assert source is not None
@@ -233,7 +236,7 @@ def train(args):
     if args.observe:
         assert previous is not None
         try:
-            manifest["resources"] = observe_fixed(player, output, output / trainer_id, world_config, seed, args)
+            manifest["resources"] = observe_fixed(player, output, output / trainer_id, world_config, seed, args, simulation)
             manifest["checkpoints"] = checkpoint_records(output / trainer_id)
             manifest["initialPolicies"] = {species: file_record(output / "initial-policies" / f"{species}.pt") for species in SPECIES}
             if manifest["checkpoints"] != previous["checkpoints"] or manifest["initialPolicies"] != previous["initialPolicies"]:
@@ -242,9 +245,9 @@ def train(args):
             manifest["status"] = "completed"
             manifest["finishedAt"] = datetime.now(timezone.utc).isoformat()
             if args.record or args.record_episodes:
-                manifest["recordings"] = [pack(output / "record-source.jsonl", path, int(path.name.split("-")[1].split(".")[0])) for path in sorted(output.glob("episode-*.replay.jsonl"))]
+                manifest["recordings"] = [pack(simulation / "record-source.jsonl", path, int(path.name.split("-")[1].split(".")[0])) for path in sorted(simulation.glob("episode-*.replay.jsonl"))]
             write_json(output / "training.json", manifest)
-            write_json(output / "training-summary.json", summarize(output / "world.jsonl"))
+            write_json(output / "training-summary.json", summarize(simulation / "world.jsonl"))
             print(json.dumps({"output": str(output), "status": manifest["status"], "checkpoints": manifest["checkpoints"]}, ensure_ascii=False), flush=True)
             return
         except Exception:
@@ -264,7 +267,7 @@ def train(args):
         command += ["--timeout-wait", "86400"]
     if not args.visible:
         command.append("--no-graphics")
-    command += ["--env-args", "--world-log", str(output / "world.jsonl"), "--world-seed", str(seed),
+    command += ["--env-args", "--world-log", str(simulation / "world.jsonl"), "--world-seed", str(seed),
                 "--world-config", str(output / "world-config.json"), "--control", "python",
                 "--policy-mode", "fixed" if args.observe else "training"]
     if args.observe:
@@ -323,15 +326,16 @@ def train(args):
         raise ValueError(f"{error}；請查看 {output / 'trainer.log'}。") from error
     if exit_code:
         manifest["status"] = "failed"
+    require_complete(simulation, args.record or bool(args.record_episodes))
     manifest["checkpointBytes"] = sum(record["bytes"] for record in manifest["checkpoints"].values())
     write_json(output / "training.json", manifest)
-    if (output / "world.jsonl").is_file():
-        write_json(output / "training-summary.json", summarize(output / "world.jsonl"))
+    if (simulation / "world.jsonl").is_file():
+        write_json(output / "training-summary.json", summarize(simulation / "world.jsonl"))
     if exit_code:
         raise ValueError(f"訓練失敗（{exit_code}），請查看 {output / 'trainer.log'}。已保留可讀取的 checkpoint。")
     if args.record or args.record_episodes:
         manifest["recordings"] = []
-        manifest["recordings"] = [pack(output / "record-source.jsonl", path, int(path.name.split("-")[1].split(".")[0])) for path in sorted(output.glob("episode-*.replay.jsonl"))]
+        manifest["recordings"] = [pack(simulation / "record-source.jsonl", path, int(path.name.split("-")[1].split(".")[0])) for path in sorted(simulation.glob("episode-*.replay.jsonl"))]
         write_json(output / "training.json", manifest)
     copies = {}
     for label, destination in (("backup", args.backup), ("history", args.history)):
@@ -352,6 +356,7 @@ def main():
     parser.add_argument("--config", type=Path)
     parser.add_argument("--seed", type=int)
     parser.add_argument("--steps", type=int, default=2048)
+    parser.add_argument("--managed-records", action="store_true")
     parser.add_argument("--record", action="store_true")
     parser.add_argument("--record-episodes", default="")
     parser.add_argument("--observe", action="store_true")

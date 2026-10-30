@@ -116,8 +116,26 @@ namespace Ecosystem.Editor
             string unknown = Path.Combine(store.Root, "unknown"); Directory.CreateDirectory(unknown); File.WriteAllText(Path.Combine(unknown, "data"), "保留");
             store.Cleanup();
             Require(Directory.GetDirectories(store.Root).Length == 1 && File.Exists(Path.Combine(unknown, "data")), "只淘汰有可靠歸屬的舊資料");
+            var extra = new ArtifactStore(store.Root, "next-build").Begin();
+            File.WriteAllText(Path.Combine(extra.DirectoryPath, "model.pt"), "非模擬資料"); extra.Dispose();
+            new ArtifactStore(store.Root, "third-build").Adopt();
+            Require(File.Exists(Path.Combine(extra.DirectoryPath, "model.pt")), "非模擬檔案不可因同處受管目錄被誤刪");
             Debug.Log("五次／一次與播放保護驗收通過");
         }
-        public static void All() { Identity(); Recording(); Failures(); Retention(); ValidateFruitReplay.RunContracts(); ValidateFruitReplay.RunScenarioGeometry(); ValidateFruitReplay.RunInputBoundaries(); ValidateProductionAI.RunAll(); }
+        public static void Paths()
+        {
+            string boundary = Path.GetFullPath("../artifacts/recording-validation/path-boundary");
+            if (!Directory.Exists(Path.Combine(boundary, "alias"))) throw new Exception("請先建立隔離 junction fixture。");
+            bool rejected = false;
+            try { new ArtifactStore(Path.Combine(boundary, "alias"), "paths").Adopt(); } catch (IOException) { rejected = true; }
+            Require(rejected && File.ReadAllText(Path.Combine(boundary, "outside/preserve.txt")) == "preserve", "受管根路徑不可經連結越界");
+            var store = new ArtifactStore(Path.Combine(boundary, "managed"), "paths"); store.Adopt();
+            var run = store.Begin(Path.Combine(boundary, "custom")); run.Dispose();
+            new ArtifactStore(store.Root, "next").Adopt();
+            Require(File.Exists(Path.Combine(boundary, "custom/run.json")), "自訂輸出不可被自動淘汰");
+            Debug.Log("連結、越界及自訂輸出驗收通過");
+        }
+        public static void All() { Identity(); Recording(); Failures(); Retention(); Paths(); ValidateFruitReplay.RunContracts(); ValidateFruitReplay.RunScenarioGeometry(); ValidateFruitReplay.RunInputBoundaries(); ValidateProductionAI.RunAll(); }
+        public static void AllAndBuild() { All(); BuildWorld.Build(); }
     }
 }

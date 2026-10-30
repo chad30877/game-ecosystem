@@ -102,7 +102,7 @@ namespace Ecosystem.Editor
         }
         public static void Run()
         {
-            var folder=Path.GetFullPath("../artifacts/fruit-supply/11");Directory.CreateDirectory(folder);
+            var folder=Path.GetFullPath("../artifacts/recording-validation/fruit-fixture");Directory.CreateDirectory(folder);
             var config=new WorldConfig {foraging=true,halfExtent=20,naturalFoodLimit=0,disableAging=true,disableReproduction=true};
             var world=new World(config,101);world.Reset();
             var actor=world.State.individuals[0];

@@ -20,7 +20,7 @@ from mlagents_envs.environment import UnityEnvironment
 from mlagents_envs.exception import UnityCommunicationException, UnityCommunicatorStoppedException, UnityEnvironmentException
 from mlagents_envs.side_channel.engine_configuration_channel import EngineConfigurationChannel
 
-from recording import pack
+from recording import pack, require_complete
 from metrics import accumulate
 from resources import peak_memory
 from session import ROOT, SPECIES, compatibility, file_record, load_source, read_json, write_json
@@ -63,11 +63,14 @@ def policy(spec, settings, weights):
 
 
 def complete(path):
-    if not path.exists():
-        return False
-    with path.open("rb") as source:
-        source.seek(max(0, path.stat().st_size - 1024))
-        return b'"kind":"episode_complete"' in source.read()
+    summary = path.parent / "summary.json"
+    if summary.exists() and read_json(summary).get("status") == "complete":
+        return True
+    if path.exists():
+        with path.open("rb") as source:
+            source.seek(max(0, path.stat().st_size - 1024))
+            return b'"kind":"world_stopped"' in source.read()
+    return False
 
 
 def metrics(log: Path):
@@ -118,6 +121,8 @@ def metrics(log: Path):
             row = json.loads(line)
             kind = row["kind"]
             state = row.get("state")
+            if kind == "sample" or (kind in ("episode_start", "episode_end") and state is None):
+                continue
             if kind == "run":
                 half_extent = row["config"]["halfExtent"]
                 cell_size = row["config"]["explorationCellSize"]
@@ -203,7 +208,8 @@ def rollout(args, output, seed, modes, weights, network, initial, capture):
     if getattr(args, "scenario_path", None):
         additional += ["--world-scenario", str(args.scenario_path)]
     env = UnityEnvironment(file_name=str(args.player), seed=seed, no_graphics=True, worker_id=args.worker_id,
-                           side_channels=[channel], log_folder=str(output), additional_args=additional)
+                           side_channels=[channel], log_folder=str(output), additional_args=additional,
+                           timeout_wait=86400 if capture else 60)
     steps = 0
     unity_peak = 0
     try:
@@ -232,6 +238,7 @@ def rollout(args, output, seed, modes, weights, network, initial, capture):
             try:
                 env.step()
             except (UnityCommunicationException, UnityCommunicatorStoppedException, UnityEnvironmentException):
+                if env._process is not None: env._process.wait(timeout=86400 if capture else 60)
                 if not complete(log): raise
                 break
             steps += 1
@@ -242,6 +249,7 @@ def rollout(args, output, seed, modes, weights, network, initial, capture):
         if not complete(log): raise ValueError("評估超過配置輪次長度而未結束。")
     finally:
         env.close()
+    require_complete(output, capture)
     result = metrics(log)
     if result["resources"] is not None:
         result["resources"]["peakWorkingSetBytes"] = unity_peak or None

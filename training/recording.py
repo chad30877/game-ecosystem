@@ -4,12 +4,35 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import uuid
 
 
 ROOT = Path(__file__).resolve().parent.parent
 
 def current_build():
     return json.loads((ROOT / "unity/Builds/build.json").read_text(encoding="utf-8-sig"))["build"]
+
+
+def simulation_directory(output: Path, managed: bool):
+    directory = ROOT / ".simulation" / uuid.uuid4().hex if managed else output
+    if managed:
+        directory.mkdir(parents=True)
+        (output / "simulation.json").write_text(json.dumps({"path": str(directory)}), encoding="utf-8")
+    return directory
+
+
+def require_complete(directory: Path, full=False):
+    info = json.loads((directory / "run.json").read_text(encoding="utf-8-sig"))
+    summary = json.loads((directory / "summary.json").read_text(encoding="utf-8-sig"))
+    if info.get("status") != "complete" or summary.get("status") != "complete":
+        raise ValueError("模擬資料不完整，不能回報產出成功。")
+    if full:
+        paths = list(directory.glob("episode-*.replay.jsonl"))
+        if not info.get("recordingComplete") or not paths or len(paths) != info.get("segments") or len(paths) != len(summary["episodes"]):
+            raise ValueError("整次錄製分段不完整。")
+        for path in paths:
+            validate(path)
+    return summary
 CURRENT_RULES = "survival-v15"
 
 def compatible(rules, schema):
@@ -115,9 +138,11 @@ def main():
     parser.add_argument("source", type=Path)
     parser.add_argument("--output", type=Path)
     parser.add_argument("--episode", type=int, default=1)
+    parser.add_argument("--check-run", action="store_true")
+    parser.add_argument("--full", action="store_true")
     args = parser.parse_args()
     try:
-        result = pack(args.source, args.output, args.episode) if args.output else validate(args.source)
+        result = require_complete(args.source, args.full) if args.check_run else pack(args.source, args.output, args.episode) if args.output else validate(args.source)
         print(json.dumps(result, ensure_ascii=False, indent=2))
     except (ValueError, OSError, KeyError, StopIteration) as error:
         parser.exit(1, f"回放記錄無效：{error}\n")

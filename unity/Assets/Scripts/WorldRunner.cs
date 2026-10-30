@@ -291,6 +291,7 @@ namespace Ecosystem
                 if (singleEpisode)
                 {
                     stopReason = "world_end";
+                    journal?.WriteDiagnostic("{\"kind\":\"world_stopped\"}");
                     Application.Quit();
                     return;
                 }
@@ -492,7 +493,7 @@ namespace Ecosystem
         private void Record(string kind, IndividualState individual = null, int unityObject = 0)
         {
             journal?.Observe(kind, world.State);
-            if (detailedLog || kind == "snapshot") journal?.WriteDiagnostic(JsonUtility.ToJson(new StepRecord
+            if (detailedLog || (kind == "snapshot" && Argument("--replay-seek", "") != "")) journal?.WriteDiagnostic(JsonUtility.ToJson(new StepRecord
                 { run = runId, kind = kind, totalSteps = totalSteps, state = world.State, individual = individual, unityObject = unityObject }));
             if (metricsLog && kind == "step")
                 journal?.WriteDiagnostic(JsonUtility.ToJson(new MetricRecord { step = world.State.step, time = world.State.time,
