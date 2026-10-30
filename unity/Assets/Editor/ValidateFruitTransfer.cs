@@ -94,6 +94,17 @@ namespace Ecosystem.Editor
             Require(b.foodOperation==FoodAction.Pickup && ground.claimedBy==b.individual && b.reservedCapacity==0,
                 "未接受的邀請不打斷有效拾取");
 
+            w=Make(); a=w.State.individuals[0]; b=w.State.individuals[1]; Pair(w,a,b,9);
+            a.health-=5; b.health-=5;
+            Tick(w,(a.individual,new WorldAction(Vector2.zero,foodAction:FoodAction.Deliver,fruit:1,recipient:b.individual,turn:1)),
+                (b.individual,new WorldAction(Vector2.zero,foodAction:FoodAction.Receive,recipient:a.individual,turn:-1)));
+            Require(w.State.fruits[0].holder==b.individual,"普通受傷及仍在視線內的掃視不打斷雙方交付");
+            w=Make(); a=w.State.individuals[0]; b=w.State.individuals[1];
+            AddFruit(w,b.individual); AddFruit(w,b.individual); Pair(w,a,b,1);
+            Require(b.reservedCapacity==1 && w.State.fruits.Count(f=>f.holder==b.individual)==2 &&
+                w.State.fruits[0].holder==a.individual,"預留消耗最後一格但果實與重量仍在送方");
+            Pair(w,a,b,9);
+            Require(w.State.fruits.Count(f=>f.holder==b.individual)==3 && b.reservedCapacity==0,"完成時以原預留格接收第三顆");
             foreach(bool senderDies in new[]{true,false})
             {
                 w=Make(); a=w.State.individuals[0]; b=w.State.individuals[1]; Pair(w,a,b,9);
@@ -237,6 +248,7 @@ namespace Ecosystem.Editor
             GroundBoundaries();
             InvitationBoundaries();
             ValidateFruitOperations.Run();
+            ValidateSourcePlacement.Run();
             Debug.Log("果實交付驗收通過");
         }
     }
