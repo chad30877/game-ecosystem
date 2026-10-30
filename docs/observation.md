@@ -1,5 +1,9 @@
 # 即時觀察與個體檢視
 
+> 2026-10-23 保存狀態更新：本文 artifacts 路徑保留為歷史驗證來源；大型原始紀錄與舊模型已淘汰，摘要及指定短回放的保存範圍見[產物清理紀錄](artifact-retention.md)。歷史操作範例須改用仍存在或新產生的來源。
+
+現行煙幕感知、19 維自身／10 維 Entities、六分支動作與 `survival-v14` 相容性見[煙幕感知與觀察](smoke-awareness.md)；四資源見[四資源觀察與死亡診斷](survival-resources.md)。以下保留既有介面與驗證歷史。
+
 建置後，覓食世界的可見規則展示、學習更新及固定模型觀察共用操作列。左上角標示目前控制模式；全景顯示各物種存活數與本輪出生／死亡累計。
 
 ```powershell
@@ -30,7 +34,7 @@
 
 `observe` 必須指定 `-ResumeFrom`，沿用保存的配置與種子；也可指定不同 `-Seed`。來源相容性檢查與續訓相同，詳見[保存與續訓](resume-training.md)。包含本次畫面變更的重新建置會改變世界組件雜湊，舊組件模型會被保守拒絕；請保留原資料，使用目前建置另開新實驗。
 
-固定觀察將模型複製到新的輸出目錄，以 ML-Agents inference 執行，結束時檢查三物種 checkpoint 的容量、SHA-256 與累計步數維持原值。`training.json` 標記 `operation: observe`、世界步數上限與來源；`world.jsonl` 標記 `policyMode: fixed`。來源檔案保留，世界由新一輪開始。
+固定觀察將模型複製到新的輸出目錄，以 ML-Agents inference 執行，結束時檢查三物種 checkpoint 的容量、SHA-256 與累計步數維持原值。`training.json` 標記 `operation: observe`、世界步數上限與來源；受管 `source.json` 標記 `policyMode: fixed`，預設只寫群體資料；模型輸出的 `simulation.json` 指向 `.simulation/<執行>`。完整錄製加 `Record`，政策見[記錄契約](recording.md)。來源檔案保留，世界由新一輪開始。
 
 可見觀察預設持續到關閉；無畫面預設 512 世界步。`-Steps 128` 可限制兩者的世界步數，`-Steps 0` 僅適用可見模式。可見 Python 控制容許最長 24 小時無新決策，供長時間暫停檢視。
 

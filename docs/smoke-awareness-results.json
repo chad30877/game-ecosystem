@@ -1,0 +1,49 @@
+{
+  "baselineCommit": "fa55e382fd10d52e2f31144cbe1f24dfdcd1369e",
+  "unit": "毫秒／次",
+  "method": "Editor 同一程序、5 次暖機、50 次平均；渲染為 Camera.Render 的 CPU 呼叫時間",
+  "runs": [
+    {
+      "seed": 7,
+      "individuals": 120,
+      "smoke": 32,
+      "iterations": 50,
+      "fixedActionSteps": 650,
+      "oldPerceptionMs": 10.885456000000001,
+      "newPerceptionMs": 19.09584,
+      "oldRulesMs": 0.9886280000000001,
+      "newRulesMs": 6.898966000000001,
+      "render960": [
+        1.0975240000000002,
+        1.00622,
+        0.733348
+      ],
+      "render1280": [
+        0.657992,
+        0.750468,
+        0.64774
+      ]
+    },
+    {
+      "seed": 7,
+      "individuals": 120,
+      "smoke": 32,
+      "iterations": 50,
+      "fixedActionSteps": 650,
+      "oldPerceptionMs": 4.681412,
+      "newPerceptionMs": 6.454276,
+      "oldRulesMs": 0.453386,
+      "newRulesMs": 3.092262,
+      "render960": [
+        0.33561799999999997,
+        0.23378600000000002,
+        0.21
+      ],
+      "render1280": [
+        0.21822400000000003,
+        0.196324,
+        0.20258600000000002
+      ]
+    }
+  ]
+}

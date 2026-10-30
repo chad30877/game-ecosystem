@@ -2,9 +2,15 @@
 
 目前支援三物種各四招技能池及完整生態 PPO 訓練。個體出生攜帶兩招，依局部食物、120° 視野與短期警戒記憶行動；同種共用策略，訓練可見／無畫面跨輪延續。規則展示與學習訓練分開，尚未證明學習品質改善。設定與證據見[戰術學習](docs/tactical-learning.md)。
 
-本期規劃見[生存資源與 Environment 任務](.scratch/survival-resources-and-environment/README.md)，規格已發佈、尚未實作，PPO 實驗延後。既有工作見[資源動態化與主動探索任務](.scratch/dynamic-resources-and-exploration/README.md)；尚未排入的想法見[後續構想](docs/future-ideas.md)。
+煙幕支援視野裁切、5 秒個體記憶與規則避險。視窗預設 1280×720，世界固定左側，右側保留可收合資料面板空間。操作與歷史驗收見[煙幕感知與觀察](docs/smoke-awareness.md)。
+
+本期規劃見[生存資源與 Environment 任務](.scratch/archive/survival-resources-and-environment/README.md)，01–07已完成，單體驗收與[生態觀察](docs/ecosystem-observation.md)已記錄，長期平衡仍待後續觀察，PPO 實驗延後；現行操作與資料契約見[四資源觀察與死亡診斷](docs/survival-resources.md)。既有工作見[資源動態化與主動探索任務](.scratch/archive/dynamic-resources-and-exploration/README.md)；尚未排入的想法見[後續構想](docs/future-ideas.md)。
 
 ## 執行
+
+果實供給與流轉的新一輪設計已確認，[正式規格與十三張任務](.scratch/fruit-supply-and-flow/README.md)已整理；2026-10-30 已於 `codex/fruit-supply-and-flow` 完成 01–10 機制／AI／畫面，11 記錄契約也已完成；使用者後續要求確認後停工，12／13 延後。新契約見[果實資料契約](docs/fruit-data-contract.md)，驗收與停工狀態見任務索引。下方舊版規則說明尚未全面更新，不視為新果實制規格。
+
+2026-10-30 已實作[輕量記錄與同建置錄製](docs/recording.md)：預設只留群體摘要，`-Record` 錄製所有輪次，正常提前停止仍可播放；`.simulation/` 保留最近五次輕量資料與一次成功錄製，新建置採用後淘汰舊資料。模型及自訂輸出不自動清理，歷史處置見[清理紀錄](docs/artifact-retention.md)。非受管產物採[LLM盤點清單、使用者預覽與手動清理](docs/legacy-artifact-cleanup.md)。
 
 在專案根目錄使用 PowerShell：
 
@@ -20,20 +26,20 @@
 ./scripts/world.ps1 -Mode train -NewExperiment -Visible
 ./scripts/world.ps1 -Mode train -TrainSteps 4096 -ResumeFrom './artifacts/runs/<首次輸出>'
 ./scripts/world.ps1 -Mode observe -ResumeFrom './artifacts/runs/<已保存執行>' -Visible
-./scripts/world.ps1 -Mode observe -ResumeFrom './artifacts/runs/<已保存執行>' -Steps 30000 -RecordEpisodes '1'
-./scripts/world.ps1 -Mode replay -ReplayFrom './artifacts/runs/<觀察輸出>/episode-1.replay.jsonl' -Visible
-./scripts/world.ps1 -Mode evaluate -ResumeFrom './artifacts/runs/<已保存執行>'
+./scripts/world.ps1 -Mode observe -ResumeFrom './artifacts/runs/<已保存執行>' -Steps 30000 -Record
+./scripts/world.ps1 -Mode replay -ReplayFrom '.simulation/<執行>/episode-1.replay.jsonl' -Visible
+./scripts/world.ps1 -Mode evaluate -ResumeFrom './artifacts/runs/<已保存執行>' -DiagnosticLog
 ```
 
-`forage -Visible` 可按 P 暫停／恢復、切換速度、滾輪縮放；點選個體查看健康、能量、年齡、兩個技能及局部視野，按「全景」返回。成長期個體較小。每輪結束停留在統計畫面，按「重建世界」開始下一輪，關閉視窗結束。四個大型黃色區域是產地，小型黃色區域是零散食物，亮度與大小反映存量。無畫面 `forage` 預設推進 12,000 步，可用 `-Steps` 指定步數；無畫面及指定正數步數的可見執行均在每輪結束後自動重建，直到指定總步數。兩種模式共用規則與固定步長。
+`forage -Visible` 可按 P 暫停／恢復、切換速度、滾輪縮放；點選個體查看健康、體力、魔力、飽食度、年齡、兩個技能及局部視野，按「全景」返回。成長期個體較小。每輪結束停留在統計畫面，按「重建世界」開始下一輪，關閉視窗結束。四個大型黃色區域是產地，小型黃色區域是零散食物，亮度與大小反映存量。無畫面 `forage` 預設推進 12,000 步，可用 `-Steps` 指定步數；無畫面及指定正數步數的可見執行均在每輪結束後自動重建，直到指定總步數。兩種模式共用規則與固定步長。
 
 ```powershell
 ./scripts/world.ps1 -Mode forage -Visible -Seed 7
 ./scripts/world.ps1 -Mode forage -Controller idle -Steps 8000
-./scripts/world.ps1 -Mode forage -ReloadRun './artifacts/runs/<輸出>/world.jsonl'
+./scripts/world.ps1 -Mode forage -ReloadRun '.simulation/<執行>/source.json'
 ```
 
-`-Controller idle` 停止移動、採食及技能，方便核對飢餓；`forage -Controller manual -Visible` 可用方向鍵移動、滑鼠瞄準、Q/E 轉向、空白鍵採食、A 攻擊（近戰／基本冰箭）、S/D 選擇兩欄技能，所有個體接收同一輸入，僅執行自己攜帶的技能。`-ReloadRun` 從 `skills-v1` 首筆紀錄重載完整配置、種子、控制模式及指定動作；規則、靜止及指定動作模式可重現執行序列，手動模式需再次輸入動作。此參數不能與 `-Seed`、`-Controller`、`-WorldConfig` 或 `-Scenario` 混用。舊版規則紀錄會拒絕重載。這不是歷史回放，也不承諾跨裝置逐影格一致。
+`-Controller idle` 停止移動、採食及技能，方便核對飢餓；`forage -Controller manual -Visible` 可用方向鍵走路、LeftShift奔跑、滑鼠瞄準、Q/E 轉向、空白鍵採食、A 攻擊（近戰／基本冰箭）、S/D 選擇兩欄技能，所有個體接收同一輸入，僅執行自己攜帶的技能。`-ReloadRun` 從 `source.json` 重載完整配置、種子、控制模式及指定動作；規則、靜止及指定動作模式可重現執行序列，手動模式需再次輸入動作。此參數不能與 `-Seed`、`-Controller`、`-WorldConfig` 或 `-Scenario` 混用。舊版規則紀錄會拒絕重載。這不是歷史回放，也不承諾跨裝置逐影格一致。
 
 固定場景可直接觀看接敵與技能：
 
@@ -44,7 +50,7 @@
 ./scripts/world.ps1 -Mode forage -WorldConfig training/scenarios/world.json -Scenario training/scenarios/moss.json -Visible
 ```
 
-受擊閃白，衝鋒及遁行有拖尾，線段表示獨立朝向；減速變藍、定身變紫、中毒偏綠。培育顯示黃圈，防禦姿態顯示青圈；陷阱與煙幕顯示於地面。點選查看攻擊／技能冷卻與作用狀態。固定場景每種一隻、20 秒一輪，關閉視窗結束；使用零基礎／移動耗能隔離技能成本，正式世界仍依原生存耗能執行。新技能場景、參數及證據見[三物種技能池](docs/skill-pools.md)；[三物種技能驗證](docs/combat.md)保留早期紀錄。
+受擊閃白，衝鋒及遁行有拖尾，線段表示獨立朝向；減速變藍、定身變紫、中毒偏綠。培育顯示黃圈，防禦姿態顯示青圈；陷阱與煙幕顯示於地面。點選查看攻擊／技能冷卻與作用狀態。固定場景每種一隻、20 秒一輪，關閉視窗結束；使用指定配置隔離技能成本，正式世界仍依原生存耗能執行。新技能場景、參數及證據見[三物種技能池](docs/skill-pools.md)；[三物種技能驗證](docs/combat.md)保留早期紀錄。
 
 `manual` 使用方向鍵控制所有個體；`bridge` 讓 Python 分別送出動作，同種個體也可移往不同方向。`-Visible` 顯示場景，省略時無畫面執行。
 
@@ -52,11 +58,11 @@
 
 `observe -ResumeFrom` 載入已保存策略，以固定模型控制新世界，不更新模型；可見模式持續到關閉，無畫面預設 512 世界步，可用 `-Steps` 指定。操作、個體視野與驗證紀錄見[即時觀察](docs/observation.md)。
 
-`-RecordEpisodes` 只完整記錄指定輪次；需讓該輪結束才能封裝。`replay` 從歷史快照還原，可前後拖動、暫停、調速與選取個體，不執行模型。操作、容量及完整性檢查見[指定場次回放](docs/replay.md)。
+`-Record` 完整記錄整次執行，重建時分段；正常提前停止仍可封裝。`replay` 從歷史快照還原，可前後拖動、暫停、調速與選取個體，不執行模型。操作、容量及完整性檢查見[指定場次回放](docs/replay.md)。
 
 `evaluate` 以來源配置及 10 組固定種子執行初始、規則與固定訓練策略對照，共 90 場；輸出離線族群曲線、逐配置統計、原始資料與三場代表回放。方法、實測與預算見[學習成效對照](docs/evaluation.md)。
 
-入口以專案根目錄定位 `.tools/unity/6000.0.85f1/Editor/Unity.exe`、`.venv/Scripts/python.exe` 及 `artifacts/runs`，可透過 `-Editor`、`-Python`、`-OutputRoot` 覆寫。每次執行產生獨立輸出目錄，不需要先啟用虛擬環境。
+入口以專案根目錄定位 `.tools/unity/6000.0.85f1/Editor/Unity.exe`、`.venv/Scripts/python.exe` ；模擬預設寫入 `.simulation/`，模型另存 `artifacts/runs`，可透過 `-Editor`、`-Python`、`-OutputRoot` 覆寫。每次執行產生獨立輸出目錄，不需要先啟用虛擬環境。
 
 ## 世界入口
 
@@ -72,7 +78,7 @@
 
 `training/world.json` 設定邊界、速度、步長、局部觀察半徑、輪次長度及增減事件。預設每物種兩隻，第 64 步各移除一隻、第 96 步各加入一隻，每 256 步重建世界。可複製配置後修改，透過 `-WorldConfig <路徑>` 載入；須滿足每物種至少兩隻及 `0 < removeStep < addStep < episodeSteps`。這些是訓練介面驗證事件，正式生命循環只在 `foraging` 配置啟用。
 
-`-Seed` 固定起始隨機序列。策略取得自身 11 維觀察及不含追蹤識別碼的可變長度視野／警戒觀察；敵人離開視野後只保留物種與最後位置五秒，友軍不保留。完整介面見[技能配置與視野決策](docs/loadout-and-perception.md)。`Flame`、`Frost`、`Moss` 對應三個 behavior，同物種個體使用同一套參數與訓練經驗。
+`-Seed` 固定起始隨機序列。策略取得自身 19 維觀察及不含追蹤識別碼的可變長度視野／警戒觀察；敵人離開視野後只保留物種與最後位置五秒，友軍不保留。完整介面見[技能配置與視野決策](docs/loadout-and-perception.md)。`Flame`、`Frost`、`Moss` 對應三個 behavior，同物種個體使用同一套參數與訓練經驗。
 
 `world.jsonl` 記錄執行識別、種子、規則版本、裝置、配置，以及輪次、世界步數、時間、個體狀態、增減事件與結束原因。世界個體編號跨輪次遞增，須與 run-id 一起識別；`unityObject` 僅供 Unity 物件追蹤。`bridge` 的 `connection.jsonl` 另記 Python 收到的 behavior、decision／terminal agent-id；ML-Agents 識別與世界個體編號屬不同命名空間。
 
@@ -80,7 +86,7 @@
 
 ## 人工核對
 
-1. 建置後開啟 `forage -Visible`，確認三色個體接近黃色食物；點選個體觀察能量補充及飢餓時健康下降。執行 `forage -Controller idle -Steps 8000`，核對死亡事件與再生不超出容量。用 `-ReloadRun` 重載同一紀錄，比較狀態與事件。
+1. 建置後開啟 `forage -Visible`，確認三色個體接近黃色食物；點選個體觀察飽食度補充及飢餓時健康下降。執行 `forage -Controller idle -Steps 8000`，核對死亡事件與再生不超出容量。用 `-ReloadRun` 重載同一紀錄，比較狀態與事件。
 2. 開啟 `manual`，確認三色個體可依方向鍵移動，族群依序由六隻變三隻、再恢復六隻。
 3. 執行 `bridge -Visible`，觀察同種個體可往不同方向移動、移除及新增；對照 `connection.jsonl` 的 terminal 與新識別。
 4. 以相同 `-Seed` 執行無畫面 `bridge`，核對 `bridge.json`，比對兩次 `world.jsonl` 的狀態及事件（排除 run-id、裝置與 Unity 物件識別）。

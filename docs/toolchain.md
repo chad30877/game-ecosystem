@@ -1,5 +1,7 @@
 # 工具鏈驗證紀錄
 
+> 2026-10-23 保存狀態更新：本文 artifacts 路徑保留為歷史驗證來源；大型原始紀錄與舊模型已淘汰，摘要及指定短回放的保存範圍見[產物清理紀錄](artifact-retention.md)。歷史操作範例須改用仍存在或新產生的來源。
+
 檢查日期：2026-10-20。任務 01 已完成建置、可見／無畫面往返與實際 PPO 更新驗證；這不代表已驗證學習品質改善。
 
 ## 版本與相容性
@@ -78,3 +80,11 @@ Python 訓練使用 `torch-device=cpu`，PyTorch 為 `2.5.1+cpu`、CUDA false；
 當時將完整基底複製到共用 `C:/Toolchains/game-ecosystem/cpython-3.10.12-windows-x86_64-none`，更新既有虛擬環境的 home，保留套件；原設定備份為 `C:/Toolchains/game-ecosystem/runs/pyvenv-before-shared-runtime.cfg`。複製前 C 槽剩餘約 70.3 GiB，基底大小約 111.1 MiB。新執行檔的 Windows 實際路徑確認仍為 `C:/Toolchains`，Python 3.10.12、PyTorch 2.5.1+cpu 匯入及 42 個套件的相依檢查通過。後續再依使用者要求遷入專案，現行配置見上表。
 
 修復後透過 Windows PowerShell 5.1 完成可見 bridge 512 步，輸出為 `C:/Toolchains/game-ecosystem/runs/bridge-20261020-145451-63788c10`；使用者亦在原本出錯的 PowerShell 視窗重跑 `./scripts/world.ps1 -Mode bridge -Visible`，確認可以正常執行。
+
+## PowerShell 腳本編碼
+
+含繁體中文的 `.ps1` 檔案須保存為 UTF-8 BOM，遵循根目錄 `.editorconfig`。無 BOM 時，Windows PowerShell 5.1 可能以碼頁 950 讀取，導致中文亂碼及連鎖解析錯誤；此時尚未啟動 Unity，與虛擬環境無關。
+
+修改啟動腳本後執行 `./scripts/check-world-script.ps1`，預設檢查 scripts 內全部 `.ps1` 的 BOM 及語法；在 PowerShell 7 下會另外呼叫已安裝的 Windows PowerShell 5.1 實際解析。也可執行 `powershell.exe -NoProfile -File scripts/check-world-script.ps1`，或用 `-Path` 指定單一檔案。人工確認方式：在原本的 PowerShell 視窗執行 `./scripts/world.ps1 -Mode forage -Visible`，確認世界視窗開啟後關閉。
+
+2026-10-29 再次修復：先前以 `.NET UTF8Encoding(false)` 寫回 world.ps1，遺失既有 BOM；新建的 check-smoke-baseline.ps1 亦缺少 BOM。PowerShell 7 可解析而 5.1 以系統碼頁誤讀，僅驗證 7 因而漏掉回歸。兩份腳本只補回 BOM，原內容位元組保持一致；預設檢查已加入 BOM 判定與雙版本解析。已驗證缺 BOM 副本會明確失敗，三份腳本於 5.1／7 通過，並以 5.1 實際執行 `forage -Visible -Steps 2` 成功。證據存於 `artifacts/powershell-encoding/`；JSON、YAML 與日誌仍依各自格式使用無 BOM UTF-8，不套用 `.ps1` 規則。

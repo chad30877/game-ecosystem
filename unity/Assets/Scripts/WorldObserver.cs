@@ -17,6 +17,7 @@ namespace Ecosystem
         private Action<IndividualState> focus;
         private Font font;
         private int selected;
+        private int selectedSource;
         private int episode;
         private float speed = 1f;
         private bool paused;
@@ -30,14 +31,52 @@ namespace Ecosystem
         private Rect toolbar;
         private Rect inspector;
         private Vector2 scroll;
+        private Rect viewport;
+        private bool panelExpanded = true;
+        private bool overviewFit = true;
+        private bool diagnostics;
+        private string lastLayout = "";
 
-        public void Initialize(World source, Camera camera, string controlMode, Action onRebuild, Action onQuit, Action<IndividualState> onFocus, WorldReplay history = null, Action<int> onSeek = null)
+        private void UpdateLayout()
+        {
+            toolbar = new Rect(8, 8, Screen.width - 16, replay == null ? 108 : 148);
+            bool details = (selected != 0 || selectedSource != 0) && panelExpanded;
+            float width = Mathf.Min(360, Screen.width * 0.32f);
+            inspector = details ? new Rect(Screen.width - width - 8, toolbar.yMax + 8, width, Screen.height - toolbar.yMax - 16) : new Rect();
+            viewport = new Rect(8, toolbar.yMax + 8, Screen.width - width - 24, Screen.height - toolbar.yMax - 16);
+            worldCamera.pixelRect = new Rect(viewport.x, Screen.height - viewport.yMax, viewport.width, viewport.height);
+            if (Selection == null && overviewFit)
+            {
+                worldCamera.transform.position = new Vector3(0, 0, -10);
+                worldCamera.orthographicSize = (world.Config.halfExtent + 1) * Mathf.Max(1, viewport.height / viewport.width);
+            }
+            if (diagnostics)
+            {
+                string layout = JsonUtility.ToJson(new LayoutRecord { width = Screen.width, height = Screen.height,
+                    selected = selected, selectedSource = selectedSource, expanded = panelExpanded, viewport = viewport, toolbar = toolbar, inspector = inspector,
+                    center = worldCamera.transform.position, scale = worldCamera.orthographicSize });
+                if (layout != lastLayout) { Debug.Log("observer_layout " + layout); lastLayout = layout; }
+            }
+        }
+
+        [Serializable]
+        private sealed class LayoutRecord
+        {
+            public int width, height, selected, selectedSource;
+            public bool expanded;
+            public Rect viewport, toolbar, inspector;
+            public Vector3 center;
+            public float scale;
+        }
+
+        public void Initialize(World source, Camera camera, string controlMode, Action onRebuild, Action onQuit, Action<IndividualState> onFocus, WorldReplay history = null, Action<int> onSeek = null, bool logLayout = false)
         {
             world = source;
             replay = history;
             seek = onSeek;
             worldCamera = camera;
             mode = controlMode;
+            diagnostics = logLayout;
             rebuild = onRebuild;
             quit = onQuit;
             focus = onFocus;
@@ -59,6 +98,7 @@ namespace Ecosystem
         }
 
         private IndividualState Selection => world.State.individuals.Find(value => value.individual == selected);
+        private FoodState SourceSelection => world.State.foods.Find(value => value.food == selectedSource);
 
         public void Pause() => SetPaused(true);
         public void ClearFeedback() { feedback = notice = ""; feedbackUntil = noticeUntil = 0; }
@@ -72,12 +112,14 @@ namespace Ecosystem
         private void Update()
         {
             if (world == null) return;
+            UpdateLayout();
             if (Input.GetKeyDown(KeyCode.P)) SetPaused(!paused);
             var pointer = new Vector2(Input.mousePosition.x, Screen.height - Input.mousePosition.y);
-            if (toolbar.Contains(pointer) || (selected != 0 && inspector.Contains(pointer))) return;
+            if (!viewport.Contains(pointer)) return;
             float wheel = Input.mouseScrollDelta.y;
             if (wheel != 0)
             {
+                overviewFit = false;
                 var before = worldCamera.ScreenToWorldPoint(Input.mousePosition);
                 worldCamera.orthographicSize = Mathf.Clamp(worldCamera.orthographicSize * Mathf.Pow(0.85f, wheel), 1f, (world.Config.halfExtent + 1) * 2);
                 worldCamera.transform.position += before - worldCamera.ScreenToWorldPoint(Input.mousePosition);
@@ -88,6 +130,15 @@ namespace Ecosystem
             var nearest = world.State.individuals.Where(value => current == null || value == current || world.CanSee(current, value))
                 .OrderBy(value => Vector2.Distance(CombatRules.Position(value), point)).FirstOrDefault();
             selected = nearest != null && Vector2.Distance(CombatRules.Position(nearest), point) <= 0.8f ? nearest.individual : 0;
+            selectedSource = 0;
+            if (selected == 0)
+            {
+                var source = world.State.foods.Where(value => current == null || world.CanSeePoint(current, new Vector2(value.x, value.y)))
+                    .OrderBy(value => Vector2.Distance(new Vector2(value.x, value.y), point)).FirstOrDefault();
+                if (source != null && Vector2.Distance(new Vector2(source.x, source.y), point) <= 1.5f)
+                    selectedSource = source.food;
+                else overviewFit = true;
+            }
             feedback = "";
             scroll = Vector2.zero;
         }
@@ -95,10 +146,11 @@ namespace Ecosystem
         private void LateUpdate()
         {
             if (world == null) return;
+            UpdateLayout();
             if (episode != world.State.episode)
             {
                 episode = world.State.episode;
-                selected = 0;
+                selected = selectedSource = 0;
                 feedback = notice = "";
             }
             var individual = Selection;
@@ -107,11 +159,21 @@ namespace Ecosystem
                 var death = world.State.deaths.Find(value => value.individual == selected);
                 notice = $"#{selected} {(death == null ? "已離開" : "已死亡・" + DeathName(death.cause))}";
                 noticeUntil = Time.unscaledTime + 4;
-                selected = 0;
+                if (death == null) selected = 0;
                 feedback = "";
             }
             focus(individual);
-            selectionRing.enabled = fieldOfView.enabled = individual != null;
+            var source = SourceSelection;
+            if (selectedSource != 0 && source == null) selectedSource = 0;
+            selectionRing.enabled = individual != null || source != null;
+            fieldOfView.enabled = individual != null;
+            if (source != null)
+            {
+                float radius = world.State.fruitInformationAvailable ? SourcePlacementRules.Radius(world.Config, source.growthType) : source.patch ? 1.3f : .45f;
+                for (int i = 0; i <= 32; i++) selectionRing.SetPosition(i, new Vector3(source.x + Mathf.Cos(i * Mathf.PI / 16) * radius,
+                    source.y + Mathf.Sin(i * Mathf.PI / 16) * radius, -.5f));
+                return;
+            }
             if (individual == null) return;
             Vector3 center = new Vector3(individual.x, individual.y, -0.5f);
             for (int i = 0; i <= 32; i++)
@@ -152,7 +214,10 @@ namespace Ecosystem
             GUI.skin.font = font;
             GUI.skin.label.fontSize = 16;
             GUI.skin.label.wordWrap = true;
-            toolbar = new Rect(8, 8, Screen.width - 16, replay == null ? 100 : 140);
+            UpdateLayout();
+            GUI.color = worldCamera.backgroundColor;
+            GUI.DrawTexture(new Rect(viewport.xMax, toolbar.yMax, Screen.width - viewport.xMax, Screen.height - toolbar.yMax), Texture2D.whiteTexture);
+            GUI.color = Color.white;
             GUILayout.BeginArea(toolbar, GUI.skin.box);
             GUILayout.BeginHorizontal();
             GUILayout.Label(ModeName(), GUILayout.Width(180));
@@ -170,17 +235,21 @@ namespace Ecosystem
             GUILayout.Label(current == null
                 ? string.Join("　", world.State.statistics.Select(value => $"{SpeciesName(value.species)} {value.incompleteLives}（+{value.births} / −{value.combat + value.starved + value.oldAge}）"))
                 : "可見　" + string.Join("　", World.Species.Select(species => $"{SpeciesName(species)} {current.perception.Count(value => value.visible && value.species == species)}")));
+            if (world.State.deaths.Count > 0 && GUILayout.Button($"死亡 {world.State.deaths.Count}", GUILayout.Width(72)))
+                selected = world.State.deaths[world.State.deaths.Count - 1].individual;
             if (GUILayout.Button("全景", GUILayout.Width(60)))
             {
                 worldCamera.transform.position = new Vector3(0, 0, -10);
                 worldCamera.orthographicSize = world.Config.halfExtent + 1;
-                selected = 0;
+                selected = selectedSource = 0;
+                overviewFit = true;
             }
+            if ((selected != 0 || selectedSource != 0) && GUILayout.Button(panelExpanded ? "收合資料" : "展開資料", GUILayout.Width(80))) panelExpanded = !panelExpanded;
             if (GUILayout.Button(replay == null ? "重建世界" : "回到開頭", GUILayout.Width(88))) rebuild();
             if (GUILayout.Button(mode == "training" ? "保存並結束" : "結束", GUILayout.Width(100))) quit();
             GUILayout.EndHorizontal();
             string end = world.State.endReason == "all_dead" ? "全體死亡" : world.State.endReason == "time_limit" ? "時間上限" : "";
-            GUILayout.Label(end != "" ? $"本輪結束・{end}" : Time.unscaledTime < noticeUntil ? notice : selected == 0 ? "點選個體　滾輪縮放" : "個體視野・點選空白或全景返回");
+            GUILayout.Label(end != "" ? $"本輪結束・{end}" : Time.unscaledTime < noticeUntil ? notice : selected == 0 && selectedSource == 0 ? "點選個體或來源　滾輪縮放" : selectedSource != 0 ? "來源・點選空白或全景返回" : "個體視野・點選空白或全景返回");
             if (replay != null)
             {
                 GUILayout.BeginHorizontal();
@@ -191,13 +260,42 @@ namespace Ecosystem
             }
             GUILayout.EndArea();
             var individual = Selection;
-            if (individual == null) return;
-            inspector = new Rect(Screen.width - Mathf.Min(360, Screen.width - 16) - 8, toolbar.yMax + 8, Mathf.Min(360, Screen.width - 16), Screen.height - toolbar.yMax - 16);
+            if (individual == null)
+            {
+                if (SourceSelection != null && panelExpanded) { DrawSource(SourceSelection); return; }
+                var death = world.State.deaths.Find(value => value.individual == selected);
+                if (death != null && panelExpanded) DrawDeath(death);
+                return;
+            }
+            if (panelExpanded)
+            {
             GUILayout.BeginArea(inspector, GUI.skin.box);
             scroll = GUILayout.BeginScrollView(scroll);
             GUILayout.Label($"#{individual.individual}　{SpeciesName(individual.species)}");
-            GUILayout.Label($"健康 {individual.health:F1} / {CombatRules.MaxHealth(individual.species):g}　能量 {individual.energy:F1} / 100");
-            GUILayout.Label($"年齡 {individual.age:F1}　{(individual.age < world.Config.maturityAge ? "成長期" : "成年")}　繁殖 {individual.reproductionCooldown:F1}s");
+            GUILayout.Label($"健康 {individual.health:F1} / {CombatRules.CurrentMaxHealth(world.Config, individual):F1}　飽食度 {individual.satiety:F1} / 100\n{(individual.running ? "奔跑" : "走路")}　體力 {individual.stamina:F1}　魔力 {individual.mana:F1}");
+            GUILayout.Label($"營養恢復 {string.Join(" / ", individual.recoveryStatus)}\n基礎 {individual.basalSpent:F1}　進食 {individual.foodReceived:F1}　營養支出 {individual.nutritionSpent:F1}\n活動體力 {individual.activityStaminaSpent:F1}　技能魔力 {individual.skillManaSpent:F1}　繁殖 {individual.reproductionSpent:F1}");
+            GUILayout.Label($"決策 {DecisionName(individual.decisionReason)}　{(individual.hasFoodTarget ? $"食物 {individual.foodTargetX:F1},{individual.foodTargetY:F1}" : "")}");
+            GUILayout.Label($"觀測 {individual.observedSeconds:F1}s　{(individual.initialAdult ? "起始成年" : "本輪出生")}");
+            if (individual.protectionChild != 0) GUILayout.Label($"保護 #{individual.protectionChild}　威脅 #{individual.protectionThreat}");
+            if (world.State.fruitInformationAvailable)
+            {
+                GUILayout.Label($"攜果 {individual.ownFruits.Count}/{FoodOperations.Capacity(world.Config, individual)}　走速 {FoodOperations.LoadMultiplier(world.State, individual):P0}");
+                GUILayout.Label($"新鮮 {individual.ownFruits.Count(f => f.freshness == FruitFreshness.Fresh)}　將腐爛 {individual.ownFruits.Count(f => f.freshness == FruitFreshness.NearRot)}");
+                if (individual.foodOperation != FoodAction.None) GUILayout.Label($"{FoodActionName(individual.foodOperation)} {individual.operationProgress:F1}s" +
+                    (individual.operationTarget != 0 ? $"　↔ #{individual.operationTarget}" : ""));
+                if (individual.reservedCapacity > 0) GUILayout.Label("接收預留 1 格");
+                if (individual.species == "Moss" && individual.productionDecision != "") GUILayout.Label($"生產 {DecisionName(individual.productionDecision)}");
+                if (individual.species == "Moss" && individual.productionStopReason != "") GUILayout.Label($"停止 {DecisionName(individual.productionStopReason)}");
+                if (diagnostics) GUILayout.Label($"世界真值・持果 {FoodOperations.Carried(world.State, individual)}");
+            }
+            else
+            {
+                GUILayout.Label("果實資訊未提供");
+            GUILayout.Label($"餵養 {(individual.careTarget != 0 ? $"#{individual.careTarget}" : individual.careReceivedFrom != 0 ? $"來自 #{individual.careReceivedFrom}" : "無")}　付出 {individual.careGiven:F1}　取得 {individual.careReceived:F1}");
+            }
+            DrawLedger(individual.ledger);
+            DrawRecoveries(individual.automaticRecovered, individual.nutritionRecovered);
+            GUILayout.Label($"年齡 {individual.age:F1}　成長 {CombatRules.Growth(world.Config, individual):P0}　{(individual.age < world.Config.maturityAge ? "成長期" : "成年")}　繁殖 {individual.reproductionCooldown:F1}s");
             GUILayout.Label($"普通攻擊　{(individual.species == "Moss" ? "無" : individual.attackCooldown > 0 ? $"冷卻 {individual.attackCooldown:F1}s" : "就緒")}");
             for (int slot = 0; slot < individual.loadout.Length; slot++)
                 GUILayout.Label($"{slot + 1}　{SkillName(individual.loadout[slot])}　{Availability(individual, slot)}");
@@ -217,10 +315,21 @@ namespace Ecosystem
             else if (individual.scanDeferred) GUILayout.Label($"掃視暫緩　{ScanReason(individual.scanReason)}　{individual.scanDeferredSeconds:F1}s");
             else if (individual.rawTurn != 0) GUILayout.Label($"主動轉向　{individual.rawTurn}");
             GUILayout.Label($"可見 {individual.perception.Count(value => value.visible)}　警戒記憶 {individual.perception.Count(value => !value.visible)}　區域 {individual.areaMemory.Count}");
+            if (!individual.smokeKnowledgeAvailable) GUILayout.Label("煙幕情報未記錄");
+            foreach (var smoke in individual.smokeKnowledge)
+                GUILayout.Label($"煙幕 {(smoke.visible ? "可見" : "記憶")}・{(smoke.harmful ? "有害" : "無毒")} ({smoke.x:F1}, {smoke.y:F1}) r{smoke.radius:F1}　{world.State.time - smoke.lastSeenAt:F1}s");
             var reward = world.State.rewards.Find(value => value.individual == selected);
             if (reward != null) GUILayout.Label($"探索 {individual.rewardedCells.Count} 格　累計 {individual.explorationRewardTotal:F4}　此步 {reward.exploration:F4}");
+            if (individual.parentId != 0) GUILayout.Label($"親代 #{individual.parentId}");
+            foreach (var child in individual.children)
+                GUILayout.Label($"子女 #{child.child}　{(child.confirmedDead ? "確認死亡" : child.visible ? "可見" : "最後觀察")} ({child.x:F1}, {child.y:F1})　{child.lastSeenAt:F1}s　推測年齡 {child.predictedAge:F1}、飽食 {child.predictedSatiety:F1}{(child.searched ? "　已搜尋" : "")}");
+            GUILayout.Label("最後觀察／推測");
             foreach (var food in individual.visibleFoods.Concat(individual.foodMemory.Where(value => !value.visible)))
-                GUILayout.Label($"食物 ({food.x:F1}, {food.y:F1})　{(food.visible ? "可見" : world.State.time - food.lastSeenAt >= world.Config.foodMemorySeconds ? "舊情報" : "記憶")}　{(food.mature && food.phase == FoodPhase.Available ? "可採" : food.phase == FoodPhase.Resting ? "休養" : "成長中")}　{food.amount:F1}");
+                GUILayout.Label(world.State.fruitInformationAvailable
+                    ? $"來源 #{food.food}　{(food.visible ? "可見" : food.stale ? "陳舊・待確認" : "記憶")}　{PhaseName(food.phase)}　果實 {food.fruits.Count}"
+                    : $"食物 ({food.x:F1}, {food.y:F1})　{(food.visible ? "可見" : world.State.time - food.lastSeenAt >= world.Config.foodMemorySeconds ? "舊情報" : "記憶")}　{(food.mature && food.phase == FoodPhase.Available ? "可採" : food.phase == FoodPhase.Resting ? "休養" : "成長中")}　{food.amount:F1}{(food.possiblyAvailable ? "　推測可能恢復" : "")}");
+            foreach (var known in individual.foodInteractions)
+                GUILayout.Label($"#{known.individual} {(known.visible ? "可見" : "最後觀察")}　持果 {(known.known ? known.carriedCount.ToString() : "未知")}　{FoodActionName(known.operation)}");
             foreach (var entity in individual.perception.Where(value => !value.visible))
                 GUILayout.Label($"{SpeciesName(entity.species)} 最後位置 ({entity.x:F1}, {entity.y:F1})　{entity.age:F1}s 前");
             foreach (var target in world.State.individuals.Where(value => world.CanSee(individual, value)))
@@ -230,24 +339,25 @@ namespace Ecosystem
             }
             GUILayout.EndScrollView();
             GUILayout.EndArea();
+            }
             foreach (var memory in individual.perception.Where(value => !value.visible))
             {
                 var point = worldCamera.WorldToScreenPoint(new Vector3(memory.x, memory.y, 0));
                 var rect = new Rect(point.x - 40, Screen.height - point.y - 12, 100, 24);
-                if (point.z > 0 && !toolbar.Overlaps(rect) && !inspector.Overlaps(rect)) GUI.Label(rect, $"◇ {SpeciesName(memory.species)}");
+                if (point.z > 0 && viewport.Contains(rect.min) && viewport.Contains(rect.max)) GUI.Label(rect, $"◇ {SpeciesName(memory.species)}");
             }
             foreach (var food in individual.foodMemory.Where(value => !value.visible))
             {
                 var point = worldCamera.WorldToScreenPoint(new Vector3(food.x, food.y, 0));
                 var rect = new Rect(point.x - 40, Screen.height - point.y - 12, 100, 24);
-                if (point.z > 0 && !toolbar.Overlaps(rect) && !inspector.Overlaps(rect)) GUI.Label(rect, "◇ 食物");
+                if (point.z > 0 && viewport.Contains(rect.min) && viewport.Contains(rect.max)) GUI.Label(rect, "◇ 食物");
             }
         }
 
         private string Availability(IndividualState individual, int slot)
         {
             if (individual.skillCooldowns[slot] > 0) return $"冷卻 {individual.skillCooldowns[slot]:F1}s";
-            if (individual.energy < SkillRules.EnergyCost(world.Config.combat, individual.loadout[slot])) return "能量不足";
+            if (individual.mana < (world.State.fruitInformationAvailable && individual.loadout[slot] == WorldSkill.Cultivate ? .000001f : SkillRules.ManaCost(world.Config.combat, individual.loadout[slot]))) return "魔力不足";
             if (individual.chargeRemaining > 0 || individual.dashRemaining > 0 || individual.windupActiveThisStep || individual.cultivateRemaining > 0) return "施放中";
             if (individual.loadout[slot] == WorldSkill.ColdMistDash && individual.rootRemaining > 0) return "定身中";
             return "就緒";
@@ -258,10 +368,10 @@ namespace Ecosystem
             if (individual.rootRemaining > 0) yield return $"定身 {individual.rootRemaining:F1}s";
             if (individual.slowRemaining > 0) yield return $"減速 {individual.slowRemaining:F1}s";
             if (individual.poisonStacks > 0) yield return $"中毒 {individual.poisonStacks} 層 / {Mathf.Max(0, individual.poisonUntil - world.State.time):F1}s";
-            if (individual.dashRemaining > 0) yield return $"寒霧遁行 {individual.dashRemaining:F1}m";
-            if (individual.chargeRemaining > 0) yield return $"烈焰衝鋒 {individual.chargeRemaining:F1}m";
+            if (individual.dashRemaining > 0) yield return $"寒霧遁行 {(world.State.fruitInformationAvailable ? individual.dashRemaining / world.Config.combat.dashSpeed : individual.dashRemaining):F1}{(world.State.fruitInformationAvailable ? "s" : "m")}";
+            if (individual.chargeRemaining > 0) yield return $"烈焰衝鋒 {(world.State.fruitInformationAvailable ? individual.chargeRemaining / world.Config.combat.chargeSpeed : individual.chargeRemaining):F1}{(world.State.fruitInformationAvailable ? "s" : "m")}";
             if (individual.shieldRemaining > 0) yield return $"防禦 → 自身 {individual.shieldRemaining:F1}s";
-            if (individual.cultivateRemaining > 0) yield return $"培育 {individual.cultivateRemaining:F1}s";
+            if (individual.cultivateRemaining > 0) yield return world.State.fruitInformationAvailable ? "培育中" : $"培育 {individual.cultivateRemaining:F1}s";
             if (individual.windupRemaining > 0) yield return $"{(individual.windupSkill == WorldSkill.None ? "普通冰箭" : SkillName(individual.windupSkill))} 前搖 {individual.windupRemaining:F1}s";
             foreach (var bias in individual.movementBiases.Where(value => value.until > world.State.time))
                 yield return $"{SkillName(bias.skill)} 偏向 {bias.until - world.State.time:F1}s{(individual.rootRemaining > 0 ? "（定身暫緩）" : "")}";
@@ -276,15 +386,104 @@ namespace Ecosystem
         private static string DeathName(string cause) => cause == "old_age" ? "老死" : cause == "starved" ? "飢餓" : "戰鬥";
         private static string ScanReason(string reason) => reason switch
         {
-            ScanReasons.Energy => "能量不足", ScanReasons.Escape => "撤退中", ScanReasons.Threat => "近迫威脅", _ => reason
+            ScanReasons.Energy => "營養不足", ScanReasons.Escape => "撤退中", ScanReasons.Threat => "近迫威脅", _ => reason
         };
         private static string SpeciesName(string species) => species == "Flame" ? "炎角獸" : species == "Frost" ? "霜羽獸" : "苔靈";
+        private void DrawSource(FoodState source)
+        {
+            GUILayout.BeginArea(inspector, GUI.skin.box);
+            GUILayout.Label($"來源 #{source.food}　{(source.patch || source.growthType == FoodGrowthType.Large ? "大型" : "小型")}");
+            if (world.State.fruitInformationAvailable)
+            {
+                var fruits = world.State.fruits.Where(f => f.source == source.food).ToList();
+                GUILayout.Label($"{PhaseName(source.phase)}　果實 {fruits.Count}");
+                GUILayout.Label($"新鮮 {fruits.Count(f => !f.NearRot(world.State.time))}　將腐爛 {fruits.Count(f => f.NearRot(world.State.time))}");
+                if (diagnostics)
+                {
+                    GUILayout.Space(8);
+                    GUILayout.Label("世界真值・診斷");
+                    GUILayout.Label($"年齡 {world.State.time - source.bornAt:F1}s　階段進度 {source.phaseProgress:F1}");
+                    foreach (var fruit in fruits) GUILayout.Label($"#{fruit.fruit}　保存 {Mathf.Max(0, fruit.expiresAt - world.State.time):F1}s");
+                }
+            }
+            else { GUILayout.Label($"存量 {source.amount:F1}"); GUILayout.Label("果實資訊未提供"); }
+            GUILayout.EndArea();
+        }
+        private static string PhaseName(FoodPhase phase) => phase switch
+        { FoodPhase.Recovering => "發育", FoodPhase.Available => "結果", FoodPhase.Waiting => "等待", FoodPhase.Resting => "休養", _ => "" };
+        private static string FoodActionName(FoodAction action) => action switch
+        { FoodAction.Gather => "採集", FoodAction.Pickup => "拾取", FoodAction.Eat => "進食", FoodAction.Deliver => "交付",
+            FoodAction.Receive => "接收", FoodAction.Drop => "放下", _ => "" };
+
         private static string EffectName(string kind) => kind switch
         {
             "trap_triggered" => "陷阱定身", "poison_applied" => "中毒", "poison_damage" => "毒傷",
             "charge_hit" => "衝鋒命中", "hot_strike_hit" => "猛擊命中", "frostbind_hit" => "霜縛箭命中",
             "piercing_hit" => "穿透冰矢命中", _ => "命中"
         };
+        private static void DrawLedger(ResourceLedger ledger)
+        {
+            if (ledger == null) return;
+            string[] labels = { "健康", "體力", "魔力", "飽食" };
+            for (int i = 0; i < 4; i++)
+                GUILayout.Label($"{labels[i]} {ledger.opening[i]:F1} +{ledger.income[i]:F1} −{ledger.expense[i]:F1} = {ledger.closing[i]:F1}");
+        }
+
+        private static void DrawRecoveries(float[] automatic, float[] nutrition)
+        {
+            GUILayout.Label($"自動恢復 健{automatic[0]:F1}／體{automatic[1]:F1}／魔{automatic[2]:F1}\n營養恢復 健{nutrition[0]:F1}／體{nutrition[1]:F1}／魔{nutrition[2]:F1}");
+        }
+
+        private void DrawDeath(DeathRecord death)
+        {
+            GUILayout.BeginArea(inspector, GUI.skin.box);
+            scroll = GUILayout.BeginScrollView(scroll);
+            int index = world.State.deaths.IndexOf(death);
+            GUILayout.BeginHorizontal();
+            if (index > 0 && GUILayout.Button("上一筆")) selected = world.State.deaths[index - 1].individual;
+            if (index + 1 < world.State.deaths.Count && GUILayout.Button("下一筆")) selected = world.State.deaths[index + 1].individual;
+            GUILayout.EndHorizontal();
+            GUILayout.Label($"#{death.individual}　{SpeciesName(death.species)}・{DeathName(death.cause)}");
+            GUILayout.Label($"{(death.initialAdult ? "起始成年" : "本輪出生")}　年齡 {death.age:F1}s\n觀測存活 {death.observedSeconds:F1}s　死亡 {death.time:F1}s");
+            GUILayout.Label($"戰鬥傷害 {death.combatDamage:F1}　飢餓傷害 {death.starvationDamage:F1}\n最近戰鬥 {death.lastCombatDamageKind}　來源 #{death.lastCombatDamageSource}");
+            GUILayout.Label($"最近進食 {death.lastAteAt:F1}s　繁殖 {death.lastReproducedAt:F1}s\n營養恢復 {death.lastNutritionAt:F1}s　{DecisionName(death.decisionReason)}");
+            DrawLedger(death.ledger);
+            DrawRecoveries(death.automaticRecovered, death.nutritionRecovered);
+            GUILayout.Label($"基礎 {death.basalSpent:F1}　進食 {death.foodReceived:F1}　營養支出 {death.nutritionSpent:F1}\n活動體力 {death.activityStaminaSpent:F1}　技能魔力 {death.skillManaSpent:F1}　繁殖 {death.reproductionSpent:F1}");
+            if (death.history != null)
+                foreach (var sample in death.history)
+                {
+                    string text = $"{sample.time:F1}s　{sample.resources[0]:F1}/{sample.resources[1]:F1}/{sample.resources[2]:F1}/{sample.resources[3]:F1}　{DecisionName(sample.decision)}\n{(sample.running ? "跑" : "走")}　戰鬥 {sample.combatDamage:F1}　飢餓 {sample.starvationDamage:F1}　{string.Join("/", sample.recoveryStatus)}";
+                    if (replay != null)
+                    {
+                        if (GUILayout.Button(text)) seek(Mathf.Clamp(Mathf.RoundToInt(sample.time / world.Config.stepSeconds), 0, replay.Count - 1));
+                    }
+                    else GUILayout.Label(text);
+                }
+            GUILayout.EndScrollView();
+            GUILayout.EndArea();
+        }
+
+        private static string DecisionName(string reason) => reason switch
+        {
+            "cultivate" => "培育", "sow" => "播種", "no_skill" => "無培育技能", "danger" => "避險",
+            "no_mana" => "魔力不足", "other_cultivator" => "已有培育者", "local_supply" => "利用既有來源",
+            "waiting" => "等待供給", "sow_low_mana" => "保留魔力", "cannot_wait" => "無法等待", "full" => "滿載",
+            "sow_cooldown" => "播種冷卻", "sow_retry" => "重新評估", "sow_no_space" => "尋找空間",
+            "food_priority" => "食物優先", "care_priority" => "照顧優先", "other_priority" => "其他行動",
+            "eat_fruit" => "進食", "gather_fruit" => "採集", "pickup_fruit" => "拾取", "receive_fruit" => "接收",
+            "care_deliver" => "送果", "care_approach" => "接近子女", "food_approach" => "接近果實", "food_revisit" => "回訪果實",
+            "escape_drop" => "減重", "care_swap" => "換果送養", "source_revisit" => "確認來源",
+            "cultivate_source" => "培育", "sow_source" => "播種",
+            "smoke_exit" => "離開煙幕", "smoke_avoid" => "繞避煙幕", "smoke_cross" => "緊急穿越",
+            "protect_child" => "保護子女", "protection_retreat" => "保護撤退",
+            "search_child" => "尋找子女",
+            "approach_parent" => "靠近親代",
+            "care_feed" => "餵養", "explore" => "探索", "food_prediction" => "回訪推測", "food_lost" => "來源耗盡", "forage" => "覓食", "feed" => "進食",
+            "contest" => "爭食", "contest_approach" => "接近補給", "switch_food" => "換點",
+            "retreat" => "撤退", "rest" => "休息", "walk_recover" => "步行恢復", _ => reason
+        };
+
         private static string SkillName(WorldSkill skill) => skill switch
         {
             WorldSkill.Charge => "烈焰衝鋒", WorldSkill.HotStrike => "熾熱猛擊", WorldSkill.Shield => "防禦姿態",

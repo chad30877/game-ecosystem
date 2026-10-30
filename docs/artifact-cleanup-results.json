@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "method": "使用者手動套用，LLM核對",
+  "appliedAt": "2026-10-30T07:00:13.4022719Z",
+  "verifiedAt": "2026-10-30T07:12:22.292083+00:00",
+  "plan": "scripts/legacy-artifacts-20261030.json",
+  "planSha256": "c30a946d8c87c33c1181752b485f659a1783c8b4f86de7f3a3e259d5a32c1f7c",
+  "sourceAudit": "artifacts/cleanup-20261030/manual-apply-20261030-145852-63af684aa3f249dabe13a87ef4b2098d.jsonl",
+  "deleted": 384,
+  "deletedBytes": 24032917856,
+  "remaining": 0,
+  "unknownBuild": 383,
+  "groups": {
+    "cultivate-comparison-20261028-154847": 16,
+    "ecosystem-ticket07-probes-reviewed": 8,
+    "fruit-supply": 25,
+    "juvenile-benchmark-20261028": 18,
+    "juvenile-ecology-20261028": 54,
+    "juvenile-ecology-bridge": 1,
+    "juvenile-ecology-headless-ok": 3,
+    "juvenile-ecology-integrated": 2,
+    "juvenile-ecology-replay": 1,
+    "juvenile-ecology-visible-ok": 3,
+    "juvenile-family-20261028": 23,
+    "juvenile-feeding-20261028": 34,
+    "juvenile-food-memory-20261028": 17,
+    "juvenile-growth-20261028": 14,
+    "juvenile-protection-20261028": 35,
+    "juvenile-review-20261028": 34,
+    "juvenile-skills-20261028": 52,
+    "observer-large-layout": 3,
+    "powershell-encoding": 1,
+    "runs": 4,
+    "smoke-validation": 36
+  },
+  "excludedFromPlan": [
+    ".simulation/",
+    "環境與工具快取",
+    "模型",
+    "artifacts/cleanup*/",
+    "artifacts/recording-validation/",
+    "正式Git文件及結果"
+  ],
+  "checks": {
+    "perFileAuditMatchesPlan": true,
+    "allPathsAbsent": true,
+    "fullRecordingRegression": "check-453e345e56c04bf48a17c420c2df6965.log：退出碼0",
+    "bridgeSteps": 512,
+    "bridgeObservations": 2886,
+    "terminalAgents": 12
+  }
+}

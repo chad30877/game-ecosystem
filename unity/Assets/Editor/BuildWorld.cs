@@ -12,6 +12,10 @@ namespace Ecosystem.Editor
         public static void Build()
         {
             Directory.CreateDirectory("Assets/Resources");
+            var identity = new ArtifactStore.BuildIdentity { build = Guid.NewGuid().ToString("N"),
+                root = Path.GetFullPath("../.simulation") };
+            File.WriteAllText("Assets/Resources/BuildIdentity.json", JsonUtility.ToJson(identity));
+            AssetDatabase.ImportAsset("Assets/Resources/BuildIdentity.json");
             const string materialPath = "Assets/Resources/WorldMaterial.mat";
             if (AssetDatabase.LoadAssetAtPath<Material>(materialPath) == null)
             {
@@ -25,9 +29,10 @@ namespace Ecosystem.Editor
             PlayerSettings.companyName = "Ecosystem";
             PlayerSettings.productName = "Ecosystem";
             PlayerSettings.defaultIsNativeResolution = false;
-            PlayerSettings.defaultScreenWidth = 960;
+            PlayerSettings.defaultScreenWidth = 1280;
             PlayerSettings.defaultScreenHeight = 720;
             PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
+            PlayerSettings.resizableWindow = true;
             AssetDatabase.SaveAssets();
             var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
             {
@@ -38,6 +43,8 @@ namespace Ecosystem.Editor
             });
             if (report.summary.result != BuildResult.Succeeded)
                 throw new Exception("世界建置失敗：" + report.summary.result);
+            ArtifactStore.WriteJson("Builds/build.json", identity);
+            new ArtifactStore(identity.root, identity.build).Adopt();
         }
     }
 }

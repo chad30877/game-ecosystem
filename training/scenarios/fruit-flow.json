@@ -1,0 +1,49 @@
+{
+  "actionVersion": 2,
+  "placements": [
+    {
+      "slot": 1,
+      "x": 0,
+      "y": 0,
+      "facing": 0
+    },
+    {
+      "slot": 2,
+      "x": 0.5,
+      "y": 0,
+      "facing": 180
+    }
+  ],
+  "fruits": [
+    {
+      "fruit": 9001,
+      "holderSlot": 1,
+      "ageSeconds": 5
+    }
+  ],
+  "commands": [
+    {
+      "slot": 1,
+      "fromStep": 1,
+      "toStep": 50,
+      "foodAction": "Deliver",
+      "fruit": 9001,
+      "recipientSlot": 2
+    },
+    {
+      "slot": 2,
+      "fromStep": 1,
+      "toStep": 50,
+      "foodAction": "Receive",
+      "fruit": 9001,
+      "recipientSlot": 1
+    },
+    {
+      "slot": 2,
+      "fromStep": 51,
+      "toStep": 150,
+      "foodAction": "Eat",
+      "fruit": 9001
+    }
+  ]
+}

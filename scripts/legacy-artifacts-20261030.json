@@ -1,0 +1,2312 @@
+{
+  "schema": 1,
+  "count": 384,
+  "bytes": 24032917856,
+  "originalInventorySha256": "5611b97066dc19e15b8d7a5a13a7c7ba9494a9a5fdac175a5015f6ab567bccd9",
+  "files": [
+    {
+      "path": "artifacts/cultivate-comparison-20261028-154847/control-101/forage-20261028-154916-c8452054/episode-1.replay.jsonl",
+      "bytes": 55721910,
+      "modifiedUnixMs": 1793173760939,
+      "sha256": "26b5a7d751f0c2e5f41f6699bd08a840241e10cad7529fb670ef7c6556551ce3"
+    },
+    {
+      "path": "artifacts/cultivate-comparison-20261028-154847/control-101/forage-20261028-154916-c8452054/episode-1.source.jsonl",
+      "bytes": 74342820,
+      "modifiedUnixMs": 1793173761909,
+      "sha256": "5da47b8521ec4007ef28a9435198466c5377a460bc2f1db16beccdea8f33440b"
+    },
+    {
+      "path": "artifacts/cultivate-comparison-20261028-154847/control-101/forage-20261028-154916-c8452054/record-source.jsonl",
+      "bytes": 74342820,
+      "modifiedUnixMs": 1793173758580,
+      "sha256": "5da47b8521ec4007ef28a9435198466c5377a460bc2f1db16beccdea8f33440b"
+    },
+    {
+      "path": "artifacts/cultivate-comparison-20261028-154847/control-101/forage-20261028-154916-c8452054/world.jsonl",
+      "bytes": 385788,
+      "modifiedUnixMs": 1793173758580,
+      "sha256": "6e483e2c9a543c429c5b1ae640f818638b857aaf5019b2a299ce1413d5b7d32a"
+    },
+    {
+      "path": "artifacts/cultivate-comparison-20261028-154847/control-102/forage-20261028-154931-212bfcf0/episode-1.replay.jsonl",
+      "bytes": 55721910,
+      "modifiedUnixMs": 1793173775984,
+      "sha256": "b43e17f3c029d33e79c53bdbbd12b150ef9ff55a16e9d0ff2db829a9d2c8c91d"
+    },
+    {
+      "path": "artifacts/cultivate-comparison-20261028-154847/control-102/forage-20261028-154931-212bfcf0/episode-1.source.jsonl",
+      "bytes": 74342820,
+      "modifiedUnixMs": 1793173776882,
+      "sha256": "61e22f02b94ea94298f2e5b8ee412b1dbcfd477a1d23eba4463be47bb0af1453"
+    },
+    {
+      "path": "artifacts/cultivate-comparison-20261028-154847/control-102/forage-20261028-154931-212bfcf0/record-source.jsonl",
+      "bytes": 74342820,
+      "modifiedUnixMs": 1793173773604,
+      "sha256": "61e22f02b94ea94298f2e5b8ee412b1dbcfd477a1d23eba4463be47bb0af1453"
+    },
+    {
+      "path": "artifacts/cultivate-comparison-20261028-154847/control-102/forage-20261028-154931-212bfcf0/world.jsonl",
+      "bytes": 385788,
+      "modifiedUnixMs": 1793173773605,
+      "sha256": "420c74b97c60fe73b20710cf37cad95f27c78b23c2640ed1bf750ca0e979a23f"
+    },
+    {
+      "path": "artifacts/cultivate-comparison-20261028-154847/cultivate-101/forage-20261028-154847-e4207fee/episode-1.replay.jsonl",
+      "bytes": 57042460,
+      "modifiedUnixMs": 1793173753410,
+      "sha256": "5be861b897c92731c2e914c1640f77d85f2fe66a6a3871d1d18f76b96390794f"
+    },
+    {
+      "path": "artifacts/cultivate-comparison-20261028-154847/cultivate-101/forage-20261028-154847-e4207fee/episode-1.source.jsonl",
+      "bytes": 75664055,
+      "modifiedUnixMs": 1793173754352,
+      "sha256": "cd855207380ea93b6b27365d4ee05213ddce24d60c4e137337ac365e5cc051c4"
+    },
+    {
+      "path": "artifacts/cultivate-comparison-20261028-154847/cultivate-101/forage-20261028-154847-e4207fee/record-source.jsonl",
+      "bytes": 75664055,
+      "modifiedUnixMs": 1793173749633,
+      "sha256": "cd855207380ea93b6b27365d4ee05213ddce24d60c4e137337ac365e5cc051c4"
+    },
+    {
+      "path": "artifacts/cultivate-comparison-20261028-154847/cultivate-101/forage-20261028-154847-e4207fee/world.jsonl",
+      "bytes": 2786389,
+      "modifiedUnixMs": 1793173749634,
+      "sha256": "4c511c343c0268c4db14ea636c70f2abf9a84e455bfb92faf3be3838c2afdc83"
+    },
+    {
+      "path": "artifacts/cultivate-comparison-20261028-154847/cultivate-102/forage-20261028-154923-654b0583/episode-1.replay.jsonl",
+      "bytes": 57042460,
+      "modifiedUnixMs": 1793173768515,
+      "sha256": "b7b6a219c11c41edbf1da195daa2078f7a58f21fd7dc8dccf6254bf483a4d703"
+    },
+    {
+      "path": "artifacts/cultivate-comparison-20261028-154847/cultivate-102/forage-20261028-154923-654b0583/episode-1.source.jsonl",
+      "bytes": 75664055,
+      "modifiedUnixMs": 1793173769425,
+      "sha256": "f8917ccc36769855a5320b735419c92b0f11a4e0150bdc957fa07526dd769094"
+    },
+    {
+      "path": "artifacts/cultivate-comparison-20261028-154847/cultivate-102/forage-20261028-154923-654b0583/record-source.jsonl",
+      "bytes": 75664055,
+      "modifiedUnixMs": 1793173766126,
+      "sha256": "f8917ccc36769855a5320b735419c92b0f11a4e0150bdc957fa07526dd769094"
+    },
+    {
+      "path": "artifacts/cultivate-comparison-20261028-154847/cultivate-102/forage-20261028-154923-654b0583/world.jsonl",
+      "bytes": 2786380,
+      "modifiedUnixMs": 1793173766126,
+      "sha256": "f29014f3c2d6616a44b2364d8f5dd673eec468cd1d9623cd3d0405bf3dc63faf"
+    },
+    {
+      "path": "artifacts/ecosystem-ticket07-probes-reviewed/contest/forage-20261023-194314-0dc31175/episode-1.replay.jsonl",
+      "bytes": 15175169,
+      "modifiedUnixMs": 1792755801274,
+      "sha256": "bed18cf897f6a2b3c6b3d37c94f74629df36551b9ad6e1e7a3cf6c52d58d1591"
+    },
+    {
+      "path": "artifacts/ecosystem-ticket07-probes-reviewed/costly/forage-20261023-194402-9146a42b/episode-1.replay.jsonl",
+      "bytes": 15411455,
+      "modifiedUnixMs": 1792755847560,
+      "sha256": "2198b31d408e14474a7f3c4be61a0c7236557bb76441f85cd8e62876bf86c955"
+    },
+    {
+      "path": "artifacts/ecosystem-ticket07-probes-reviewed/frost/forage-20261023-194343-74544731/episode-1.replay.jsonl",
+      "bytes": 13879724,
+      "modifiedUnixMs": 1792755828589,
+      "sha256": "d9bcef76a78d7f7e0bad385bdd6c8ec370a1180fd0cbc2bb1d368026f9d01f72"
+    },
+    {
+      "path": "artifacts/ecosystem-ticket07-probes-reviewed/hidden/forage-20261023-194417-32b30690/episode-1.replay.jsonl",
+      "bytes": 13572754,
+      "modifiedUnixMs": 1792755860746,
+      "sha256": "62d5559efb5cee6589676ff48f43fffaca19129bc1680bafb6bb290374080937"
+    },
+    {
+      "path": "artifacts/ecosystem-ticket07-probes-reviewed/retreat/forage-20261023-194334-5dc6eb5e/episode-1.replay.jsonl",
+      "bytes": 14953750,
+      "modifiedUnixMs": 1792755819806,
+      "sha256": "d6846f6722e85ae0c08d848e331da1997dde771bbe113c753388d4b2b303ab04"
+    },
+    {
+      "path": "artifacts/ecosystem-ticket07-probes-reviewed/roots/forage-20261023-194352-7cd1aa78/episode-1.replay.jsonl",
+      "bytes": 15187405,
+      "modifiedUnixMs": 1792755838546,
+      "sha256": "29ef62659abca4829557c0cf7ec3daf64022be7685e505a08a45f76a3b6aae23"
+    },
+    {
+      "path": "artifacts/ecosystem-ticket07-probes-reviewed/stale/forage-20261023-194410-35bf0a72/episode-1.replay.jsonl",
+      "bytes": 13930688,
+      "modifiedUnixMs": 1792755856002,
+      "sha256": "1fe480209b5a0f82859153594593d625c741cd931a363f1ae1382fc196d4c2fc"
+    },
+    {
+      "path": "artifacts/ecosystem-ticket07-probes-reviewed/switch/forage-20261023-194324-53b16aa7/episode-1.replay.jsonl",
+      "bytes": 15504620,
+      "modifiedUnixMs": 1792755810872,
+      "sha256": "2998b6fb708970c7c9ddaf6d9b223b8f04159e8cbf2bf3cfa36e0c2457a4bb29"
+    },
+    {
+      "path": "artifacts/fruit-supply/10/baseline.jsonl",
+      "bytes": 421067215,
+      "modifiedUnixMs": 1793335509891,
+      "sha256": "49430ad43c35ec08f9d5d97966fe5991d63f8e0d2faa22eba1fda062d2741994"
+    },
+    {
+      "path": "artifacts/fruit-supply/10/forage-green.jsonl",
+      "bytes": 515180878,
+      "modifiedUnixMs": 1793335675046,
+      "sha256": "0afd016bf9f7b9841a5a3d9cb689a18dee9423ce273dca545749edad9efe2b5e"
+    },
+    {
+      "path": "artifacts/fruit-supply/10/legacy-v14-view.jsonl",
+      "bytes": 39997,
+      "modifiedUnixMs": 1793336025690,
+      "sha256": "3bb812ff2bccfe32b9889b9896dde95242ff4f38f5489dc1cde511ee0a23fa62"
+    },
+    {
+      "path": "artifacts/fruit-supply/10/showcase-final-view.jsonl",
+      "bytes": 235574,
+      "modifiedUnixMs": 1793335971848,
+      "sha256": "b3420306314aa009f94b61b70ab2c38ad2d44dde9fbc7ccbdb80c65d62f05dce"
+    },
+    {
+      "path": "artifacts/fruit-supply/10/showcase-verified-view.jsonl",
+      "bytes": 594927,
+      "modifiedUnixMs": 1793336211796,
+      "sha256": "2b41493b1e40d43862007149f688348f13eca08a677085946b4d83af030a20fd"
+    },
+    {
+      "path": "artifacts/fruit-supply/10/showcase.replay.jsonl",
+      "bytes": 346094,
+      "modifiedUnixMs": 1793336026247,
+      "sha256": "e3cb90f02c18f2b600922a88481e8e378c27020955e418120985d1dc4b067118"
+    },
+    {
+      "path": "artifacts/fruit-supply/11/contract.replay.jsonl",
+      "bytes": 63864,
+      "modifiedUnixMs": 1793341973311,
+      "sha256": "d3882660ffed8194c24f99613c1c95328fb3d72766d85a0d914edd4160d21c08"
+    },
+    {
+      "path": "artifacts/fruit-supply/11/showcase-v15.replay.jsonl",
+      "bytes": 346178,
+      "modifiedUnixMs": 1793337619483,
+      "sha256": "79336ce7e87d2079e2bd4a4393c251c854c7754fd000fab42b48a469ec952616"
+    },
+    {
+      "path": "artifacts/fruit-supply/11/showcase-v15.replay.source.jsonl",
+      "bytes": 460483,
+      "modifiedUnixMs": 1793337619460,
+      "sha256": "c31e6964fe47402b8db90b2a7fc7955042d7b0c57785207bf9e6d791f93a96ac"
+    },
+    {
+      "path": "artifacts/fruit-supply/11/bridge/world.jsonl",
+      "bytes": 16536066,
+      "modifiedUnixMs": 1793337427031,
+      "sha256": "72c19c48c960f52adeb790a7c3f533d4290fb245c41e9291ff4cf9cd11376037"
+    },
+    {
+      "path": "artifacts/fruit-supply/11/metadata-seek/replay-20261030-132125-5f75134c/world.jsonl",
+      "bytes": 79444,
+      "modifiedUnixMs": 1793337686743,
+      "sha256": "32033b2bf00a21ecb0106f0f6f971862438d703a590a7d2b8c81c7d04b03033c"
+    },
+    {
+      "path": "artifacts/fruit-supply/11/player-survival-v10/world.jsonl",
+      "bytes": 102625,
+      "modifiedUnixMs": 1793337671917,
+      "sha256": "8429bec35fcc38b0286f905482ba09a45ae2120c0e322081bdd4791e8bddd307"
+    },
+    {
+      "path": "artifacts/fruit-supply/11/player-survival-v11/world.jsonl",
+      "bytes": 72873,
+      "modifiedUnixMs": 1793337672719,
+      "sha256": "099aa528225ad796049cc84caa561c5ca6bfe12611604a68bb874b5a65809555"
+    },
+    {
+      "path": "artifacts/fruit-supply/11/player-survival-v12/world.jsonl",
+      "bytes": 59665,
+      "modifiedUnixMs": 1793337673427,
+      "sha256": "ded6cfbcadb3a7e54da986de97e8b9960bb4002d7ccc08130864f0339925e687"
+    },
+    {
+      "path": "artifacts/fruit-supply/11/player-survival-v13/world.jsonl",
+      "bytes": 60072,
+      "modifiedUnixMs": 1793337674141,
+      "sha256": "96960047e89a6701940b12132c7d08c894c08e917857b8485e3278ea4e0e9460"
+    },
+    {
+      "path": "artifacts/fruit-supply/11/player-survival-v14/world.jsonl",
+      "bytes": 175070,
+      "modifiedUnixMs": 1793337675725,
+      "sha256": "1f238f0c03834bbf803130e9b1dfe659f8d8e05b0f687dfab38f3fbe4433ae62"
+    },
+    {
+      "path": "artifacts/fruit-supply/11/player-survival-v9/world.jsonl",
+      "bytes": 80095,
+      "modifiedUnixMs": 1793337671146,
+      "sha256": "d9a3f312e0d32faf7838a79d60ff1a0dd80a36fbe9747fb54f4ffc1842efa82e"
+    },
+    {
+      "path": "artifacts/fruit-supply/11/reload/forage-20261030-131755-2e43591f/episode-1.replay.jsonl",
+      "bytes": 1852699,
+      "modifiedUnixMs": 1793337477228,
+      "sha256": "4c9ec36eb8d8f22d409e55cabfdd7050ccebf1bd21d05684fbf804f7ed0a86d2"
+    },
+    {
+      "path": "artifacts/fruit-supply/11/reload/forage-20261030-131755-2e43591f/record-source.jsonl",
+      "bytes": 2441143,
+      "modifiedUnixMs": 1793337476814,
+      "sha256": "afcf952bef62e06060162f96b4d2c59737d34a1d19366c88b3535130dd219147"
+    },
+    {
+      "path": "artifacts/fruit-supply/11/reload/forage-20261030-131755-2e43591f/world.jsonl",
+      "bytes": 189406,
+      "modifiedUnixMs": 1793337476815,
+      "sha256": "6bb2d1efc18d9925f6774dd32ad246ba708d2bb89fb563a1fa2fa15463697bb3"
+    },
+    {
+      "path": "artifacts/fruit-supply/11/scripted/forage-20261030-131739-629f25b4/episode-1.replay.jsonl",
+      "bytes": 1852699,
+      "modifiedUnixMs": 1793337462323,
+      "sha256": "5a5865ac78a7b36fc87f3d43e68b526cf790730c728ab521a7d69ce3e1e804cc"
+    },
+    {
+      "path": "artifacts/fruit-supply/11/scripted/forage-20261030-131739-629f25b4/record-source.jsonl",
+      "bytes": 2441143,
+      "modifiedUnixMs": 1793337460893,
+      "sha256": "21b7defd108755fbe9e693e17144f5b15ed678278744d7f80067f22e7814a462"
+    },
+    {
+      "path": "artifacts/fruit-supply/11/scripted/forage-20261030-131739-629f25b4/world.jsonl",
+      "bytes": 189416,
+      "modifiedUnixMs": 1793337460893,
+      "sha256": "c9c02bce2c410268d6be33a8baeb589485af296b9f15e247c32298fb8579f485"
+    },
+    {
+      "path": "artifacts/fruit-supply/11/seek/replay-20261030-131757-5b4ec760/world.jsonl",
+      "bytes": 126890,
+      "modifiedUnixMs": 1793337478470,
+      "sha256": "776d4390209b80a058a8f6e34e2c35f27f64012f367d1cb3215a82a6c61d9bb1"
+    },
+    {
+      "path": "artifacts/fruit-supply/11/showcase-seek/replay-20261030-132124-e7945931/world.jsonl",
+      "bytes": 705126,
+      "modifiedUnixMs": 1793337685055,
+      "sha256": "38d2486593e0747cba0ec9065579845f67743418a4338e273ab05d3680ff44d2"
+    },
+    {
+      "path": "artifacts/juvenile-benchmark-20261028/101-off/forage-20261028-191759-591234f0/episode-1.replay.jsonl",
+      "bytes": 239527762,
+      "modifiedUnixMs": 1793186293050,
+      "sha256": "f1b90db2594b438e224ff594ff5dffda5fb1eb847fab6efdac9a9950ac22a21e"
+    },
+    {
+      "path": "artifacts/juvenile-benchmark-20261028/101-off/forage-20261028-191759-591234f0/record-source.jsonl",
+      "bytes": 248210821,
+      "modifiedUnixMs": 1793186286294,
+      "sha256": "70941afe180991c97835237239775001a23e0d26abdbde5316ccc358717f39e3"
+    },
+    {
+      "path": "artifacts/juvenile-benchmark-20261028/101-off/forage-20261028-191759-591234f0/world.jsonl",
+      "bytes": 8510680,
+      "modifiedUnixMs": 1793186286295,
+      "sha256": "e879fb3787257efe8ee0e48e6cb82e3a1390a8ad56f8da8abc2b3703e4c7b105"
+    },
+    {
+      "path": "artifacts/juvenile-benchmark-20261028/101-on/forage-20261028-191741-b47abf37/episode-1.replay.jsonl",
+      "bytes": 251852355,
+      "modifiedUnixMs": 1793186275354,
+      "sha256": "3f1330cb0dfc6091b8b5815acc93e8bc11236168be952f6be3b18e010f918a1a"
+    },
+    {
+      "path": "artifacts/juvenile-benchmark-20261028/101-on/forage-20261028-191741-b47abf37/record-source.jsonl",
+      "bytes": 260378134,
+      "modifiedUnixMs": 1793186268176,
+      "sha256": "0d15f5f40c7ab4a23250d603aa0e7f7db727dee9004c0727c67652872308073d"
+    },
+    {
+      "path": "artifacts/juvenile-benchmark-20261028/101-on/forage-20261028-191741-b47abf37/world.jsonl",
+      "bytes": 7480431,
+      "modifiedUnixMs": 1793186268178,
+      "sha256": "818a824284cf3f1c6ee378138e1b363346423f3af2b7f1fa9cab8e77f6075ba8"
+    },
+    {
+      "path": "artifacts/juvenile-benchmark-20261028/102-off/forage-20261028-191835-f99d1362/episode-1.replay.jsonl",
+      "bytes": 273694314,
+      "modifiedUnixMs": 1793186331629,
+      "sha256": "40137750bb9ad7f42dbf1afbb7cb432b69da4e7ea26115f62d73c821bcccf857"
+    },
+    {
+      "path": "artifacts/juvenile-benchmark-20261028/102-off/forage-20261028-191835-f99d1362/record-source.jsonl",
+      "bytes": 281525674,
+      "modifiedUnixMs": 1793186323896,
+      "sha256": "d35a341870f9695c2173f441d80b880ad83284376976883176d83d116d2ef4f7"
+    },
+    {
+      "path": "artifacts/juvenile-benchmark-20261028/102-off/forage-20261028-191835-f99d1362/world.jsonl",
+      "bytes": 7435223,
+      "modifiedUnixMs": 1793186323898,
+      "sha256": "0e6aa271184b0691911a1a011d644812389da11d0cd721b743fe44f1024e32c2"
+    },
+    {
+      "path": "artifacts/juvenile-benchmark-20261028/102-on/forage-20261028-191816-c89a56ed/episode-1.replay.jsonl",
+      "bytes": 279241213,
+      "modifiedUnixMs": 1793186311904,
+      "sha256": "1fad417181c9b94e67ee31449a5197f57ee80527476e6e6cc662a862677ced8c"
+    },
+    {
+      "path": "artifacts/juvenile-benchmark-20261028/102-on/forage-20261028-191816-c89a56ed/record-source.jsonl",
+      "bytes": 287084279,
+      "modifiedUnixMs": 1793186304083,
+      "sha256": "3253a8ff77db8c50142308ce67f424a1eb6b2ce18b8aa745ebbbd833f897dafc"
+    },
+    {
+      "path": "artifacts/juvenile-benchmark-20261028/102-on/forage-20261028-191816-c89a56ed/world.jsonl",
+      "bytes": 6688028,
+      "modifiedUnixMs": 1793186304084,
+      "sha256": "8d035a6372f6042ff4c1eb716073a8a2e2fcbc5f0c60bf4f6d6030390b2116ab"
+    },
+    {
+      "path": "artifacts/juvenile-benchmark-20261028/103-off/forage-20261028-191914-1cb2ea0e/episode-1.replay.jsonl",
+      "bytes": 266442550,
+      "modifiedUnixMs": 1793186369912,
+      "sha256": "3116192f996b47148a9c035eed67a128eff9b271463325e32fbb53b34c385b46"
+    },
+    {
+      "path": "artifacts/juvenile-benchmark-20261028/103-off/forage-20261028-191914-1cb2ea0e/record-source.jsonl",
+      "bytes": 274165756,
+      "modifiedUnixMs": 1793186362587,
+      "sha256": "a57784b1699363de3fac7547372d1d9f8f8230112bc74a2f4c1c9df8809049f2"
+    },
+    {
+      "path": "artifacts/juvenile-benchmark-20261028/103-off/forage-20261028-191914-1cb2ea0e/world.jsonl",
+      "bytes": 7495615,
+      "modifiedUnixMs": 1793186362587,
+      "sha256": "d3215038bba4247569be20c1a77f22878c1267b10587bbd1031ce46e0bf63384"
+    },
+    {
+      "path": "artifacts/juvenile-benchmark-20261028/103-on/forage-20261028-191855-a44c1e1a/episode-1.replay.jsonl",
+      "bytes": 273879297,
+      "modifiedUnixMs": 1793186350640,
+      "sha256": "411b4ed5445ffbf24ad129aaaa6e9766b78f02b334b232b632a7226855b33754"
+    },
+    {
+      "path": "artifacts/juvenile-benchmark-20261028/103-on/forage-20261028-191855-a44c1e1a/record-source.jsonl",
+      "bytes": 281641242,
+      "modifiedUnixMs": 1793186343092,
+      "sha256": "fc55ec476f25ca3b75d58a4e11eea34c4a48c9043b9d44a88f5592d63f188908"
+    },
+    {
+      "path": "artifacts/juvenile-benchmark-20261028/103-on/forage-20261028-191855-a44c1e1a/world.jsonl",
+      "bytes": 7436901,
+      "modifiedUnixMs": 1793186343093,
+      "sha256": "e75d32ba9af6c180371f8dd57b56f0f6b532f78c9a05b4b4c7070feae8bafc03"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/abundant-101-care/forage-20261028-191550-71039fdd/episode-1.replay.jsonl",
+      "bytes": 58225632,
+      "modifiedUnixMs": 1793186154466,
+      "sha256": "95307800cbb29e7b359051ec623dd5bee7179483e0a56071f3e4b1da4f5b7267"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/abundant-101-care/forage-20261028-191550-71039fdd/record-source.jsonl",
+      "bytes": 62974037,
+      "modifiedUnixMs": 1793186152556,
+      "sha256": "431e319d2038551af3717b3f0e37faebc81d513061cb69e2dee7735f54673142"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/abundant-101-care/forage-20261028-191550-71039fdd/world.jsonl",
+      "bytes": 894765,
+      "modifiedUnixMs": 1793186152556,
+      "sha256": "a6c9d39b6b79ddea916c5255c3f70e26fb0b52dd3b56f74f6473a1e16c5dad49"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/abundant-101-no-care/forage-20261028-191555-0afa4c52/episode-1.replay.jsonl",
+      "bytes": 71703904,
+      "modifiedUnixMs": 1793186160658,
+      "sha256": "75dc3885f8e94045d011a5b3d7ed5f17e296c5d77783a8041c907d0466adf2c8"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/abundant-101-no-care/forage-20261028-191555-0afa4c52/record-source.jsonl",
+      "bytes": 76374966,
+      "modifiedUnixMs": 1793186158506,
+      "sha256": "572224e686d3171d89827df4c6400f36ee773424c58fb012ad895ee61fe5dd5b"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/abundant-101-no-care/forage-20261028-191555-0afa4c52/world.jsonl",
+      "bytes": 679881,
+      "modifiedUnixMs": 1793186158507,
+      "sha256": "91bccbada0e0e37e66d49343cfe824dca084ae63e9572b5d3378c07b158837f8"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/abundant-102-care/forage-20261028-191602-229a8696/episode-1.replay.jsonl",
+      "bytes": 57938976,
+      "modifiedUnixMs": 1793186166397,
+      "sha256": "ab03e1249211fcb064edd2812033b720868db596a95caedbef7699910f15f892"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/abundant-102-care/forage-20261028-191602-229a8696/record-source.jsonl",
+      "bytes": 62667810,
+      "modifiedUnixMs": 1793186164532,
+      "sha256": "94c08a04149df86618f14639eda2493d2afd3fc672fc51fd0c574040a5b9f87e"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/abundant-102-care/forage-20261028-191602-229a8696/world.jsonl",
+      "bytes": 1470228,
+      "modifiedUnixMs": 1793186164533,
+      "sha256": "687da2d2ba7008c8fa7ac5e66f53769e18e7083999cbcff6235f38b4d151fe54"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/abundant-102-no-care/forage-20261028-191607-ee9a5160/episode-1.replay.jsonl",
+      "bytes": 75290325,
+      "modifiedUnixMs": 1793186172819,
+      "sha256": "86c076176a01155b28ef762492777568bbc2ddfc0377b88b7dc2ef7e2b098e62"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/abundant-102-no-care/forage-20261028-191607-ee9a5160/record-source.jsonl",
+      "bytes": 79971249,
+      "modifiedUnixMs": 1793186170548,
+      "sha256": "5566da75cdac4e1530b8380ceb59e22f615faf883f717788ee57ccf9d9934400"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/abundant-102-no-care/forage-20261028-191607-ee9a5160/world.jsonl",
+      "bytes": 761706,
+      "modifiedUnixMs": 1793186170548,
+      "sha256": "3e12c2edc5f877970d21dbc00cf0dcdc032aebb79562a979d3ca0df27bab2872"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/abundant-103-care/forage-20261028-191614-2e866acf/episode-1.replay.jsonl",
+      "bytes": 74018910,
+      "modifiedUnixMs": 1793186179330,
+      "sha256": "63bd0410b28e121276fa2b064b16728afd8e789f4882340eeef38f4a2234eed8"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/abundant-103-care/forage-20261028-191614-2e866acf/record-source.jsonl",
+      "bytes": 78704985,
+      "modifiedUnixMs": 1793186177071,
+      "sha256": "2d1f7d0793946c002ee5a86521f8cccbc88e1dadb3ff3403f86a3959b7807333"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/abundant-103-care/forage-20261028-191614-2e866acf/world.jsonl",
+      "bytes": 1136621,
+      "modifiedUnixMs": 1793186177072,
+      "sha256": "6b673af76ce5f773c881c3afe5a419f9aa48ef0bf84a6a0703c5b6e1bdb439d3"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/abundant-103-no-care/forage-20261028-191620-4bc268b8/episode-1.replay.jsonl",
+      "bytes": 75193162,
+      "modifiedUnixMs": 1793186185804,
+      "sha256": "5220a2b85ff777d3b631cc4c7dd5b58d763632080e0394fcc557b0d28e22084e"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/abundant-103-no-care/forage-20261028-191620-4bc268b8/record-source.jsonl",
+      "bytes": 79869202,
+      "modifiedUnixMs": 1793186183562,
+      "sha256": "08c9fbcda1a99320a0025851771631b27c339c237001bd151263fc98cec9a048"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/abundant-103-no-care/forage-20261028-191620-4bc268b8/world.jsonl",
+      "bytes": 781199,
+      "modifiedUnixMs": 1793186183563,
+      "sha256": "27c0924a736117cc6b0289560ada69976b4a4cd2914e672aebeb0f4891230ab4"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/limited-101-care/forage-20261028-191627-9c33cd17/episode-1.replay.jsonl",
+      "bytes": 66082553,
+      "modifiedUnixMs": 1793186192165,
+      "sha256": "66f18db83281b96309573962c1b5bd249335c75f57b51f35f0b7ea940a88ff44"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/limited-101-care/forage-20261028-191627-9c33cd17/record-source.jsonl",
+      "bytes": 70742694,
+      "modifiedUnixMs": 1793186190066,
+      "sha256": "6112ce5290d97bc2aea1f1a7ea983f2879d0e1295f39ed714964578a1cd21e58"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/limited-101-care/forage-20261028-191627-9c33cd17/world.jsonl",
+      "bytes": 780426,
+      "modifiedUnixMs": 1793186190067,
+      "sha256": "c3d74b3800cfb45d1218483bd73742c9e0d08ee16a72a59dbb8e7d1a4c4bd6b9"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/limited-101-no-care/forage-20261028-191633-5ff7617f/episode-1.replay.jsonl",
+      "bytes": 58681279,
+      "modifiedUnixMs": 1793186198048,
+      "sha256": "1d9bf551e4a5fcca56313f77f7a485405294d5bcd2f3211ebf4ddbe5f99690ec"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/limited-101-no-care/forage-20261028-191633-5ff7617f/record-source.jsonl",
+      "bytes": 63329788,
+      "modifiedUnixMs": 1793186196164,
+      "sha256": "8d58f308cb5409e3610124f9ac69531976248bfc71e81089475acde33c810ba0"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/limited-101-no-care/forage-20261028-191633-5ff7617f/world.jsonl",
+      "bytes": 343851,
+      "modifiedUnixMs": 1793186196165,
+      "sha256": "7c29ebbe8686c2874436a2eec6f04c9c65cb9c22e887d86a8955d707325ef6f8"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/limited-102-care/forage-20261028-191639-389a15e8/episode-1.replay.jsonl",
+      "bytes": 70824766,
+      "modifiedUnixMs": 1793186204276,
+      "sha256": "ea40ba7fe896a15e7b2e25b376c62ebd738045bb2f3a93f93a0bb6ff1589ea19"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/limited-102-care/forage-20261028-191639-389a15e8/record-source.jsonl",
+      "bytes": 75572048,
+      "modifiedUnixMs": 1793186202124,
+      "sha256": "2fdf876566d07c09a1a3eeb90d96c2953ed2ebe4a9499c034061b1898825aedd"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/limited-102-care/forage-20261028-191639-389a15e8/world.jsonl",
+      "bytes": 989366,
+      "modifiedUnixMs": 1793186202125,
+      "sha256": "648ef940fe9216589ca080a1ef9ee511a3199cdb2ec0fc46126469c74c7324ac"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/limited-102-no-care/forage-20261028-191645-40ffbc48/episode-1.replay.jsonl",
+      "bytes": 59481322,
+      "modifiedUnixMs": 1793186210095,
+      "sha256": "c5a95db35c780e17e0827105c9c84634810e00376509e9f8d382c9a5ab514be2"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/limited-102-no-care/forage-20261028-191645-40ffbc48/record-source.jsonl",
+      "bytes": 64131115,
+      "modifiedUnixMs": 1793186208188,
+      "sha256": "3c338b3ffdcdc4cf02d403de4d7341f650b53b83fd116af73860704ce3156a46"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/limited-102-no-care/forage-20261028-191645-40ffbc48/world.jsonl",
+      "bytes": 388157,
+      "modifiedUnixMs": 1793186208189,
+      "sha256": "c78cdfea9d73a284d08897440068a9857d6406d76f3bcb56ab1519635642c516"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/limited-103-care/forage-20261028-191651-51cbcad5/episode-1.replay.jsonl",
+      "bytes": 69586167,
+      "modifiedUnixMs": 1793186216246,
+      "sha256": "e7b1b5ddc1bf09071b1a93758956f8807e85ad7684907dc32769cce74dab82db"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/limited-103-care/forage-20261028-191651-51cbcad5/record-source.jsonl",
+      "bytes": 74255792,
+      "modifiedUnixMs": 1793186214149,
+      "sha256": "5ac7bcf77be1346a36b4aa7b1629336891f861d74d6fd9eddbac8407672b6e56"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/limited-103-care/forage-20261028-191651-51cbcad5/world.jsonl",
+      "bytes": 1004530,
+      "modifiedUnixMs": 1793186214150,
+      "sha256": "3699500af96d1abb75b0215a3954da8057ecba0ec4da7494e813dd94c3c05cc6"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/limited-103-no-care/forage-20261028-191657-8978f6a8/episode-1.replay.jsonl",
+      "bytes": 61084522,
+      "modifiedUnixMs": 1793186222217,
+      "sha256": "338be978b333630cceddf5028284b48caaf91c5f96b76cc5cf1fdf8fbf2e8635"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/limited-103-no-care/forage-20261028-191657-8978f6a8/record-source.jsonl",
+      "bytes": 65737401,
+      "modifiedUnixMs": 1793186220212,
+      "sha256": "6a7eb80e78072235647e2f8ce3e62aee847f8fe35d1326c2989663ba6650c4b7"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/limited-103-no-care/forage-20261028-191657-8978f6a8/world.jsonl",
+      "bytes": 719796,
+      "modifiedUnixMs": 1793186220213,
+      "sha256": "8a0ddeee328c3b7aa521b0a539b30b5a6c658c930c718d388f55d1f81f842da8"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/threat-101-care/forage-20261028-191703-9658fb50/episode-1.replay.jsonl",
+      "bytes": 61122937,
+      "modifiedUnixMs": 1793186228089,
+      "sha256": "8826e4e25fe9325224be9d1a1dbc880cde38bf5121a77b326bedc4c1785fe61f"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/threat-101-care/forage-20261028-191703-9658fb50/record-source.jsonl",
+      "bytes": 65776626,
+      "modifiedUnixMs": 1793186226161,
+      "sha256": "05ad9e912f26182307d839589b193ec8f436514a1ead8dac4530e99d9e0ec258"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/threat-101-care/forage-20261028-191703-9658fb50/world.jsonl",
+      "bytes": 792479,
+      "modifiedUnixMs": 1793186226162,
+      "sha256": "b4359cd1834c96a4da49a5e230e1a153abcd889b026174b3027cd34612d4d79c"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/threat-101-no-care/forage-20261028-191709-2ceb45d6/episode-1.replay.jsonl",
+      "bytes": 57628748,
+      "modifiedUnixMs": 1793186233769,
+      "sha256": "0ed447c1683dd1bfc3fe469af363e6f19dee42b5d4e935f7120833f41505c580"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/threat-101-no-care/forage-20261028-191709-2ceb45d6/record-source.jsonl",
+      "bytes": 62270510,
+      "modifiedUnixMs": 1793186231960,
+      "sha256": "ce5a97c57dfc2220a6aca48ed037768c7018aebb6ce2a1bdb9311fb8dc2a5941"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/threat-101-no-care/forage-20261028-191709-2ceb45d6/world.jsonl",
+      "bytes": 336808,
+      "modifiedUnixMs": 1793186231961,
+      "sha256": "249e7a361f93b1e26d4a068f25b14e91986e2d06f6ffd8892f5ee3ca7e663137"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/threat-102-care/forage-20261028-191715-2c5ebdd9/episode-1.replay.jsonl",
+      "bytes": 65597078,
+      "modifiedUnixMs": 1793186239668,
+      "sha256": "8985390f357c740663ef927e14a2e2c2007f7250e781b34493676fe56a1208c1"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/threat-102-care/forage-20261028-191715-2c5ebdd9/record-source.jsonl",
+      "bytes": 70260794,
+      "modifiedUnixMs": 1793186237681,
+      "sha256": "a59abafc411014e287b0a676f20f7ad0708222b7b8af556cc9663583f935415c"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/threat-102-care/forage-20261028-191715-2c5ebdd9/world.jsonl",
+      "bytes": 945502,
+      "modifiedUnixMs": 1793186237682,
+      "sha256": "a8cae2b7ff7139172baa7f71cbae4e2699dbc71cdb3dfc223e7101b7daee4904"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/threat-102-no-care/forage-20261028-191721-133f2675/episode-1.replay.jsonl",
+      "bytes": 61101134,
+      "modifiedUnixMs": 1793186245504,
+      "sha256": "e750014154f13960cea0481363d1d4f76921f44e5a378011d74025519ffda86c"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/threat-102-no-care/forage-20261028-191721-133f2675/record-source.jsonl",
+      "bytes": 65750707,
+      "modifiedUnixMs": 1793186243640,
+      "sha256": "32020b539611c4adb80d0980111556327c480f18983156e3146c38aee1f47ed9"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/threat-102-no-care/forage-20261028-191721-133f2675/world.jsonl",
+      "bytes": 409737,
+      "modifiedUnixMs": 1793186243641,
+      "sha256": "7b052ee4a7c604c2f01dc41505b78a9fedb37b9b6ac9e5a9e0419cd5c5d08681"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/threat-103-care/forage-20261028-191726-4b925ccf/episode-1.replay.jsonl",
+      "bytes": 65304051,
+      "modifiedUnixMs": 1793186251501,
+      "sha256": "04aa6b6565368614cb33d78fe3a0f1ad8fdcd65ac62a9cb0c8b092aa38513767"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/threat-103-care/forage-20261028-191726-4b925ccf/record-source.jsonl",
+      "bytes": 69964045,
+      "modifiedUnixMs": 1793186249441,
+      "sha256": "25a3386720e93b1313353ec56c8798fbb81e915671ae0e5634be445a113f5f8e"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/threat-103-care/forage-20261028-191726-4b925ccf/world.jsonl",
+      "bytes": 1062348,
+      "modifiedUnixMs": 1793186249442,
+      "sha256": "bc78daec95ec216b9d84b0987fa780c04b0e1835af6b52de9a7807c46b09ac96"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/threat-103-no-care/forage-20261028-191732-1a9067c8/episode-1.replay.jsonl",
+      "bytes": 64388546,
+      "modifiedUnixMs": 1793186257508,
+      "sha256": "e638595ed55d4029f696b7646125ad39ab6bb22e1bd7fd6f4d8faeb162178bdd"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/threat-103-no-care/forage-20261028-191732-1a9067c8/record-source.jsonl",
+      "bytes": 69048784,
+      "modifiedUnixMs": 1793186255540,
+      "sha256": "e7e02414f9f5d47b593a71e1b22b262561e596a6a1bc8bb94e2296ea18a50ee1"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-20261028/threat-103-no-care/forage-20261028-191732-1a9067c8/world.jsonl",
+      "bytes": 472711,
+      "modifiedUnixMs": 1793186255540,
+      "sha256": "3f8a53f1ed44ce744b05540d97f4ae9fc677ec67cbb8465670e38a593fb05ae4"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-bridge/bridge-20261028-191948-7cb8761e/world.jsonl",
+      "bytes": 2838086,
+      "modifiedUnixMs": 1793186390156,
+      "sha256": "25b08a784a350616372030f5f4f2b2f567ce236951b0c9ac3dfa30376503a83d"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-headless-ok/forage-20261028-192028-7382f98a/episode-1.replay.jsonl",
+      "bytes": 3136725,
+      "modifiedUnixMs": 1793186429835,
+      "sha256": "a412fb86924fe18b83267bb98ff67e27bc3e19806afed966f0b71d5afdf9cf43"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-headless-ok/forage-20261028-192028-7382f98a/record-source.jsonl",
+      "bytes": 3658048,
+      "modifiedUnixMs": 1793186429454,
+      "sha256": "d9710cc22988940d9e98279d2961a69b46600d3374dade9b036533de0b751251"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-headless-ok/forage-20261028-192028-7382f98a/world.jsonl",
+      "bytes": 369038,
+      "modifiedUnixMs": 1793186429454,
+      "sha256": "1c107e48efb3430c5fc9f8ca7702a5ef701e7de1dda5571b1a2dd450881e9bc5"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-integrated/forage-20261028-192047-4480c0d5/world.jsonl",
+      "bytes": 26980811,
+      "modifiedUnixMs": 1793186448484,
+      "sha256": "d7e9ab2a4f7cc8a45de7e64488d27d4cb9a1b2a0a8bd1e18988a29613238cb40"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-integrated/forage-20261028-192048-ca9223a9/world.jsonl",
+      "bytes": 26451133,
+      "modifiedUnixMs": 1793186450105,
+      "sha256": "2961ba6dd399f4d4039f23e6881191b0cc49912c5fa6b387b012a0b5df29e606"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-replay/replay-20261028-191944-528d123f/world.jsonl",
+      "bytes": 206520,
+      "modifiedUnixMs": 1793186388010,
+      "sha256": "55113315634edf5b2ef98e94b68d4ed5dcb0a91bab68e3998726511b4eb1258d"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-visible-ok/forage-20261028-192021-9b3c1ffc/episode-1.replay.jsonl",
+      "bytes": 3136725,
+      "modifiedUnixMs": 1793186428668,
+      "sha256": "6896e4e00c161509121d0fab7b679de5cc6cb4459821b95e4060034a2987f6b9"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-visible-ok/forage-20261028-192021-9b3c1ffc/record-source.jsonl",
+      "bytes": 3658071,
+      "modifiedUnixMs": 1793186428198,
+      "sha256": "41909ce04d0e3959d9adaeae95ef5bbde811dc358dc11f4e159c8b5f518591fd"
+    },
+    {
+      "path": "artifacts/juvenile-ecology-visible-ok/forage-20261028-192021-9b3c1ffc/world.jsonl",
+      "bytes": 369051,
+      "modifiedUnixMs": 1793186428198,
+      "sha256": "8a8bc256a8e23cffa3420a21869c6505e810814d82aed0fc32816946f8ab4018"
+    },
+    {
+      "path": "artifacts/juvenile-family-20261028/family-bridge-2.jsonl",
+      "bytes": 59195,
+      "modifiedUnixMs": 1793184493809,
+      "sha256": "7d63e0aa13f5ae766a7c12f1a25d200a76e5262fc8b320b384c37f048cdd97ef"
+    },
+    {
+      "path": "artifacts/juvenile-family-20261028/family-bridge-world.jsonl",
+      "bytes": 58582,
+      "modifiedUnixMs": 1793184480072,
+      "sha256": "4ffcfc92c21728577ea91cc70e43c79da78a971943efa52cd9a947aa2cd683e1"
+    },
+    {
+      "path": "artifacts/juvenile-family-20261028/age/forage-20261028-184734-b424ad49/world.jsonl",
+      "bytes": 86516,
+      "modifiedUnixMs": 1793184454813,
+      "sha256": "fdf64972e0d404d95dffe72f96d709ff417e8b7d27b813b68cf5297dcc727862"
+    },
+    {
+      "path": "artifacts/juvenile-family-20261028/age-off/forage-20261028-184735-6813eb91/world.jsonl",
+      "bytes": 86392,
+      "modifiedUnixMs": 1793184456245,
+      "sha256": "0cea5b54e3f6887b3acbe21ffde620e0041e71ccf9d91f8b1d48930b249171aa"
+    },
+    {
+      "path": "artifacts/juvenile-family-20261028/approach/forage-20261028-184742-b482493e/world.jsonl",
+      "bytes": 165073,
+      "modifiedUnixMs": 1793184462843,
+      "sha256": "be4e284bdc39c06783f5dc8f5697a61749c50433ac683d32f168e533c43686ee"
+    },
+    {
+      "path": "artifacts/juvenile-family-20261028/birth/forage-20261028-184710-eb17b3b0/world.jsonl",
+      "bytes": 97402,
+      "modifiedUnixMs": 1793184430840,
+      "sha256": "712bbfb9ee8e94cf4af11c8a88ee6f88cea809a43e3730a79a160f53bc968274"
+    },
+    {
+      "path": "artifacts/juvenile-family-20261028/bridge/bridge-20261028-184720-99d81361/world.jsonl",
+      "bytes": 2597316,
+      "modifiedUnixMs": 1793184442015,
+      "sha256": "43c9d4843be89d838d1054dad3eb1cff3a7a63dc4f43108d0b32f96eee9c94bf"
+    },
+    {
+      "path": "artifacts/juvenile-family-20261028/green/forage-20261028-184522-cad252fc/episode-1.replay.partial",
+      "bytes": 1807416,
+      "modifiedUnixMs": 1793184344845,
+      "sha256": "56bdfdb58d4af06980694a10f78ab55dbb3f4637e5edc665903724161388a6c6"
+    },
+    {
+      "path": "artifacts/juvenile-family-20261028/green/forage-20261028-184522-cad252fc/record-source.jsonl",
+      "bytes": 2354605,
+      "modifiedUnixMs": 1793184342374,
+      "sha256": "0ea2c2c9b1bf61d2cce774e2c241eefb7fe4b574d45e35a5158f0fd598458814"
+    },
+    {
+      "path": "artifacts/juvenile-family-20261028/green/forage-20261028-184522-cad252fc/world.jsonl",
+      "bytes": 50302,
+      "modifiedUnixMs": 1793184342376,
+      "sha256": "038ab66de73ac478ded9b6559216db1b58957cbf201038ad9f8eadf797cac614"
+    },
+    {
+      "path": "artifacts/juvenile-family-20261028/merged/forage-20261028-184711-d0101cc7/world.jsonl",
+      "bytes": 2416500,
+      "modifiedUnixMs": 1793184432336,
+      "sha256": "e0ab1b63ed5f07341aabfb4992d749c6c51cbb47a0001f592cef4f93f7b72562"
+    },
+    {
+      "path": "artifacts/juvenile-family-20261028/old-replay/replay-20261028-184713-52f29090/world.jsonl",
+      "bytes": 70406,
+      "modifiedUnixMs": 1793184433977,
+      "sha256": "1026b9c9c68ca9d3240db6bd1e98cfe5b39ef3e2b86076fe31e2eb4111f8536a"
+    },
+    {
+      "path": "artifacts/juvenile-family-20261028/red/forage-20261028-183920-bb42a2c6/world.jsonl",
+      "bytes": 2283124,
+      "modifiedUnixMs": 1793183961107,
+      "sha256": "2cc25f4bc937500e280f7ccaad66e9a407151bfd3fc4db96363423d7b81caf88"
+    },
+    {
+      "path": "artifacts/juvenile-family-20261028/replay/forage-20261028-184601-54a7ced3/episode-1.replay.jsonl",
+      "bytes": 1807534,
+      "modifiedUnixMs": 1793184362752,
+      "sha256": "7a03aeb7f128950ea3c0e318b3b39628353be52142d29c5396051d2d9bc53d51"
+    },
+    {
+      "path": "artifacts/juvenile-family-20261028/replay/forage-20261028-184601-54a7ced3/record-source.jsonl",
+      "bytes": 2366580,
+      "modifiedUnixMs": 1793184362383,
+      "sha256": "864ec613b42340f9b4940e9db72c6f13daf37fc0294c21d1b3ea0bf2e379ee69"
+    },
+    {
+      "path": "artifacts/juvenile-family-20261028/replay/forage-20261028-184601-54a7ced3/world.jsonl",
+      "bytes": 62277,
+      "modifiedUnixMs": 1793184362383,
+      "sha256": "bcd542f94abb22deea09b468707b02a8970a4dbf723284319f19e776b76282de"
+    },
+    {
+      "path": "artifacts/juvenile-family-20261028/replay-check/replay-20261028-184617-d5cc45c2/world.jsonl",
+      "bytes": 56117,
+      "modifiedUnixMs": 1793184378377,
+      "sha256": "1a51d691f36a9993d22a330a77371524260f0f0e7a7485b875c5a471b123aa90"
+    },
+    {
+      "path": "artifacts/juvenile-family-20261028/search/forage-20261028-184615-f995da11/world.jsonl",
+      "bytes": 7488059,
+      "modifiedUnixMs": 1793184376752,
+      "sha256": "3aae832843711e829f54735f052fc26ddf1d03ddfa034a3e7d9974fe5c9d6254"
+    },
+    {
+      "path": "artifacts/juvenile-family-20261028/search-end/forage-20261028-184657-a7d7eba2/world.jsonl",
+      "bytes": 227859,
+      "modifiedUnixMs": 1793184419299,
+      "sha256": "ad12ae917e7071a82191666967f92d70912e62a14a3d2923ca699be4d49dd501"
+    },
+    {
+      "path": "artifacts/juvenile-family-20261028/seen/forage-20261028-184558-4fd76fdb/world.jsonl",
+      "bytes": 134808,
+      "modifiedUnixMs": 1793184359313,
+      "sha256": "ab8bc6f97333d930d3b28235ae5ea1a9f5619447dc7a7008a93a5f81d8d88517"
+    },
+    {
+      "path": "artifacts/juvenile-family-20261028/threat/forage-20261028-184844-0d420f96/world.jsonl",
+      "bytes": 265878,
+      "modifiedUnixMs": 1793184525690,
+      "sha256": "7654a73412f0537d9dc0ae7bb27871dead3eadf89bd7bd4d815e165047a4ba39"
+    },
+    {
+      "path": "artifacts/juvenile-family-20261028/unseen/forage-20261028-184600-e1b7593f/world.jsonl",
+      "bytes": 133926,
+      "modifiedUnixMs": 1793184360805,
+      "sha256": "7676822bc77a8e84f4bbd413db38d785df8eb1005682e06849322d68a1739691"
+    },
+    {
+      "path": "artifacts/juvenile-family-20261028/v9-replay/replay-20261028-184835-8f5c875e/world.jsonl",
+      "bytes": 35348,
+      "modifiedUnixMs": 1793184518782,
+      "sha256": "0e7b427416f1c4f4ef49e764391fe66a6d47f4b12e9335305e389b268dc69760"
+    },
+    {
+      "path": "artifacts/juvenile-feeding-20261028/bridge/bridge-20261028-185618-32e16f5f/world.jsonl",
+      "bytes": 2684830,
+      "modifiedUnixMs": 1793184981029,
+      "sha256": "5d424ab373b3535f5b08c8b9cae04dcf5d342d4ab90165d0917dbac8b8f267cb"
+    },
+    {
+      "path": "artifacts/juvenile-feeding-20261028/final/basic/forage-20261028-185834-d374b092/world.jsonl",
+      "bytes": 617197,
+      "modifiedUnixMs": 1793185114971,
+      "sha256": "aeb6e28531162c850dea8269d5771d895ae203ed48c3a2f1024b0f103428715a"
+    },
+    {
+      "path": "artifacts/juvenile-feeding-20261028/final/death/forage-20261028-185844-943fa2df/world.jsonl",
+      "bytes": 1488063,
+      "modifiedUnixMs": 1793185125512,
+      "sha256": "d78b4ad0c8435b8c860391e13928b160a9d5fea99daa6f92cfdde3fabd5a1578"
+    },
+    {
+      "path": "artifacts/juvenile-feeding-20261028/final/parent-death/forage-20261028-185855-64294225/world.jsonl",
+      "bytes": 1471317,
+      "modifiedUnixMs": 1793185135846,
+      "sha256": "00cdb42846d4b6a386eb365a9b99415f2f6df346a7c904a5f39f778c35f46ce2"
+    },
+    {
+      "path": "artifacts/juvenile-feeding-20261028/final/rules/forage-20261028-185833-8c9bba36/world.jsonl",
+      "bytes": 561168,
+      "modifiedUnixMs": 1793185114137,
+      "sha256": "ab5bd5e1dd260397c437482ac7b6a11020fc4a448812ccbf31e9d198f1b9f173"
+    },
+    {
+      "path": "artifacts/juvenile-feeding-20261028/final/tie/forage-20261028-185831-8719ebb6/world.jsonl",
+      "bytes": 129563,
+      "modifiedUnixMs": 1793185113249,
+      "sha256": "1075af97d66ac0fa636270cc5f4fe698b3cdc148ff0080f0ed3cbaaec74982da"
+    },
+    {
+      "path": "artifacts/juvenile-feeding-20261028/green/adult/forage-20261028-185551-c6c3253d/world.jsonl",
+      "bytes": 609546,
+      "modifiedUnixMs": 1793184951920,
+      "sha256": "06d47f429657fef62a2ddb9e7f949f727828d3db00a3a3aba68557d54d2cf5e4"
+    },
+    {
+      "path": "artifacts/juvenile-feeding-20261028/green/attack/forage-20261028-185548-568b15dd/world.jsonl",
+      "bytes": 605520,
+      "modifiedUnixMs": 1793184949277,
+      "sha256": "464470fbf5087c55687cae7aaacd506a15bc8ca3bb7cba8b711a0e7ddb15c1bb"
+    },
+    {
+      "path": "artifacts/juvenile-feeding-20261028/green/basic/forage-20261028-185528-a5ae5718/world.jsonl",
+      "bytes": 617197,
+      "modifiedUnixMs": 1793184944213,
+      "sha256": "c2ca114fd017653d1c330ca1a7023534b4064bf85bf96f4df7242f1ac02ce676"
+    },
+    {
+      "path": "artifacts/juvenile-feeding-20261028/green/child-attack/forage-20261028-185738-6d04eec4/world.jsonl",
+      "bytes": 616033,
+      "modifiedUnixMs": 1793185059613,
+      "sha256": "b7d81211c6fddff43ce987aac01993be0dd109a5dc9c08c499a7cd73cc505e55"
+    },
+    {
+      "path": "artifacts/juvenile-feeding-20261028/green/distant/forage-20261028-185549-84fd3a5d/world.jsonl",
+      "bytes": 605511,
+      "modifiedUnixMs": 1793184950163,
+      "sha256": "d0393a6e04ec44befb0810f8611fe345567ba9b0f94f3cf5adb251881f0945fc"
+    },
+    {
+      "path": "artifacts/juvenile-feeding-20261028/green/full/forage-20261028-185547-f6c5f2f9/world.jsonl",
+      "bytes": 615072,
+      "modifiedUnixMs": 1793184948433,
+      "sha256": "5671760bee7770edbfcedfeef2310045d58f9f4cf08904b1228808928d0453fa"
+    },
+    {
+      "path": "artifacts/juvenile-feeding-20261028/green/invisible/forage-20261028-185546-8e2df3da/world.jsonl",
+      "bytes": 595362,
+      "modifiedUnixMs": 1793184946651,
+      "sha256": "dac5b313a51e8139e7561cbdd830e7a7fccabd368a16a2fc7e17072fab10d4ae"
+    },
+    {
+      "path": "artifacts/juvenile-feeding-20261028/green/move/forage-20261028-185739-54d30f27/world.jsonl",
+      "bytes": 624464,
+      "modifiedUnixMs": 1793185060583,
+      "sha256": "fc8835a64d0c50b730e29431c2e6efd003d94bc24c96c07267391987e0fbdff9"
+    },
+    {
+      "path": "artifacts/juvenile-feeding-20261028/green/mutual/forage-20261028-185616-9ebce316/world.jsonl",
+      "bytes": 645549,
+      "modifiedUnixMs": 1793184976848,
+      "sha256": "b2792032341e0a4bbe6bc4c386b3242cae75cb1b9ca12352924c3931ac4df99d"
+    },
+    {
+      "path": "artifacts/juvenile-feeding-20261028/green/not-parent/forage-20261028-185550-3481084c/world.jsonl",
+      "bytes": 591792,
+      "modifiedUnixMs": 1793184951047,
+      "sha256": "851b34acca96f58b440a79dbabe55abe10e71e455e695c5f11982038fff67b69"
+    },
+    {
+      "path": "artifacts/juvenile-feeding-20261028/green/priority/forage-20261028-185706-32fc24c9/world.jsonl",
+      "bytes": 128530,
+      "modifiedUnixMs": 1793185027103,
+      "sha256": "c349467bb5c044853404cbcf17fa42ecd19bb1615cc23d911e739eaa310af1ea"
+    },
+    {
+      "path": "artifacts/juvenile-feeding-20261028/green/reserve/forage-20261028-185546-a9549800/world.jsonl",
+      "bytes": 610187,
+      "modifiedUnixMs": 1793184947556,
+      "sha256": "c6cd70e357cf8d8fbaf5c7bf49ad835d51a6d37ccf05011bce50069ed0bd35cc"
+    },
+    {
+      "path": "artifacts/juvenile-feeding-20261028/green/rules/forage-20261028-185617-01d6b62e/world.jsonl",
+      "bytes": 4423388,
+      "modifiedUnixMs": 1793184978689,
+      "sha256": "e931bcbc0be411f3c010bf9bf6fccf851e2d658eee34e2bc8d14a22918b5b4c8"
+    },
+    {
+      "path": "artifacts/juvenile-feeding-20261028/green/rules-fast/forage-20261028-185654-67d80ad7/world.jsonl",
+      "bytes": 561158,
+      "modifiedUnixMs": 1793185015279,
+      "sha256": "b77dd14539da283d5d0b0e41dbb1a470779bc15b3ccda26e154d4bd7718e2c1d"
+    },
+    {
+      "path": "artifacts/juvenile-feeding-20261028/green/rules-isolated/forage-20261028-185644-36a5cc4a/world.jsonl",
+      "bytes": 4826593,
+      "modifiedUnixMs": 1793185005680,
+      "sha256": "cf5c5cb18fafa0eb43dab6bbf2b20ae7697fca22aac51fd13b4d45f6ce635e6f"
+    },
+    {
+      "path": "artifacts/juvenile-feeding-20261028/green/rules-slow/forage-20261028-185630-bd249b66/world.jsonl",
+      "bytes": 4423406,
+      "modifiedUnixMs": 1793184991266,
+      "sha256": "e1dc29f12aeb2cdf51f72371cc6c182d9f2627452e85fcbb10712cd1a38c0dc0"
+    },
+    {
+      "path": "artifacts/juvenile-feeding-20261028/green/stopped/forage-20261028-185552-630daef2/world.jsonl",
+      "bytes": 608595,
+      "modifiedUnixMs": 1793184952794,
+      "sha256": "54d513da365f273f5d785cabe1882029c2155d5626383edac55aa0231960e28a"
+    },
+    {
+      "path": "artifacts/juvenile-feeding-20261028/green/tie/forage-20261028-185740-c28475b8/world.jsonl",
+      "bytes": 130603,
+      "modifiedUnixMs": 1793185061547,
+      "sha256": "abe73128b7568cbfe722785c72f163a93571dfed1412d8efd8d8f12a3c4c459f"
+    },
+    {
+      "path": "artifacts/juvenile-feeding-20261028/green/turn/forage-20261028-185617-369f6109/world.jsonl",
+      "bytes": 637070,
+      "modifiedUnixMs": 1793184977715,
+      "sha256": "1fffa5c0dc118ae15943ac3d1d003ab24acc11b3ef4f7e85dcc0851c270f24fa"
+    },
+    {
+      "path": "artifacts/juvenile-feeding-20261028/record/forage-20261028-185707-958d3744/episode-1.replay.partial",
+      "bytes": 444111,
+      "modifiedUnixMs": 1793185028303,
+      "sha256": "33ebacbb67b62b242d71f561490ce8644559fc8d396d6acbbac1cf15089db0c5"
+    },
+    {
+      "path": "artifacts/juvenile-feeding-20261028/record/forage-20261028-185707-958d3744/record-source.jsonl",
+      "bytes": 617124,
+      "modifiedUnixMs": 1793185027945,
+      "sha256": "d224c35ebbb4a1c8bf367f48c8f1223116dc044087ad355735b65fa378c58089"
+    },
+    {
+      "path": "artifacts/juvenile-feeding-20261028/record/forage-20261028-185707-958d3744/world.jsonl",
+      "bytes": 95899,
+      "modifiedUnixMs": 1793185027946,
+      "sha256": "cad40a6f6d31e7307501cc331a321090b2162681775ee22720ee93a0a122369c"
+    },
+    {
+      "path": "artifacts/juvenile-feeding-20261028/record2/forage-20261028-185713-b30043ef/episode-1.replay.jsonl",
+      "bytes": 444227,
+      "modifiedUnixMs": 1793185034750,
+      "sha256": "49822ca0729d5ad2c7bf2367fdaac7528ec7979c806e1edee518bfa75535daba"
+    },
+    {
+      "path": "artifacts/juvenile-feeding-20261028/record2/forage-20261028-185713-b30043ef/record-source.jsonl",
+      "bytes": 628052,
+      "modifiedUnixMs": 1793185034426,
+      "sha256": "5e0aec864b39b74bb2908ace52e9e1adb900da38f0899263ab2940e14ca1842f"
+    },
+    {
+      "path": "artifacts/juvenile-feeding-20261028/record2/forage-20261028-185713-b30043ef/world.jsonl",
+      "bytes": 106807,
+      "modifiedUnixMs": 1793185034427,
+      "sha256": "c9c783995e14880d2d5e2e42e6eeda9543397784ec8e6b656d331c445e608cea"
+    },
+    {
+      "path": "artifacts/juvenile-feeding-20261028/red/forage-20261028-185021-46739d70/world.jsonl",
+      "bytes": 540078,
+      "modifiedUnixMs": 1793184622585,
+      "sha256": "852f643e8018602ce918e9cc41105d61e9b2cfe4cbdf498d4fdaad515b93c7f3"
+    },
+    {
+      "path": "artifacts/juvenile-feeding-20261028/replay/replay-20261028-185719-9026cedb/world.jsonl",
+      "bytes": 45544,
+      "modifiedUnixMs": 1793185040191,
+      "sha256": "436cda49e2957fde0a9d18554acee55cf2cf7fd5f919bd4f1360d83dc75d48d0"
+    },
+    {
+      "path": "artifacts/juvenile-feeding-20261028/replay-old/replay-20261028-185720-8d3f9036/world.jsonl",
+      "bytes": 47674,
+      "modifiedUnixMs": 1793185041066,
+      "sha256": "2cdafaf9987d6c0b48e5f3d78d67c0a89719fa405a050e0247c9fc5208eb2305"
+    },
+    {
+      "path": "artifacts/juvenile-food-memory-20261028/bridge-20261028-183224-abe066a7/world.jsonl",
+      "bytes": 2434785,
+      "modifiedUnixMs": 1793183548403,
+      "sha256": "c3db0fc2fac5a29e6c4d6252f14108379216e35f4ca9b03d220d90750f83f9a3"
+    },
+    {
+      "path": "artifacts/juvenile-food-memory-20261028/forage-20261028-183150-56b3ce47/world.jsonl",
+      "bytes": 1747512,
+      "modifiedUnixMs": 1793183530250,
+      "sha256": "b9c049d488c7424d54dced44fe6395144ee418dffb808194704914c65a338fe5"
+    },
+    {
+      "path": "artifacts/juvenile-food-memory-20261028/forage-20261028-183224-54b83f5c/world.jsonl",
+      "bytes": 1700849,
+      "modifiedUnixMs": 1793183545666,
+      "sha256": "4944df09e51f13fa63be513397f0336d92f4955086a5334629d0593c4c989c69"
+    },
+    {
+      "path": "artifacts/juvenile-food-memory-20261028/forage-20261028-183224-da2a0d68/world.jsonl",
+      "bytes": 4524453,
+      "modifiedUnixMs": 1793183545946,
+      "sha256": "85608718b96e8ccfff7a738298dd169d9e7f6f7aa0a553a7f80ffb05cf1ab003"
+    },
+    {
+      "path": "artifacts/juvenile-food-memory-20261028/forage-20261028-183238-1665e85c/episode-1.replay.jsonl",
+      "bytes": 1233602,
+      "modifiedUnixMs": 1793183559711,
+      "sha256": "df4b43d31e27394521b18c10b797722db4c25d8745ea9773692bcffc04a37880"
+    },
+    {
+      "path": "artifacts/juvenile-food-memory-20261028/forage-20261028-183238-1665e85c/record-source.jsonl",
+      "bytes": 1756186,
+      "modifiedUnixMs": 1793183559316,
+      "sha256": "175803945ee6fca716f216822c2c5c87be22bd779a2312e29a6bd4c8f5e16c81"
+    },
+    {
+      "path": "artifacts/juvenile-food-memory-20261028/forage-20261028-183238-1665e85c/world.jsonl",
+      "bytes": 40331,
+      "modifiedUnixMs": 1793183559317,
+      "sha256": "2e605d0e9b15c681f4f739a15f0ad0964761995f9394d7b7d6337e42a6f71cf7"
+    },
+    {
+      "path": "artifacts/juvenile-food-memory-20261028/forage-20261028-183316-80096d68/world.jsonl",
+      "bytes": 1755198,
+      "modifiedUnixMs": 1793183597718,
+      "sha256": "ad70020a862544a541d0ab30d2a69fcd4bf1137edc0bf7dbaf89a1444b819cb1"
+    },
+    {
+      "path": "artifacts/juvenile-food-memory-20261028/forage-20261028-183316-97b89bc5/world.jsonl",
+      "bytes": 1770522,
+      "modifiedUnixMs": 1793183597704,
+      "sha256": "6133f04228f8782c6f0d3decbffe479c0d44771d2ffd1518683b06ee5c64fae5"
+    },
+    {
+      "path": "artifacts/juvenile-food-memory-20261028/forage-20261028-183347-3bdf0eaa/world.jsonl",
+      "bytes": 2482638,
+      "modifiedUnixMs": 1793183628037,
+      "sha256": "2e34b14e1ded9240109cc49ef2a918361d7daf766559207c8649754077192f1e"
+    },
+    {
+      "path": "artifacts/juvenile-food-memory-20261028/forage-20261028-183401-5e32bd47/world.jsonl",
+      "bytes": 2525566,
+      "modifiedUnixMs": 1793183642721,
+      "sha256": "04a7c5d7c1f5779960b8219e8a3cb28360d9dcbfe92c8b026dc6bf201ef0fbc0"
+    },
+    {
+      "path": "artifacts/juvenile-food-memory-20261028/forage-20261028-183435-89387cb8/world.jsonl",
+      "bytes": 3496572,
+      "modifiedUnixMs": 1793183676870,
+      "sha256": "bcf2eea238c71cac87ed6bdd8a361beba30c615a59ab0828a30a0624ab176bbb"
+    },
+    {
+      "path": "artifacts/juvenile-food-memory-20261028/forage-20261028-183535-3a75b530/world.jsonl",
+      "bytes": 1769499,
+      "modifiedUnixMs": 1793183737475,
+      "sha256": "0d27830c7f2bda741ef3fc6da8e8c6a2af884bf42049997b3856745800a7d9c3"
+    },
+    {
+      "path": "artifacts/juvenile-food-memory-20261028/forage-20261028-183535-ce657576/world.jsonl",
+      "bytes": 1498777,
+      "modifiedUnixMs": 1793183737442,
+      "sha256": "2011738198a0c2dcf6cbbccd57af6040332e448d51299a9ce5356dce89097f03"
+    },
+    {
+      "path": "artifacts/juvenile-food-memory-20261028/replay-20261028-183150-02a145af/world.jsonl",
+      "bytes": 31197,
+      "modifiedUnixMs": 1793183531722,
+      "sha256": "8793e6a73d6e450bd922db3b27f1fca5654ebab6456af39c7e8ccfa3090d8f51"
+    },
+    {
+      "path": "artifacts/juvenile-food-memory-20261028/replay-20261028-183242-8d66aa5a/world.jsonl",
+      "bytes": 38632,
+      "modifiedUnixMs": 1793183562944,
+      "sha256": "bcf80d93ca8353560af46bc4f65e2e11fb37a3459a174b03f549fe17b70be36c"
+    },
+    {
+      "path": "artifacts/juvenile-food-memory-20261028/replay-20261028-183535-1472cdf9/world.jsonl",
+      "bytes": 31648,
+      "modifiedUnixMs": 1793183739888,
+      "sha256": "f35b3da963e14eae94b62fe52d3efefc2ef1f651683da3453141e460dc16cd25"
+    },
+    {
+      "path": "artifacts/juvenile-growth-20261028/birth-runs/forage-20261028-183053-7b66017b/world.jsonl",
+      "bytes": 2661790,
+      "modifiedUnixMs": 1793183454461,
+      "sha256": "eeee1c37a8a028bf1803cb9c69503a659e704104b52bbbf6af96ceba7f38fd8b"
+    },
+    {
+      "path": "artifacts/juvenile-growth-20261028/flame-15-runs/forage-20261028-183545-54e6a99b/world.jsonl",
+      "bytes": 974217,
+      "modifiedUnixMs": 1793183746573,
+      "sha256": "0bc11facd465a5f5ee7fd44a937e58ff149c4adf37133676e06828b2f67fe4ee"
+    },
+    {
+      "path": "artifacts/juvenile-growth-20261028/flame-30-runs/forage-20261028-183547-1b3fc935/world.jsonl",
+      "bytes": 970028,
+      "modifiedUnixMs": 1793183748251,
+      "sha256": "aa79b5c403bdceec01f92009d5b05b24c8e2e89e390da6f14a06ee84e1623671"
+    },
+    {
+      "path": "artifacts/juvenile-growth-20261028/frost-15-runs/forage-20261028-183549-108c7dc6/world.jsonl",
+      "bytes": 973898,
+      "modifiedUnixMs": 1793183749864,
+      "sha256": "2f7087d837da86e6156c17e0e94b83d3909501bbcc72c513e7fdd5577957a635"
+    },
+    {
+      "path": "artifacts/juvenile-growth-20261028/frost-30-runs/forage-20261028-183550-9949950f/world.jsonl",
+      "bytes": 972321,
+      "modifiedUnixMs": 1793183751435,
+      "sha256": "82ac224f42919a84e8d3e24eeca37e060dc9c61cd8d7d77043ad575c331b4745"
+    },
+    {
+      "path": "artifacts/juvenile-growth-20261028/frozen-runs/forage-20261028-183034-5744510b/world.jsonl",
+      "bytes": 1832136,
+      "modifiedUnixMs": 1793183435089,
+      "sha256": "f869d916ed11291d8c846b38f88b469f258cfb4556b0f2e33bb8d29231e055fa"
+    },
+    {
+      "path": "artifacts/juvenile-growth-20261028/juvenile-replay/forage-20261028-183559-f6a5f405/episode-1.replay.jsonl",
+      "bytes": 762394,
+      "modifiedUnixMs": 1793183760581,
+      "sha256": "bc5ce44ebfbaf4051f57fef53b7ac41495925c0ebb262330096c03095707d780"
+    },
+    {
+      "path": "artifacts/juvenile-growth-20261028/juvenile-replay/forage-20261028-183559-f6a5f405/record-source.jsonl",
+      "bytes": 974144,
+      "modifiedUnixMs": 1793183760210,
+      "sha256": "74c765c05717d3976cac65303143bd3894b67c3270b1e365abbbe5f6f7f58436"
+    },
+    {
+      "path": "artifacts/juvenile-growth-20261028/juvenile-replay/forage-20261028-183559-f6a5f405/world.jsonl",
+      "bytes": 105690,
+      "modifiedUnixMs": 1793183760211,
+      "sha256": "02dc023f7d99a34fc7c983af7ab5c8d4a8f07e1487c0e0024127b9b2d2147f24"
+    },
+    {
+      "path": "artifacts/juvenile-growth-20261028/replay-check/replay-20261028-183533-1c7b8afc/world.jsonl",
+      "bytes": 34297,
+      "modifiedUnixMs": 1793183738414,
+      "sha256": "b429853a47ccbbfa1995f34dd11389bd48330c4d2ff384c27f272b440e2007db"
+    },
+    {
+      "path": "artifacts/juvenile-growth-20261028/replay-check/replay-20261028-183538-85c4e723/world.jsonl",
+      "bytes": 33335,
+      "modifiedUnixMs": 1793183739409,
+      "sha256": "5527b9f9fce3f86a9ba41fdb844c3f08e5931331bf0a81bc3b8069ac868c5d65"
+    },
+    {
+      "path": "artifacts/juvenile-growth-20261028/replay-check/replay-20261028-183603-13684920/world.jsonl",
+      "bytes": 68331,
+      "modifiedUnixMs": 1793183764765,
+      "sha256": "d76c7f7ce61f065e03031ba871dcf568398b5686dd520a69cf6109f2fbf75eed"
+    },
+    {
+      "path": "artifacts/juvenile-growth-20261028/runs/forage-20261028-183005-705d2204/world.jsonl",
+      "bytes": 28958563,
+      "modifiedUnixMs": 1793183421341,
+      "sha256": "c6c59170a333649c27f5f6e6fea2d41f44944868738123f73550f62c8553da67"
+    },
+    {
+      "path": "artifacts/juvenile-growth-20261028/vitals-runs/forage-20261028-183106-4ccdb068/world.jsonl",
+      "bytes": 1807781,
+      "modifiedUnixMs": 1793183467449,
+      "sha256": "b409f5a76fe64fcfb7c9fe84ab07a684e0fa212b9c6941cc60e62b6e2e9e0d42"
+    },
+    {
+      "path": "artifacts/juvenile-protection-20261028/attacked/forage-20261028-190622-7b2d7f63/world.jsonl",
+      "bytes": 2994577,
+      "modifiedUnixMs": 1793185583179,
+      "sha256": "d68b735b05930405698c29a46512ce335d32d315b80e532ede0a33edbfff1574"
+    },
+    {
+      "path": "artifacts/juvenile-protection-20261028/bridge/bridge-20261028-190545-0dabd761/world.jsonl",
+      "bytes": 2838025,
+      "modifiedUnixMs": 1793185547260,
+      "sha256": "cc337b256a7b81995b05d068196ad6d83b37ac910c7ff1d3df1f1444170d9b2c"
+    },
+    {
+      "path": "artifacts/juvenile-protection-20261028/child-death/forage-20261028-190624-293f7b4c/world.jsonl",
+      "bytes": 2734138,
+      "modifiedUnixMs": 1793185585009,
+      "sha256": "52601c07f98b5c282e2b264200d464803e68992a7efc8698a53d7f6baadfb5b1"
+    },
+    {
+      "path": "artifacts/juvenile-protection-20261028/critical/forage-20261028-190522-b8f96cd5/world.jsonl",
+      "bytes": 800555,
+      "modifiedUnixMs": 1793185523019,
+      "sha256": "1bc1357dc16318c015fc2e20c129fac9ef073366349c8ddecd829ac602c86488"
+    },
+    {
+      "path": "artifacts/juvenile-protection-20261028/flame/forage-20261028-190446-f9cb928e/episode-1.replay.partial",
+      "bytes": 555884,
+      "modifiedUnixMs": 1793185510759,
+      "sha256": "85b791773fc9c627bd7f84d1957ac7ec516cd269e08b69c41dcaef5725edefcb"
+    },
+    {
+      "path": "artifacts/juvenile-protection-20261028/flame/forage-20261028-190446-f9cb928e/record-source.jsonl",
+      "bytes": 795204,
+      "modifiedUnixMs": 1793185508431,
+      "sha256": "663aa20474011bfb32dfddce4935dc71fd93da83f11918aebc1c6a3af3e00bc5"
+    },
+    {
+      "path": "artifacts/juvenile-protection-20261028/flame/forage-20261028-190446-f9cb928e/world.jsonl",
+      "bytes": 210776,
+      "modifiedUnixMs": 1793185508431,
+      "sha256": "eb55e5cb47a2640618eb2046dca19dbc8b3b4d67f1173de704fc0d025b65ae6c"
+    },
+    {
+      "path": "artifacts/juvenile-protection-20261028/flame/forage-20261028-190518-94389d38/world.jsonl",
+      "bytes": 795287,
+      "modifiedUnixMs": 1793185519401,
+      "sha256": "7080c119fa32f2ec9fdec1e016250fd8990243c98265c73329a5a94b69151473"
+    },
+    {
+      "path": "artifacts/juvenile-protection-20261028/frost/forage-20261028-190519-e303bf10/world.jsonl",
+      "bytes": 792512,
+      "modifiedUnixMs": 1793185520318,
+      "sha256": "45083794f21f38d836ba338b814a8beda6d26ca8c6f440cbe302c6ad8cf217d6"
+    },
+    {
+      "path": "artifacts/juvenile-protection-20261028/full/forage-20261028-190535-f9b2ca69/episode-1.replay.jsonl",
+      "bytes": 4617488,
+      "modifiedUnixMs": 1793185536628,
+      "sha256": "0ec5d07459201db56d1544bd276e393139ec3490b59065f067d43b4eaf2ecd8f"
+    },
+    {
+      "path": "artifacts/juvenile-protection-20261028/full/forage-20261028-190535-f9b2ca69/record-source.jsonl",
+      "bytes": 5278273,
+      "modifiedUnixMs": 1793185536169,
+      "sha256": "5eee978db4e3ab6c8bd4e4a380b92562b77a602464a7b92603c64abf3c518e4f"
+    },
+    {
+      "path": "artifacts/juvenile-protection-20261028/full/forage-20261028-190535-f9b2ca69/world.jsonl",
+      "bytes": 260730,
+      "modifiedUnixMs": 1793185536170,
+      "sha256": "27260dd7446e0cdc6b9802c311293d62bc8f390a96fe0610287570abf1586ebf"
+    },
+    {
+      "path": "artifacts/juvenile-protection-20261028/hidden/forage-20261028-190523-62a96ead/world.jsonl",
+      "bytes": 794281,
+      "modifiedUnixMs": 1793185523923,
+      "sha256": "3c363fd2832cb376d090dfd11a762969ae92b56a2f8673b5844d8680301733be"
+    },
+    {
+      "path": "artifacts/juvenile-protection-20261028/interrupt/forage-20261028-190556-dcdd9a72/world.jsonl",
+      "bytes": 2187307,
+      "modifiedUnixMs": 1793185557517,
+      "sha256": "4f4cda0a3cadfd874dd8ec84c1123fa88205616b80781f009d6fd4503df4ba9d"
+    },
+    {
+      "path": "artifacts/juvenile-protection-20261028/interrupt-still/forage-20261028-190609-0bf786a5/world.jsonl",
+      "bytes": 2185204,
+      "modifiedUnixMs": 1793185570798,
+      "sha256": "f8eea69a2becb44c6589c9f3c56290a665ce8e38ed44c66525e0fc34801e52a9"
+    },
+    {
+      "path": "artifacts/juvenile-protection-20261028/moss/forage-20261028-190520-201f75fc/world.jsonl",
+      "bytes": 809857,
+      "modifiedUnixMs": 1793185521258,
+      "sha256": "57d174cda94d85d8eac363b0bba4706b774a62d18549b8026cc879204e294d26"
+    },
+    {
+      "path": "artifacts/juvenile-protection-20261028/multi/forage-20261028-190658-5ff18ac3/world.jsonl",
+      "bytes": 598927,
+      "modifiedUnixMs": 1793185618953,
+      "sha256": "a5ea9cc6c116b4d01d071b394ee6a142874f3434f35477dfa2f5aa05ae63cbaa"
+    },
+    {
+      "path": "artifacts/juvenile-protection-20261028/old-replay/replay-20261028-190544-73f4066f/world.jsonl",
+      "bytes": 47744,
+      "modifiedUnixMs": 1793185545239,
+      "sha256": "98d2a3268162f0b5ad9577f00c2a0a77ade6838bdb00646c41caba60af3d6309"
+    },
+    {
+      "path": "artifacts/juvenile-protection-20261028/parent-dead/forage-20261028-190635-5d38fa68/world.jsonl",
+      "bytes": 3035702,
+      "modifiedUnixMs": 1793185596209,
+      "sha256": "8003f38efda8e2a75bcb9e407e52373f6c199100f65e69020ad14a17e091de6c"
+    },
+    {
+      "path": "artifacts/juvenile-protection-20261028/parent-dead2/forage-20261028-190647-9089030c/world.jsonl",
+      "bytes": 2705316,
+      "modifiedUnixMs": 1793185607844,
+      "sha256": "534e86c5877d79d9c35767d058572bfb9ece8ff0994f944a00670b4ac40c3a47"
+    },
+    {
+      "path": "artifacts/juvenile-protection-20261028/parent-death/forage-20261028-190623-b1732106/world.jsonl",
+      "bytes": 2734139,
+      "modifiedUnixMs": 1793185584097,
+      "sha256": "c88838d1f5fe647e169383bc5c327cb46c48bbabe5586a41895cbf272468adcb"
+    },
+    {
+      "path": "artifacts/juvenile-protection-20261028/parent-hit/forage-20261028-190634-bbba401d/world.jsonl",
+      "bytes": 3036095,
+      "modifiedUnixMs": 1793185595309,
+      "sha256": "229e711306d9aff275a50efcfb47b91448a5cf4d8fa27ef6696f1e777ee85361"
+    },
+    {
+      "path": "artifacts/juvenile-protection-20261028/parent-hit2/forage-20261028-190646-171ebb2c/world.jsonl",
+      "bytes": 3039201,
+      "modifiedUnixMs": 1793185606913,
+      "sha256": "361ef7f97129bd2dbb903a3e43de3a1bd12de8a01f45af29a165c710862d2ccf"
+    },
+    {
+      "path": "artifacts/juvenile-protection-20261028/pure-care/forage-20261028-190824-4ef18289/world.jsonl",
+      "bytes": 5624739,
+      "modifiedUnixMs": 1793185705465,
+      "sha256": "a64a98e18a893c1c15f9dc2372fecaa8cd94bd4487820a8538121bf620c98917"
+    },
+    {
+      "path": "artifacts/juvenile-protection-20261028/pure-child/forage-20261028-190802-0fbb1bd0/world.jsonl",
+      "bytes": 5037639,
+      "modifiedUnixMs": 1793185683166,
+      "sha256": "cd66023c94f90f3b43fd2b732abafffbfce091df15c3ac9b2614a6b0783162ea"
+    },
+    {
+      "path": "artifacts/juvenile-protection-20261028/pure-child/forage-20261028-190803-38284cf6/world.jsonl",
+      "bytes": 5037629,
+      "modifiedUnixMs": 1793185684138,
+      "sha256": "156aa6d238acbeb94f0811bed1cd05d4decbc584af330cb5f3cf9debf5e10eb2"
+    },
+    {
+      "path": "artifacts/juvenile-protection-20261028/pure-child/forage-20261028-190804-d8aeda35/world.jsonl",
+      "bytes": 4958988,
+      "modifiedUnixMs": 1793185685115,
+      "sha256": "cf966eb98e0759c542269e560869d99cf9df5d1029d054e460be06dd73f6810f"
+    },
+    {
+      "path": "artifacts/juvenile-protection-20261028/pure-hit/forage-20261028-190823-bce08293/world.jsonl",
+      "bytes": 5593345,
+      "modifiedUnixMs": 1793185704400,
+      "sha256": "bc66a89d8b0b7678fbc0039893ff50b24917a6c96f9c22e2cd13b6466554adb5"
+    },
+    {
+      "path": "artifacts/juvenile-protection-20261028/pure-parent/forage-20261028-190759-ad433775/world.jsonl",
+      "bytes": 4956701,
+      "modifiedUnixMs": 1793185680159,
+      "sha256": "87ac0e57f4880c4fed45d26de327e2ba836a6463d12b3cbad7a0b63a320ef178"
+    },
+    {
+      "path": "artifacts/juvenile-protection-20261028/pure-parent/forage-20261028-190800-e969e65d/world.jsonl",
+      "bytes": 4956691,
+      "modifiedUnixMs": 1793185681139,
+      "sha256": "7fffd7c441f83cdbdbfa65dc6f805ae71b44e27550a755e4f4ff5a8df67c4b21"
+    },
+    {
+      "path": "artifacts/juvenile-protection-20261028/pure-parent/forage-20261028-190801-dfa22cec/world.jsonl",
+      "bytes": 4899933,
+      "modifiedUnixMs": 1793185682139,
+      "sha256": "e670869d2c5b514e97348458dc6364f8e7f2afbe8c42c59e21b9fb92fde2acce"
+    },
+    {
+      "path": "artifacts/juvenile-protection-20261028/red/forage-20261028-190104-10630890/world.jsonl",
+      "bytes": 426579,
+      "modifiedUnixMs": 1793185265386,
+      "sha256": "16f92f047331baed9f6127275f3c298b0e360a4b8fbfcb0b7b419fa3b1dfa99b"
+    },
+    {
+      "path": "artifacts/juvenile-protection-20261028/red-v12/forage-20261028-190123-430ea6fe/world.jsonl",
+      "bytes": 467175,
+      "modifiedUnixMs": 1793185284460,
+      "sha256": "7f9a2d068e0c2b4ab7ad65c12fcfbd04b969471c662348465541585a7e404ad6"
+    },
+    {
+      "path": "artifacts/juvenile-protection-20261028/replay/replay-20261028-190543-0ec55fa8/world.jsonl",
+      "bytes": 146638,
+      "modifiedUnixMs": 1793185544440,
+      "sha256": "a1d18559084a228b53ac48f386f5e0f33763fdfcb926bd06ebb1edca4abcbc93"
+    },
+    {
+      "path": "artifacts/juvenile-protection-20261028/weak/forage-20261028-190521-71b4f887/world.jsonl",
+      "bytes": 792928,
+      "modifiedUnixMs": 1793185522126,
+      "sha256": "703f5096fbd205ac9fb1a4d2b39b4c0c9b1992951f518fc8598fe60d3859577f"
+    },
+    {
+      "path": "artifacts/juvenile-review-20261028/bridge/bridge-20261028-192756-fa1f8b58/world.jsonl",
+      "bytes": 2838077,
+      "modifiedUnixMs": 1793186878451,
+      "sha256": "1acf110b37c82e87209e7908b7110946ce322694cf2aaaa7f8d203670a14804d"
+    },
+    {
+      "path": "artifacts/juvenile-review-20261028/green-care/forage-20261028-192748-c8259944/episode-1.replay.jsonl",
+      "bytes": 4949536,
+      "modifiedUnixMs": 1793186870235,
+      "sha256": "ba7bcede8bc28f56cf937ca508c28f8d23fd1ee450277c6e41596ffdca2cf8e1"
+    },
+    {
+      "path": "artifacts/juvenile-review-20261028/green-care/forage-20261028-192748-c8259944/record-source.jsonl",
+      "bytes": 5624718,
+      "modifiedUnixMs": 1793186869781,
+      "sha256": "a5e7fda17eeb6fdb32d4d562f25d9283c11f3ce21f9c73975ac12538880905d9"
+    },
+    {
+      "path": "artifacts/juvenile-review-20261028/green-care/forage-20261028-192748-c8259944/world.jsonl",
+      "bytes": 515267,
+      "modifiedUnixMs": 1793186869782,
+      "sha256": "e58759bd08a8049e1b54504d2ed81a5e395b2c696d7d686a3f00fb76beb6cf1e"
+    },
+    {
+      "path": "artifacts/juvenile-review-20261028/green-charge/forage-20261028-192719-a9f95711/episode-1.replay.jsonl",
+      "bytes": 326056,
+      "modifiedUnixMs": 1793186840071,
+      "sha256": "3303a8beaa26148bb816b9d925d90a58bf6971282a390a939ecd56ca2e9c46c9"
+    },
+    {
+      "path": "artifacts/juvenile-review-20261028/green-charge/forage-20261028-192719-a9f95711/record-source.jsonl",
+      "bytes": 477448,
+      "modifiedUnixMs": 1793186839754,
+      "sha256": "f21937b6242b501d340dc0572cda441a07b5c58a0b366c999cdf218ab229e84f"
+    },
+    {
+      "path": "artifacts/juvenile-review-20261028/green-charge/forage-20261028-192719-a9f95711/world.jsonl",
+      "bytes": 63884,
+      "modifiedUnixMs": 1793186839755,
+      "sha256": "13df8709835857074f76d8dfca8e458868c23b034ef88fe2e09a53183c6da663"
+    },
+    {
+      "path": "artifacts/juvenile-review-20261028/green-danger/forage-20261028-192720-27abf212/episode-1.replay.jsonl",
+      "bytes": 4547338,
+      "modifiedUnixMs": 1793186841389,
+      "sha256": "b2181087a3471d7ceaf93dcd439a308b9ca82e21d59742906ac84d3c0f5c14c2"
+    },
+    {
+      "path": "artifacts/juvenile-review-20261028/green-danger/forage-20261028-192720-27abf212/record-source.jsonl",
+      "bytes": 5204729,
+      "modifiedUnixMs": 1793186840943,
+      "sha256": "9fcdba7ef189076ff675e70d5f22468db3b20f49f91b79da51fe455b1a962553"
+    },
+    {
+      "path": "artifacts/juvenile-review-20261028/green-danger/forage-20261028-192720-27abf212/world.jsonl",
+      "bytes": 250294,
+      "modifiedUnixMs": 1793186840944,
+      "sha256": "d9b1ce8a3e278f329cbcbcf8d4aa6126a0eb0c56a1358bcbf6576163856c3fbb"
+    },
+    {
+      "path": "artifacts/juvenile-review-20261028/green-dash/forage-20261028-192831-426b0b1a/episode-1.replay.jsonl",
+      "bytes": 326153,
+      "modifiedUnixMs": 1793186912020,
+      "sha256": "0464c232fd49637a74f251975bce780f23004f788d109ba40412362dded76391"
+    },
+    {
+      "path": "artifacts/juvenile-review-20261028/green-dash/forage-20261028-192831-426b0b1a/record-source.jsonl",
+      "bytes": 477575,
+      "modifiedUnixMs": 1793186911699,
+      "sha256": "bed4f1ff93ab8be1ad7cafbea492fde529d4fccbf4f0df0d282a41ecbee1a84c"
+    },
+    {
+      "path": "artifacts/juvenile-review-20261028/green-dash/forage-20261028-192831-426b0b1a/world.jsonl",
+      "bytes": 63941,
+      "modifiedUnixMs": 1793186911700,
+      "sha256": "276402c5a962f0ab184b01935bf7a0cfe442cf5960634dbf67423e0b5bf8f731"
+    },
+    {
+      "path": "artifacts/juvenile-review-20261028/green-no-danger/forage-20261028-192806-c375ca59/episode-1.replay.jsonl",
+      "bytes": 4255918,
+      "modifiedUnixMs": 1793186887327,
+      "sha256": "a6015d2d60ad984dac6b5e5a5b94bad357c0fe7bcc042d96f5789152f46ccac1"
+    },
+    {
+      "path": "artifacts/juvenile-review-20261028/green-no-danger/forage-20261028-192806-c375ca59/record-source.jsonl",
+      "bytes": 4906138,
+      "modifiedUnixMs": 1793186886849,
+      "sha256": "83e861930fd746bcd0fdc20d43ea4812308463f4a6ff1eca275964d9eb481d56"
+    },
+    {
+      "path": "artifacts/juvenile-review-20261028/green-no-danger/forage-20261028-192806-c375ca59/world.jsonl",
+      "bytes": 242357,
+      "modifiedUnixMs": 1793186886850,
+      "sha256": "e798417dd7cc1f8b51a1fa4d9cfcf4dec3337b177912ba014a118480d6fbe92f"
+    },
+    {
+      "path": "artifacts/juvenile-review-20261028/green-windup/forage-20261028-192654-a34979c5/episode-1.replay.jsonl",
+      "bytes": 328908,
+      "modifiedUnixMs": 1793186839050,
+      "sha256": "ef9c4f2d56dbe9e9d8744fccf774681a97ffac3e91bfc47a4600f8194d1aa2c0"
+    },
+    {
+      "path": "artifacts/juvenile-review-20261028/green-windup/forage-20261028-192654-a34979c5/record-source.jsonl",
+      "bytes": 481018,
+      "modifiedUnixMs": 1793186836768,
+      "sha256": "de716f00d521f7601ff150cd929898f0554003cba506a273f2d17a2c95ae4712"
+    },
+    {
+      "path": "artifacts/juvenile-review-20261028/green-windup/forage-20261028-192654-a34979c5/world.jsonl",
+      "bytes": 75634,
+      "modifiedUnixMs": 1793186836769,
+      "sha256": "1cee8b1cb17125e78def794600991a16d1ad7164f0ebb45186e5c1ad8ba883d2"
+    },
+    {
+      "path": "artifacts/juvenile-review-20261028/red-charge/forage-20261028-192639-77484524/episode-1.replay.partial",
+      "bytes": 334144,
+      "modifiedUnixMs": 1793186800427,
+      "sha256": "1688e24889d18e1e20f2239477a3c7dd5b71a45a4336e0ea5914797919478230"
+    },
+    {
+      "path": "artifacts/juvenile-review-20261028/red-charge/forage-20261028-192639-77484524/record-source.jsonl",
+      "bytes": 474022,
+      "modifiedUnixMs": 1793186800080,
+      "sha256": "fdcb48edc4516044c226ba2c12ddf665d973bc419ff96e7b2cb6e81f2db91b2a"
+    },
+    {
+      "path": "artifacts/juvenile-review-20261028/red-charge/forage-20261028-192639-77484524/world.jsonl",
+      "bytes": 84866,
+      "modifiedUnixMs": 1793186800081,
+      "sha256": "7ab5dcae1d0c129fcda4f432c17382dd6cf01badc72b38b6f8667d40e8a68c31"
+    },
+    {
+      "path": "artifacts/juvenile-review-20261028/red-danger/forage-20261028-192534-b7eed54d/episode-1.replay.partial",
+      "bytes": 277415,
+      "modifiedUnixMs": 1793186735736,
+      "sha256": "b3710c6c552911399b4eb0facc44a701ebfc7dfb82eaab81dcacc8907e3fffae"
+    },
+    {
+      "path": "artifacts/juvenile-review-20261028/red-danger/forage-20261028-192534-b7eed54d/record-source.jsonl",
+      "bytes": 485060,
+      "modifiedUnixMs": 1793186735403,
+      "sha256": "d60066aac9adae16aa018d77e86044693be7727de54d4225e7d676fdd5cf61d9"
+    },
+    {
+      "path": "artifacts/juvenile-review-20261028/red-danger/forage-20261028-192534-b7eed54d/world.jsonl",
+      "bytes": 206662,
+      "modifiedUnixMs": 1793186735405,
+      "sha256": "85fbd91ae5c1244d9febd58c2bef109a1743c220ecd488a9b5588d8d89cbd582"
+    },
+    {
+      "path": "artifacts/juvenile-review-20261028/red-search/forage-20261028-192554-775769a0/episode-1.replay.jsonl",
+      "bytes": 4527158,
+      "modifiedUnixMs": 1793186755625,
+      "sha256": "5d2b6e471d56ecc59a04573f090964c89a7142af29c59308ef8f853a90aeb43e"
+    },
+    {
+      "path": "artifacts/juvenile-review-20261028/red-search/forage-20261028-192554-775769a0/record-source.jsonl",
+      "bytes": 5183634,
+      "modifiedUnixMs": 1793186755180,
+      "sha256": "3e72525247311defaa760d58fb7a876200b67d08eafed6c18eebb1f84d5a4834"
+    },
+    {
+      "path": "artifacts/juvenile-review-20261028/red-search/forage-20261028-192554-775769a0/world.jsonl",
+      "bytes": 249125,
+      "modifiedUnixMs": 1793186755181,
+      "sha256": "ce5bd8d1d1bb4518b6635dffa7c1e28041ef130f6e59773a91f22825846a8c84"
+    },
+    {
+      "path": "artifacts/juvenile-review-20261028/red-windup/forage-20261028-192358-e52f55e5/episode-1.replay.partial",
+      "bytes": 279276,
+      "modifiedUnixMs": 1793186661489,
+      "sha256": "ec24486d7750a8270dad34d503c5cbf2313e67e78f353cd75b5c06f78f000909"
+    },
+    {
+      "path": "artifacts/juvenile-review-20261028/red-windup/forage-20261028-192358-e52f55e5/record-source.jsonl",
+      "bytes": 397749,
+      "modifiedUnixMs": 1793186659733,
+      "sha256": "e053d44c7d0b530c853165dd6294ac628f9dac298a0cf0009c7d90265aa519b0"
+    },
+    {
+      "path": "artifacts/juvenile-review-20261028/red-windup/forage-20261028-192358-e52f55e5/world.jsonl",
+      "bytes": 44974,
+      "modifiedUnixMs": 1793186659734,
+      "sha256": "091168486c4ad798a33a896d2b38cab3b689ade66ea6a362ff041279b1b23d67"
+    },
+    {
+      "path": "artifacts/juvenile-review-20261028/red2/forage-20261028-192445-275baa96/episode-1.replay.partial",
+      "bytes": 334223,
+      "modifiedUnixMs": 1793186686244,
+      "sha256": "a08d334c0db452751c64aeb0a880c7a396d64d17da7c8bb1f24ee0daea3436e4"
+    },
+    {
+      "path": "artifacts/juvenile-review-20261028/red2/forage-20261028-192445-275baa96/record-source.jsonl",
+      "bytes": 474216,
+      "modifiedUnixMs": 1793186685924,
+      "sha256": "da056ef149e0bd1462097a869134bd923fc353853aa34f9afc4e4b95569f81a7"
+    },
+    {
+      "path": "artifacts/juvenile-review-20261028/red2/forage-20261028-192445-275baa96/world.jsonl",
+      "bytes": 85113,
+      "modifiedUnixMs": 1793186685924,
+      "sha256": "32514f0372232b0e74910132a0576a07c4bcb6fac3b32c1b87be840e315ab9c8"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/baseline/forage-20261028-183813-2792dd3f/world.jsonl",
+      "bytes": 168027424,
+      "modifiedUnixMs": 1793183900130,
+      "sha256": "5ec98bd645970144f6ee927a34896e27bc0a47d542f03dab41a4ecd09e6525b6"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/baseline-growth/forage-20261028-183837-26a0bc2f/world.jsonl",
+      "bytes": 170898489,
+      "modifiedUnixMs": 1793183929839,
+      "sha256": "58e61a67552cf49307488980a6f8242b862f3c72c7320838d7fae59e99a1d327"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/bridge/bridge-20261028-184327-a2fdbea2/world.jsonl",
+      "bytes": 2573205,
+      "modifiedUnixMs": 1793184211704,
+      "sha256": "1d5fe3644ba0fb4133a416487f4e7e9b6094dfb1b7bbf6a2c133c6145e849494"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/charge-15-runs/forage-20261028-184256-bd1764f1/world.jsonl",
+      "bytes": 2149226,
+      "modifiedUnixMs": 1793184177624,
+      "sha256": "58e297a2b69d48b7eebdb0347e187d6fb8d9180de96f314f1d9a982164b29131"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/charge-30-runs/forage-20261028-184257-79fd5381/world.jsonl",
+      "bytes": 2140522,
+      "modifiedUnixMs": 1793184178519,
+      "sha256": "8bd84288cfeb949c5dfbc82c0622b191510d7085d86d861e57e36cd83cf6d0e2"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/charge-runs/forage-20261028-184144-2c099973/world.jsonl",
+      "bytes": 5576552,
+      "modifiedUnixMs": 1793184105334,
+      "sha256": "11270d924ea7dc1918fe7332f90ccb3bb2777eb8278f295056da8538d4f1a744"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/cross-adult-runs/forage-20261028-184149-e78cdf27/world.jsonl",
+      "bytes": 5425025,
+      "modifiedUnixMs": 1793184110374,
+      "sha256": "fea7d1ae35ef6ae34f98658020f97ba77b0749158330954f257c7472564a2395"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/cultivate-runs/forage-20261028-184154-4b0b7541/world.jsonl",
+      "bytes": 5557384,
+      "modifiedUnixMs": 1793184115387,
+      "sha256": "586a0d1fa9eca28c9b2a5acaac726f5e49199b48b8d6ee545ab15ed57c2b5fab"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/dash-runs/forage-20261028-184150-5d5ed88a/world.jsonl",
+      "bytes": 5391276,
+      "modifiedUnixMs": 1793184111376,
+      "sha256": "c3392a89bece8b6b39137975c1c6fe4901a7bcb05532c714c9a9e78e1cec8349"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/death-projectile-runs/forage-20261028-184529-7fcdd1fb/world.jsonl",
+      "bytes": 2506044,
+      "modifiedUnixMs": 1793184330267,
+      "sha256": "43adbfc766d8388be75691e2dd1211bbe268b83bd4ccb0f05566d0cddf18b490"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/existing-skills-flame/forage-20261028-184502-2a6b5608/world.jsonl",
+      "bytes": 19399695,
+      "modifiedUnixMs": 1793184304588,
+      "sha256": "24153eb0488e11116e414cc3fabe883b7321ae24af1f728e5157c744ab4c4640"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/existing-skills-frost-arrows/forage-20261028-184504-9451f228/world.jsonl",
+      "bytes": 19759065,
+      "modifiedUnixMs": 1793184307625,
+      "sha256": "5c9a1b65bd38d1a8fe54d371c76eb767b0015b52edb89168efcbbc894389cc91"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/existing-skills-frost-mobility/forage-20261028-184508-da764bf4/world.jsonl",
+      "bytes": 21552416,
+      "modifiedUnixMs": 1793184310198,
+      "sha256": "33c48d7a4d9f8e87dd9d66e61651b385968b16601a954950bca81cbae51d94dc"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/existing-skills-moss-control/forage-20261028-184512-1d75ee80/world.jsonl",
+      "bytes": 19745161,
+      "modifiedUnixMs": 1793184313452,
+      "sha256": "7a2d5bd036b9a60657d783e8a147152b4869fd736398f0dedd277589487aa010"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/existing-skills-moss-growth/forage-20261028-184510-4a4e300b/world.jsonl",
+      "bytes": 24210654,
+      "modifiedUnixMs": 1793184311867,
+      "sha256": "8c3982c2c808cef16f3cb1d208fd6c7518acdf3880dcdfc1f8bb66b62dfd05ff"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/FrostbindArrow-15-runs/forage-20261028-184258-f5c8f377/world.jsonl",
+      "bytes": 2087907,
+      "modifiedUnixMs": 1793184179425,
+      "sha256": "9f6b9dba815bd2bf78f35b6343b4978960da59535e30000ab6c365635eb277de"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/FrostbindArrow-30-runs/forage-20261028-184259-b26cec76/world.jsonl",
+      "bytes": 2080644,
+      "modifiedUnixMs": 1793184180357,
+      "sha256": "2c0552db403aa0ce17e8940084b6068bade3b4b935a1beab8df01053d93e997e"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/FrostbindArrow-runs/forage-20261028-184147-f9f3d753/world.jsonl",
+      "bytes": 5418452,
+      "modifiedUnixMs": 1793184108317,
+      "sha256": "b05ffb099bb45d32e6a9bba51441a050c16844c8735256c9bbff7b398fe60784"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/hotstrike-15-runs/forage-20261028-184254-ac9e1c69/world.jsonl",
+      "bytes": 1197412,
+      "modifiedUnixMs": 1793184175756,
+      "sha256": "58da836a12f2546b2b36b6d9009aa5096f20e1488a38c96bc602058112f81d7c"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/hotstrike-30-runs/forage-20261028-184255-1e813125/world.jsonl",
+      "bytes": 1190277,
+      "modifiedUnixMs": 1793184176690,
+      "sha256": "e9b71d0d857b9a8e58003f6aea0100c441c49da762d571644009ec315ff99cad"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/hotstrike-runs/forage-20261028-184125-df0b36c3/world.jsonl",
+      "bytes": 3260523,
+      "modifiedUnixMs": 1793184102857,
+      "sha256": "cba2d82ca1220777a8a5a4d82b206776f3bf42d29ad8d02602b97f9a46a68690"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/invalid-runs/forage-20261028-184303-7c4897a0/world.jsonl",
+      "bytes": 1165903,
+      "modifiedUnixMs": 1793184183963,
+      "sha256": "e7df1939f2d3b80838516cd09601a5b4b68253787f3877d64c5863005120cb8b"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/old-replay/replay-20261028-184357-a463cdca/world.jsonl",
+      "bytes": 42623,
+      "modifiedUnixMs": 1793184244991,
+      "sha256": "2292151161b7e6ab8b50f487878a682bfc5ea65e3c4d70c9150b8be93b0d6244"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/PiercingIceArrow-15-runs/forage-20261028-184300-55712773/world.jsonl",
+      "bytes": 2095841,
+      "modifiedUnixMs": 1793184181269,
+      "sha256": "909ce587756d2e0ec443163944f0aebc4914f51bc4a968440f43652fb34d5f2c"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/PiercingIceArrow-30-runs/forage-20261028-184301-507e234c/world.jsonl",
+      "bytes": 2087170,
+      "modifiedUnixMs": 1793184182185,
+      "sha256": "6227f3741ec79ca719a7cf74809852c07f248c2b7ec8291750f95182157c5510"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/PiercingIceArrow-runs/forage-20261028-184148-3f72b236/world.jsonl",
+      "bytes": 5423756,
+      "modifiedUnixMs": 1793184109335,
+      "sha256": "2428a21892daae88a53805af2e417b83c097eb18f55d239f4d5d1b61906937ec"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/record/forage-20261028-184338-a16e33a3/episode-1.replay.jsonl",
+      "bytes": 916487,
+      "modifiedUnixMs": 1793184228722,
+      "sha256": "885e439bd7fa253e44ca176210270f840ddce2214d49cc8a84f76a8138551ce9"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/record/forage-20261028-184338-a16e33a3/record-source.jsonl",
+      "bytes": 1196506,
+      "modifiedUnixMs": 1793184224105,
+      "sha256": "7bee445ed60ae2f2f18977a6462457ca7ee0e040eb16e9dbc5511e49d0ee60c6"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/record/forage-20261028-184338-a16e33a3/world.jsonl",
+      "bytes": 87447,
+      "modifiedUnixMs": 1793184224107,
+      "sha256": "fc5d9b5442afdd37aa89533a7690fabc7fb02b4d34e48add84570eef2a6e9ba7"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/replay/replay-20261028-184354-44355ee4/world.jsonl",
+      "bytes": 70173,
+      "modifiedUnixMs": 1793184236942,
+      "sha256": "579bbcb61c4533705b15f194756e2da134d25400afca9706ec76a856ce4f1a9b"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/roar-runs/forage-20261028-184146-cb099dc5/world.jsonl",
+      "bytes": 5466658,
+      "modifiedUnixMs": 1793184107315,
+      "sha256": "3d6d1b0a4261941c6f189cb314b2663c7c9cbd63eeeca71da6171ee3e6fb2dac"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/roots-runs/forage-20261028-184152-1adaa80b/world.jsonl",
+      "bytes": 5447196,
+      "modifiedUnixMs": 1793184113377,
+      "sha256": "e0dff249cd4f12893174a55bb971982c70bc9e9e839812bb257a760d41148ac4"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/rule-close-contest/forage-20261028-184732-d8316df8/world.jsonl",
+      "bytes": 262610,
+      "modifiedUnixMs": 1793184453495,
+      "sha256": "493b1f9cae2dcfa6d17cf10740ba50a39783cfe3b42bc612507fa70b98920d7a"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/rule-close-isolated/forage-20261028-184715-b7637c56/world.jsonl",
+      "bytes": 203551,
+      "modifiedUnixMs": 1793184435837,
+      "sha256": "e612a794f91730811d3d471e38563cf1ab44ead9caef75ad54818c366bbe4c73"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/rule-close-runs/forage-20261028-184658-41ee0912/world.jsonl",
+      "bytes": 208478,
+      "modifiedUnixMs": 1793184419116,
+      "sha256": "1bd34a0b46f7fb6e2472967290ccfd4adb9a8682994db9cb2783d1970c749882"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/rule-far-contest/forage-20261028-184733-4cba2c05/world.jsonl",
+      "bytes": 264389,
+      "modifiedUnixMs": 1793184454411,
+      "sha256": "2c50037635cd16a5f9014b507a85f799d43de4974c9d4712bfa1310759041a1c"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/rule-far-isolated/forage-20261028-184716-1c2fb0d1/world.jsonl",
+      "bytes": 205335,
+      "modifiedUnixMs": 1793184436651,
+      "sha256": "0576c0b6b2499845779eaf394ecab648c8a52d1893ce6653fb71b05cf6a5f41f"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/rule-far-runs/forage-20261028-184659-1cf314de/world.jsonl",
+      "bytes": 210272,
+      "modifiedUnixMs": 1793184420079,
+      "sha256": "707e8e0e5de7ddcb6c0c5b40458dae9a75d6563020003b8e3c4844fc4ae0e9a1"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/shield-runs/forage-20261028-184145-1d93384f/world.jsonl",
+      "bytes": 5566892,
+      "modifiedUnixMs": 1793184106325,
+      "sha256": "c41f0866715b46da09ee85c78fc3cd62263f7c58c85d96d07791487d5b3e8ff2"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/smoke-runs/forage-20261028-184153-d2e96792/world.jsonl",
+      "bytes": 5644821,
+      "modifiedUnixMs": 1793184114385,
+      "sha256": "e445d9c5a9a9495a3d21072511bd3cfd233f06458e6143ae360a26eebcfb4592"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/sow-runs/forage-20261028-184302-7f06936c/world.jsonl",
+      "bytes": 2167238,
+      "modifiedUnixMs": 1793184183095,
+      "sha256": "97e8cb97477586005d3db7bfb2694a43e5b10753957de330208379cd9c4c886c"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/trap-runs/forage-20261028-184151-5098c968/world.jsonl",
+      "bytes": 5441145,
+      "modifiedUnixMs": 1793184112398,
+      "sha256": "119949e0562a92c8b631255cac2e38bce7103d1bd1b53b9b492f061ea4abe365"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/v11-bridge/bridge-20261028-185018-0a793642/world.jsonl",
+      "bytes": 2597316,
+      "modifiedUnixMs": 1793184620421,
+      "sha256": "7125345e8a60c636e2e1a29fa988e8592ff491b54ed2db11a32a86f26f76375a"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/v11-charge-distance/forage-20261028-185042-cc5efce4/world.jsonl",
+      "bytes": 670241,
+      "modifiedUnixMs": 1793184642921,
+      "sha256": "6f794d02c894a50ab9f32adb5319c8965e23429873fc3a126478bff06b1e5b82"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/v11-cross-adult/forage-20261028-185013-8a42a3ed/world.jsonl",
+      "bytes": 5468234,
+      "modifiedUnixMs": 1793184615201,
+      "sha256": "c000414020afceb654f323f54cd25026b945b66ab82a8ab9cd139b745a7720d3"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/v11-cultivate/forage-20261028-185015-f1dba434/world.jsonl",
+      "bytes": 5600592,
+      "modifiedUnixMs": 1793184616228,
+      "sha256": "fb88c7ff3241dcea37df02f6f7bb4019336e3f1c957a3804b266ff127419d562"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/v11-death-projectile/forage-20261028-185016-27561bc3/world.jsonl",
+      "bytes": 5220489,
+      "modifiedUnixMs": 1793184617293,
+      "sha256": "b0139ea8e2780b88044bc8097741e21f3a61a4061b818801f441ec7dd60197ec"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/v11-play-record/replay-20261028-185027-03f2e534/world.jsonl",
+      "bytes": 70750,
+      "modifiedUnixMs": 1793184628003,
+      "sha256": "3f507b981d5207b4ba8980a9a64b107b1b37a2c37a8cc9724a015bd4aefdd6fb"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/v11-play-v11-record/replay-20261028-185026-0777795d/world.jsonl",
+      "bytes": 70740,
+      "modifiedUnixMs": 1793184627173,
+      "sha256": "66f335218c2200a9e257cbebe9da52e5ec124b4a48ce5cd7b2f960bf70dd0ec7"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/v11-record/forage-20261028-185017-91b8bd82/episode-1.replay.jsonl",
+      "bytes": 923120,
+      "modifiedUnixMs": 1793184618623,
+      "sha256": "3340d45e39be4374317f2ba571353f01af9abae1d223544e86bcb35e9010a8dd"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/v11-record/forage-20261028-185017-91b8bd82/record-source.jsonl",
+      "bytes": 1205866,
+      "modifiedUnixMs": 1793184618247,
+      "sha256": "c283881728bddd4ff520458bee799ca544a30232b6e40d4dadbc4a700b9ee211"
+    },
+    {
+      "path": "artifacts/juvenile-skills-20261028/v11-record/forage-20261028-185017-91b8bd82/world.jsonl",
+      "bytes": 88167,
+      "modifiedUnixMs": 1793184618248,
+      "sha256": "63e531f5bce6496fadbc410b6d08d6057db00f5cf87d480fffee44d48b631dc4"
+    },
+    {
+      "path": "artifacts/observer-large-layout/live.jsonl",
+      "bytes": 18290362,
+      "modifiedUnixMs": 1793278386260,
+      "sha256": "49ce9db02351c9c9bcb5868f0c840838974b8f578e826b36f6835707dae12afe"
+    },
+    {
+      "path": "artifacts/observer-large-layout/replay.jsonl",
+      "bytes": 4469,
+      "modifiedUnixMs": 1793278443561,
+      "sha256": "13ac19f08d4af4191262e7f1c74de7c6348f65367520fb88b9076ec8379c94ca"
+    },
+    {
+      "path": "artifacts/observer-large-layout/bridge/world.jsonl",
+      "bytes": 836453,
+      "modifiedUnixMs": 1793278384777,
+      "sha256": "abb62ec8b99f21fb049d6c1bb2874bc45d2e02d406cdb55977eebfe2e1f8dece"
+    },
+    {
+      "path": "artifacts/powershell-encoding/visible/forage-20261029-205943-71747117/world.jsonl",
+      "bytes": 4306345,
+      "modifiedUnixMs": 1793278789355,
+      "sha256": "b542c97f7ce18d511e7f963eed4a4b8fbc2e0b3ccb466414002a6f9158114636"
+    },
+    {
+      "path": "artifacts/runs/forage-20261025-113850-38967285/world.jsonl",
+      "bytes": 11905810481,
+      "modifiedUnixMs": 1792899843862,
+      "sha256": "a4fd821efa23846e9bd4cf97c54b3db79cde11fc6533e628d19b8f11c85e5645"
+    },
+    {
+      "path": "artifacts/runs/forage-20261029-111706-986ccef7/world.jsonl",
+      "bytes": 3728749,
+      "modifiedUnixMs": 1793243842759,
+      "sha256": "40f4f620b0b57467c4b40486de74b934acb6057730ec38383394180ee0e1a3d3"
+    },
+    {
+      "path": "artifacts/runs/forage-20261029-111812-45550c17/world.jsonl",
+      "bytes": 1519895440,
+      "modifiedUnixMs": 1793244111180,
+      "sha256": "2ca054e9db0599628469a0cefd877448e6ffd7ae0a954b990312ca7f5a8cc4e7"
+    },
+    {
+      "path": "artifacts/runs/forage-20261029-210704-5b7cdb05/world.jsonl",
+      "bytes": 1759218384,
+      "modifiedUnixMs": 1793279321183,
+      "sha256": "bfb877c9e87e69867dcc00327b30e7e428cb20db6a829aa4f48d5e72f05680a3"
+    },
+    {
+      "path": "artifacts/smoke-validation/ui-edge-960.jsonl",
+      "bytes": 33927,
+      "modifiedUnixMs": 1793269129823,
+      "sha256": "5cda36db6c9765b61622966b0345829c3ba805816c0ef9117190f80f4389b782"
+    },
+    {
+      "path": "artifacts/smoke-validation/ui-final-1280.jsonl",
+      "bytes": 36188,
+      "modifiedUnixMs": 1793268445117,
+      "sha256": "eb224af0c7ef1909910f90a0fe32b19d0b41d56da087788bca6d851ad876dc20"
+    },
+    {
+      "path": "artifacts/smoke-validation/ui-live-1280.jsonl",
+      "bytes": 19611241,
+      "modifiedUnixMs": 1793269201610,
+      "sha256": "4486a152a06cbeb233c734d74baa60a91abfafb6a8ec99acf1cf1f03eef539e4"
+    },
+    {
+      "path": "artifacts/smoke-validation/ui-live.jsonl",
+      "bytes": 29250719,
+      "modifiedUnixMs": 1793267684072,
+      "sha256": "bad1438e56525a5bf518834b74ab08944bd41aea853a9cd6976be55b9922c615"
+    },
+    {
+      "path": "artifacts/smoke-validation/ui-replay-visible.jsonl",
+      "bytes": 34377,
+      "modifiedUnixMs": 1793267543849,
+      "sha256": "d80a534cff493b4926db1252894644655af3278bf59bb82a0636abcfa0c5fd04"
+    },
+    {
+      "path": "artifacts/smoke-validation/ui-replay.jsonl",
+      "bytes": 4469,
+      "modifiedUnixMs": 1793267489244,
+      "sha256": "2e647006e65658e65f7c9c457a365ec322ffdda653dc2dd6a29f18b47c8e3f34"
+    },
+    {
+      "path": "artifacts/smoke-validation/ui-resize-replay.jsonl",
+      "bytes": 4469,
+      "modifiedUnixMs": 1793268624829,
+      "sha256": "b904dfc529c434b87249453d2c9984be4ca6ebac8898f6dcafddc5dd979afcc7"
+    },
+    {
+      "path": "artifacts/smoke-validation/baseline-valid/forage-20261029-175014-b2e48e83/episode-1.replay.jsonl",
+      "bytes": 14866874,
+      "modifiedUnixMs": 1793267418551,
+      "sha256": "9b03c4bc32b2bb4fa6f9353bcde9d17cec34631fdbd14ee634d88f66c77ee6ad"
+    },
+    {
+      "path": "artifacts/smoke-validation/baseline-valid/forage-20261029-175014-b2e48e83/record-source.jsonl",
+      "bytes": 16662373,
+      "modifiedUnixMs": 1793267416440,
+      "sha256": "0bd14d6a6aeea56c9ea519596bf88cbc28d8d06d4ee07978254797544b963afb"
+    },
+    {
+      "path": "artifacts/smoke-validation/baseline-valid/forage-20261029-175014-b2e48e83/world.jsonl",
+      "bytes": 230526,
+      "modifiedUnixMs": 1793267416442,
+      "sha256": "adf14efad7bdbacebfd3adf7dfd2eb88e7c0ceecbc2c10dbaa4c45e7367442cc"
+    },
+    {
+      "path": "artifacts/smoke-validation/current-perception/forage-20261029-175107-072f3812/episode-1.replay.jsonl",
+      "bytes": 17324047,
+      "modifiedUnixMs": 1793267471934,
+      "sha256": "26fa0b4d84fb620cea810d88dea7949581f41f0541af07ce5e89d7e7ef02f03a"
+    },
+    {
+      "path": "artifacts/smoke-validation/current-perception/forage-20261029-175107-072f3812/record-source.jsonl",
+      "bytes": 19473396,
+      "modifiedUnixMs": 1793267471033,
+      "sha256": "79c9fa90ee2e1c2ecd3f30703a3e3847efece4ebe406699b17160bbcd7d89ce9"
+    },
+    {
+      "path": "artifacts/smoke-validation/current-perception/forage-20261029-175107-072f3812/world.jsonl",
+      "bytes": 264596,
+      "modifiedUnixMs": 1793267471035,
+      "sha256": "5314d94feb2154478fcf5e39d12078750f9b09cae2bacc9625847219609a93cf"
+    },
+    {
+      "path": "artifacts/smoke-validation/current-perception/replay-20261029-175113-89040814/world.jsonl",
+      "bytes": 198133,
+      "modifiedUnixMs": 1793267474694,
+      "sha256": "74c47d217385440b1499a42fe65a100c4f4a46f8953b448714fc6514d2cb1f80"
+    },
+    {
+      "path": "artifacts/smoke-validation/default-bridge/bridge-20261029-180606-17220bc4/world.jsonl",
+      "bytes": 11680244,
+      "modifiedUnixMs": 1793268372485,
+      "sha256": "1d501f3de9569eab88d707f28c000b7f56b3035c4777b4b40d894d05619dbc91"
+    },
+    {
+      "path": "artifacts/smoke-validation/edge/forage-20261029-181657-6546ef34/episode-1.replay.jsonl",
+      "bytes": 17491322,
+      "modifiedUnixMs": 1793269019436,
+      "sha256": "e2f67fd458384e671cc71cdd39cfb160042d219157f759aaa31194d489110c64"
+    },
+    {
+      "path": "artifacts/smoke-validation/edge/forage-20261029-181657-6546ef34/record-source.jsonl",
+      "bytes": 19639042,
+      "modifiedUnixMs": 1793269018634,
+      "sha256": "9ad252561be0fdd84240c40454ce410743c3f3e9f01e9e7a23278da7056b5f03"
+    },
+    {
+      "path": "artifacts/smoke-validation/edge/forage-20261029-181657-6546ef34/world.jsonl",
+      "bytes": 258360,
+      "modifiedUnixMs": 1793269018634,
+      "sha256": "166d9b9a80f27516beeb8d1c601d23ee23a24a2b34dbfa92d0b5c4c804318c29"
+    },
+    {
+      "path": "artifacts/smoke-validation/edge/replay-20261029-181700-15e354e2/world.jsonl",
+      "bytes": 197012,
+      "modifiedUnixMs": 1793269022087,
+      "sha256": "8f1776cdd1455b7f69b605f3ba0e6ce6aed5eef35efeeece4e6ac319fc688ca0"
+    },
+    {
+      "path": "artifacts/smoke-validation/final-rules/forage-20261029-180551-5ea6e232/episode-1.replay.jsonl",
+      "bytes": 21010454,
+      "modifiedUnixMs": 1793268355715,
+      "sha256": "af38e98a07312d3ae99bb9144b46c42a944a9db44065430c98bae8f510d95acd"
+    },
+    {
+      "path": "artifacts/smoke-validation/final-rules/forage-20261029-180551-5ea6e232/record-source.jsonl",
+      "bytes": 23175856,
+      "modifiedUnixMs": 1793268354165,
+      "sha256": "6d3a269bbe0182fee4e759fce2d2a44369c7256c59992ae2a203388f5744a0ab"
+    },
+    {
+      "path": "artifacts/smoke-validation/final-rules/forage-20261029-180551-5ea6e232/world.jsonl",
+      "bytes": 411998,
+      "modifiedUnixMs": 1793268354168,
+      "sha256": "bc183fd43e25560dd7437fb5fa6138c396448410112ee1aff345dafdc13b969e"
+    },
+    {
+      "path": "artifacts/smoke-validation/final-rules/replay-20261029-180557-f961cc9d/world.jsonl",
+      "bytes": 209898,
+      "modifiedUnixMs": 1793268359944,
+      "sha256": "89b64dd54ab2cc83e1dc6f4c3699b0cb7695bf24cfc9c3b15641c3ed9b55ad39"
+    },
+    {
+      "path": "artifacts/smoke-validation/final-scripted/forage-20261029-180541-fae848dc/episode-1.replay.jsonl",
+      "bytes": 17324047,
+      "modifiedUnixMs": 1793268345611,
+      "sha256": "c39d50b8d31285380b051222a2a622d09abcc7ba14ff087fe08df6d0682aa4d1"
+    },
+    {
+      "path": "artifacts/smoke-validation/final-scripted/forage-20261029-180541-fae848dc/record-source.jsonl",
+      "bytes": 19473396,
+      "modifiedUnixMs": 1793268344348,
+      "sha256": "04f00aae909bf42b9a0236ff4d31598861e3ff9c3d1199cf72f081b4efd27a3e"
+    },
+    {
+      "path": "artifacts/smoke-validation/final-scripted/forage-20261029-180541-fae848dc/world.jsonl",
+      "bytes": 264605,
+      "modifiedUnixMs": 1793268344363,
+      "sha256": "36614c338b488a1afec672fb1551916069162a7c78a56eaab35fda4f2ef6270f"
+    },
+    {
+      "path": "artifacts/smoke-validation/final-scripted/replay-20261029-180547-a2b09c3b/world.jsonl",
+      "bytes": 198133,
+      "modifiedUnixMs": 1793268349614,
+      "sha256": "1a4c16acd547c476505015d315a83968ad8389940335e345a1f44ed9b75f35f4"
+    },
+    {
+      "path": "artifacts/smoke-validation/final-smoke-bridge/world.jsonl",
+      "bytes": 846505,
+      "modifiedUnixMs": 1793268366192,
+      "sha256": "0d8b5024423d8ab33528769c08d9826b94edc38a90160daffdb4ccde9103da8b"
+    },
+    {
+      "path": "artifacts/smoke-validation/old-replay/replay-20261029-181020-256ed86e/world.jsonl",
+      "bytes": 137773,
+      "modifiedUnixMs": 1793268622566,
+      "sha256": "d006be92e584ccc2fe21d376d9b59a4bf7b1afc079305b06840095d61273dc2a"
+    },
+    {
+      "path": "artifacts/smoke-validation/review-bridge/bridge-20261029-181724-8e7311b2/world.jsonl",
+      "bytes": 11680234,
+      "modifiedUnixMs": 1793269048245,
+      "sha256": "5ab978005dec50084fabe769def94d1661e4a0e4b588b6eeeb4a61d9751736f5"
+    },
+    {
+      "path": "artifacts/smoke-validation/review-rules/forage-20261029-181649-c0c18d7b/episode-1.replay.jsonl",
+      "bytes": 20982168,
+      "modifiedUnixMs": 1793269013251,
+      "sha256": "cfd0905e66ec414b18045d79818da7b673a22ee1e60339db0ca78ee4199f408a"
+    },
+    {
+      "path": "artifacts/smoke-validation/review-rules/forage-20261029-181649-c0c18d7b/record-source.jsonl",
+      "bytes": 23147517,
+      "modifiedUnixMs": 1793269012281,
+      "sha256": "ccf34f380c07918bb32da53f8e92ae859de49b080fc7837290feefc0d441acf1"
+    },
+    {
+      "path": "artifacts/smoke-validation/review-rules/forage-20261029-181649-c0c18d7b/world.jsonl",
+      "bytes": 411819,
+      "modifiedUnixMs": 1793269012283,
+      "sha256": "0eba277de5b422f46d52cc117ea13a43d783e7fa04e3399e11444af9a6a3e51b"
+    },
+    {
+      "path": "artifacts/smoke-validation/review-rules/replay-20261029-181654-ac14908a/world.jsonl",
+      "bytes": 209974,
+      "modifiedUnixMs": 1793269016068,
+      "sha256": "8d156bdb190f0193b1a84cb338d98f2be448d87848c3249a1dff9285b87a978e"
+    },
+    {
+      "path": "artifacts/smoke-validation/review-smoke-bridge/world.jsonl",
+      "bytes": 846496,
+      "modifiedUnixMs": 1793269103518,
+      "sha256": "fd57028502ce77b575503441adbc0521ae9b2a585bdd174422abb4b4017af14f"
+    },
+    {
+      "path": "artifacts/smoke-validation/smoke-bridge/world.jsonl",
+      "bytes": 846505,
+      "modifiedUnixMs": 1793267626122,
+      "sha256": "be576359005efcb3c8e551d977ecafd6169f6f3054526b074b9f75cfa58c110b"
+    }
+  ]
+}

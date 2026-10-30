@@ -20,7 +20,7 @@ import torch
 import yaml
 
 from summarize import summarize
-from recording import pack
+from recording import pack, simulation_directory, require_complete
 from resources import peak_memory, unity_child
 
 
@@ -68,8 +68,9 @@ def checkpoint_records(trainer: Path):
 
 def compatibility(player: Path, trainer_config):
     return {
-        "modelVersion": "perception-v5",
-        "rulesVersion": "perception-v5",
+        "modelVersion": "survival-v15",
+        "rulesVersion": "survival-v15",
+        "actionVersion": 2,
         "worldAssembly": file_record(player.parent / "World_Data/Managed/Assembly-CSharp.dll")["sha256"],
         "packages": {name: version(name) for name in ("mlagents", "mlagents-envs", "torch")},
         "trainer": trainer_config,
@@ -124,7 +125,7 @@ def copy_output(output: Path, destination_root: Path):
     return {"path": str(destination), "bytes": required}
 
 
-def observe_fixed(player, output, trainer, world_config, seed, args):
+def observe_fixed(player, output, trainer, world_config, seed, args, simulation):
     from mlagents.trainers.policy.torch_policy import TorchPolicy
     from mlagents.trainers.settings import NetworkSettings
     from mlagents.trainers.torch_entities.networks import SimpleActor
@@ -134,15 +135,16 @@ def observe_fixed(player, output, trainer, world_config, seed, args):
 
     torch.set_num_threads(1)
     channel = EngineConfigurationChannel()
-    channel.set_configuration_parameters(time_scale=1 if args.visible else 20, width=960, height=720)
-    additional = ["--world-log", str(output / "world.jsonl"), "--world-seed", str(seed),
+    channel.set_configuration_parameters(time_scale=1 if args.visible else 20, width=1280, height=720)
+    additional = ["--world-log", str(simulation / "world.jsonl"), "--world-seed", str(seed),
                   "--world-config", str(output / "world-config.json"), "--control", "python", "--policy-mode", "fixed"]
     if args.world_steps:
         additional += ["--world-steps", str(args.world_steps)]
-    if args.record_episodes:
-        additional += ["--record-episodes", args.record_episodes, "--record-log", str(output / "record-source.jsonl")]
+    if args.record or args.record_episodes:
+        additional += ["--record", "true"]
     env = UnityEnvironment(file_name=str(player), seed=seed, no_graphics=not args.visible,
-                           side_channels=[channel], log_folder=str(output), additional_args=additional)
+                           side_channels=[channel], log_folder=str(simulation), additional_args=additional,
+                           timeout_wait=86400 if args.visible or args.record or args.record_episodes else 60)
     started = time.perf_counter()
     unity_peak = 0
     steps = 0
@@ -174,10 +176,12 @@ def observe_fixed(player, output, trainer, world_config, seed, args):
                 unity_peak = max(unity_peak, peak_memory(env._process.pid) or 0)
     finally:
         env.close()
+    require_complete(simulation, args.record or bool(args.record_episodes))
     world_steps = 0
-    with (output / "world.jsonl").open(encoding="utf-8-sig") as log:
+    with (simulation / "world.jsonl").open(encoding="utf-8-sig") as log:
         for line in log:
-            world_steps = max(world_steps, json.loads(line).get("totalSteps", 0))
+            row = json.loads(line)
+            if row.get("kind") == "episode_end": world_steps += row["step"]
     if args.world_steps and world_steps != args.world_steps:
         raise ValueError(f"固定觀察在 {world_steps} 步停止，預期 {args.world_steps} 步。")
     return {"wallSeconds": time.perf_counter() - started,
@@ -196,11 +200,6 @@ def train(args):
         world_config = previous["worldConfig"]
     if world_config is None:
         world_config = read_json(ROOT / "training/foraging.json")
-    if args.observe and args.record_episodes:
-        last_episode = max(map(int, args.record_episodes.split(",")))
-        required_steps = last_episode * world_config["episodeSteps"]
-        if args.world_steps < required_steps:
-            raise ValueError(f"錄製第 {last_episode} 輪須設定 --world-steps 至少 {required_steps}，才能封裝完整回放。")
     seed = args.seed if args.seed is not None else previous["seed"] if previous else 1
     run_id = f"{'observe' if args.observe else 'train'}-{datetime.now().strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:8]}"
     output = args.output.resolve() / run_id
@@ -210,8 +209,10 @@ def train(args):
     if any(path == output.parent or path == output or output in path.parents for path in destinations):
         raise ValueError("備份／歷史目錄須與活躍輸出分開，且不能位於本次輸出內。")
     output.mkdir(parents=True, exist_ok=False)
+    simulation = simulation_directory(output, args.managed_records)
     trainer_id = previous["trainerRunId"] if previous else run_id
     if trainer_source:
+        assert source is not None
         shutil.copytree(trainer_source, output / trainer_id)
         shutil.copytree(source / "initial-policies", output / "initial-policies")
     else:
@@ -233,8 +234,9 @@ def train(args):
         settings["max_steps"] = args.steps
     (output / "trainer.yaml").write_text(yaml.safe_dump(trainer_template), encoding="utf-8")
     if args.observe:
+        assert previous is not None
         try:
-            manifest["resources"] = observe_fixed(player, output, output / trainer_id, world_config, seed, args)
+            manifest["resources"] = observe_fixed(player, output, output / trainer_id, world_config, seed, args, simulation)
             manifest["checkpoints"] = checkpoint_records(output / trainer_id)
             manifest["initialPolicies"] = {species: file_record(output / "initial-policies" / f"{species}.pt") for species in SPECIES}
             if manifest["checkpoints"] != previous["checkpoints"] or manifest["initialPolicies"] != previous["initialPolicies"]:
@@ -242,12 +244,10 @@ def train(args):
             manifest["checkpointBytes"] = sum(record["bytes"] for record in manifest["checkpoints"].values())
             manifest["status"] = "completed"
             manifest["finishedAt"] = datetime.now(timezone.utc).isoformat()
-            if args.record_episodes:
-                manifest["recordings"] = [pack(output / "record-source.jsonl", output / f"episode-{episode}.replay.jsonl", episode,
-                                               {"experimentId": manifest["experimentId"], "checkpoints": manifest["checkpoints"], "compatibility": signature})
-                                          for episode in sorted(set(map(int, args.record_episodes.split(","))))]
+            if args.record or args.record_episodes:
+                manifest["recordings"] = [pack(simulation / "record-source.jsonl", path, int(path.name.split("-")[1].split(".")[0])) for path in sorted(simulation.glob("episode-*.replay.jsonl"))]
             write_json(output / "training.json", manifest)
-            write_json(output / "training-summary.json", summarize(output / "world.jsonl"))
+            write_json(output / "training-summary.json", summarize(simulation / "world.jsonl"))
             print(json.dumps({"output": str(output), "status": manifest["status"], "checkpoints": manifest["checkpoints"]}, ensure_ascii=False), flush=True)
             return
         except Exception:
@@ -257,7 +257,7 @@ def train(args):
     command = [sys.executable, str(ROOT / "training/trainer_capture.py"), str(output / "trainer.yaml"),
                "--env", str(player), "--run-id", trainer_id, "--results-dir", str(output),
                "--seed", str(seed), "--torch-device", "cpu", "--time-scale", "1" if args.visible else "20",
-               "--width", "960", "--height", "720", "--max-lifetime-restarts", "0"]
+               "--width", "1280", "--height", "720", "--max-lifetime-restarts", "0"]
     if previous:
         command.append("--resume")
     if args.observe:
@@ -267,13 +267,13 @@ def train(args):
         command += ["--timeout-wait", "86400"]
     if not args.visible:
         command.append("--no-graphics")
-    command += ["--env-args", "--world-log", str(output / "world.jsonl"), "--world-seed", str(seed),
+    command += ["--env-args", "--world-log", str(simulation / "world.jsonl"), "--world-seed", str(seed),
                 "--world-config", str(output / "world-config.json"), "--control", "python",
                 "--policy-mode", "fixed" if args.observe else "training"]
     if args.observe:
         command += ["--world-steps", str(args.world_steps)]
-    if args.record_episodes:
-        command += ["--record-episodes", args.record_episodes, "--record-log", str(output / "record-source.jsonl"), "--summary-log", "true"]
+    if args.record or args.record_episodes:
+        command += ["--record", "true"]
     print(f"{'固定模型觀察' if args.observe else '續訓' if previous else '全新實驗'}：{manifest['experimentId']}\n輸出：{output}", flush=True)
     wall_started = time.perf_counter()
     trainer_peak = [0]
@@ -326,17 +326,16 @@ def train(args):
         raise ValueError(f"{error}；請查看 {output / 'trainer.log'}。") from error
     if exit_code:
         manifest["status"] = "failed"
+    require_complete(simulation, args.record or bool(args.record_episodes))
     manifest["checkpointBytes"] = sum(record["bytes"] for record in manifest["checkpoints"].values())
     write_json(output / "training.json", manifest)
-    if (output / "world.jsonl").is_file():
-        write_json(output / "training-summary.json", summarize(output / "world.jsonl"))
+    if (simulation / "world.jsonl").is_file():
+        write_json(output / "training-summary.json", summarize(simulation / "world.jsonl"))
     if exit_code:
         raise ValueError(f"訓練失敗（{exit_code}），請查看 {output / 'trainer.log'}。已保留可讀取的 checkpoint。")
-    if args.record_episodes:
+    if args.record or args.record_episodes:
         manifest["recordings"] = []
-        for episode in sorted(set(map(int, args.record_episodes.split(",")))):
-            manifest["recordings"].append(pack(output / "record-source.jsonl", output / f"episode-{episode}.replay.jsonl", episode,
-                                                {"experimentId": manifest["experimentId"], "checkpoints": manifest["checkpoints"], "compatibility": signature}))
+        manifest["recordings"] = [pack(simulation / "record-source.jsonl", path, int(path.name.split("-")[1].split(".")[0])) for path in sorted(simulation.glob("episode-*.replay.jsonl"))]
         write_json(output / "training.json", manifest)
     copies = {}
     for label, destination in (("backup", args.backup), ("history", args.history)):
@@ -357,6 +356,8 @@ def main():
     parser.add_argument("--config", type=Path)
     parser.add_argument("--seed", type=int)
     parser.add_argument("--steps", type=int, default=2048)
+    parser.add_argument("--managed-records", action="store_true")
+    parser.add_argument("--record", action="store_true")
     parser.add_argument("--record-episodes", default="")
     parser.add_argument("--observe", action="store_true")
     parser.add_argument("--world-steps", type=int, default=512)

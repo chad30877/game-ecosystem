@@ -20,7 +20,7 @@ from mlagents_envs.environment import UnityEnvironment
 from mlagents_envs.exception import UnityCommunicationException, UnityCommunicatorStoppedException, UnityEnvironmentException
 from mlagents_envs.side_channel.engine_configuration_channel import EngineConfigurationChannel
 
-from recording import pack
+from recording import pack, require_complete
 from metrics import accumulate
 from resources import peak_memory
 from session import ROOT, SPECIES, compatibility, file_record, load_source, read_json, write_json
@@ -33,23 +33,23 @@ ACCEPTANCE = {"minObservedSecondsRatio": 1.05, "minFoodEnergyRatio": 1.05,
 SCENARIOS = {
     "settle": {"placements": [{"slot": 1, "x": 16, "y": 16, "facing": 0},
                                {"slot": 3, "x": 16, "y": -16, "facing": 0},
-                               {"slot": 5, "x": -9, "y": -9, "facing": 0, "setEnergy": True, "energy": 80}]},
+                               {"slot": 5, "x": -9, "y": -9, "facing": 0, "setSatiety": True, "satiety": 80}]},
     "depletion": {"placements": [{"slot": 1, "x": 16, "y": 16, "facing": 0},
                                   {"slot": 3, "x": 16, "y": -16, "facing": 0},
-                                  {"slot": 5, "x": -9, "y": -9, "facing": 0, "setEnergy": True, "energy": 40}],
+                                  {"slot": 5, "x": -9, "y": -9, "facing": 0, "setSatiety": True, "satiety": 40}],
                   "foods": [{"food": 1, "setAmount": True, "amount": 0.2},
                             {"food": 2, "relocate": True, "x": -6, "y": -9, "setAmount": True, "amount": 20}]},
     "stale": {"placements": [{"slot": 1, "x": 16, "y": 16, "facing": 0},
                              {"slot": 3, "x": 16, "y": -16, "facing": 0},
-                             {"slot": 5, "x": -12, "y": -9, "facing": 0, "setEnergy": True, "energy": 40}],
+                             {"slot": 5, "x": -12, "y": -9, "facing": 0, "setSatiety": True, "satiety": 40}],
               "foods": [{"food": 1, "setElapsedAge": True, "elapsedAge": 117},
                         {"food": 2, "relocate": True, "x": -6, "y": -9}]},
     "low-energy": {"placements": [{"slot": 1, "x": 16, "y": 16, "facing": 0},
                                   {"slot": 3, "x": 16, "y": -16, "facing": 0},
-                                  {"slot": 5, "x": -9, "y": -9, "facing": 0, "setEnergy": True, "energy": 5}]},
+                                  {"slot": 5, "x": -9, "y": -9, "facing": 0, "setSatiety": True, "satiety": 5}]},
     "rear-threat": {"placements": [{"slot": 1, "x": 16, "y": 16, "facing": 0},
                                    {"slot": 3, "x": -12, "y": -9, "facing": 0},
-                                   {"slot": 5, "x": -9, "y": -9, "facing": 0, "setEnergy": True, "energy": 80}]},
+                                   {"slot": 5, "x": -9, "y": -9, "facing": 0, "setSatiety": True, "satiety": 80}]},
 }
 
 
@@ -63,11 +63,14 @@ def policy(spec, settings, weights):
 
 
 def complete(path):
-    if not path.exists():
-        return False
-    with path.open("rb") as source:
-        source.seek(max(0, path.stat().st_size - 1024))
-        return b'"kind":"episode_complete"' in source.read()
+    summary = path.parent / "summary.json"
+    if summary.exists() and read_json(summary).get("status") == "complete":
+        return True
+    if path.exists():
+        with path.open("rb") as source:
+            source.seek(max(0, path.stat().st_size - 1024))
+            return b'"kind":"world_stopped"' in source.read()
+    return False
 
 
 def metrics(log: Path):
@@ -118,6 +121,8 @@ def metrics(log: Path):
             row = json.loads(line)
             kind = row["kind"]
             state = row.get("state")
+            if kind == "sample" or (kind in ("episode_start", "episode_end") and state is None):
+                continue
             if kind == "run":
                 half_extent = row["config"]["halfExtent"]
                 cell_size = row["config"]["explorationCellSize"]
@@ -181,6 +186,7 @@ def metrics(log: Path):
             "completedLives": len(ages), "extinct": stat["incompleteLives"] == 0,
             "incompleteAges": [age for b in buckets for age in b["incompleteAges"]],
             "meanObservedSeconds": statistics.mean([v for b in buckets for v in b["observedSeconds"]])}
+    assert half_extent is not None
     return {"steps": final["step"], "seconds": final["time"], "reason": final["endReason"],
             "explorationGridCells": math.ceil(half_extent * 2 / cell_size) ** 2,
             "speciesExploredCells": {species: len(species_coverage[species]) for species in SPECIES},
@@ -192,17 +198,18 @@ def rollout(args, output, seed, modes, weights, network, initial, capture):
     log = output / "world.jsonl"
     rules = ",".join(s for s in SPECIES if modes[s] == "rules")
     channel = EngineConfigurationChannel()
-    channel.set_configuration_parameters(time_scale=100, width=960, height=720)
+    channel.set_configuration_parameters(time_scale=100, width=1280, height=720)
     additional = ["--control", "python", "--policy-mode", "fixed", "--world-seed", str(seed),
                   "--world-config", str(args.config), "--world-log", str(log), "--summary-log", "true",
-                  "--metrics-log", "true",
+                  "--metrics-log", "true", "--diagnostic-log", "true",
                   "--rules-species", rules, "--single-episode", "true"]
     if capture:
         additional += ["--record-log", str(output / "record-source.jsonl"), "--record-episodes", "1"]
     if getattr(args, "scenario_path", None):
         additional += ["--world-scenario", str(args.scenario_path)]
     env = UnityEnvironment(file_name=str(args.player), seed=seed, no_graphics=True, worker_id=args.worker_id,
-                           side_channels=[channel], log_folder=str(output), additional_args=additional)
+                           side_channels=[channel], log_folder=str(output), additional_args=additional,
+                           timeout_wait=86400 if capture else 60)
     steps = 0
     unity_peak = 0
     try:
@@ -231,6 +238,7 @@ def rollout(args, output, seed, modes, weights, network, initial, capture):
             try:
                 env.step()
             except (UnityCommunicationException, UnityCommunicatorStoppedException, UnityEnvironmentException):
+                if env._process is not None: env._process.wait(timeout=86400 if capture else 60)
                 if not complete(log): raise
                 break
             steps += 1
@@ -241,6 +249,7 @@ def rollout(args, output, seed, modes, weights, network, initial, capture):
         if not complete(log): raise ValueError("評估超過配置輪次長度而未結束。")
     finally:
         env.close()
+    require_complete(output, capture)
     result = metrics(log)
     if result["resources"] is not None:
         result["resources"]["peakWorkingSetBytes"] = unity_peak or None
@@ -398,8 +407,11 @@ def main():
     parser.add_argument("--player", type=Path, required=True)
     parser.add_argument("--trained", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--diagnostics", action="store_true", help="明確同意輸出評估所需逐步診斷")
     parser.add_argument("--workers", type=int, choices=(1, 2, 3), default=3)
     args = parser.parse_args()
+    if not args.diagnostics:
+        parser.error("此詳細評估須明確加上 --diagnostics；一般觀察請使用 observe。")
     torch.set_num_threads(1)
     args.player = args.player.resolve(strict=True)
     template = yaml.safe_load((ROOT / "training/toolchain.yaml").read_text(encoding="utf-8"))

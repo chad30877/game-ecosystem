@@ -16,16 +16,19 @@ namespace Ecosystem
         private WorldReplay replay;
         private float replayClock;
         private string replaySeek;
+        private bool exportReplaySnapshots;
         private readonly Dictionary<int, WorldIndividualView> views = new Dictionary<int, WorldIndividualView>();
-        private StreamWriter recording;
-        private HashSet<int> recordEpisodes;
+        private RunJournal journal;
+        private ArtifactStore store;
+        private string stopReason = "user_stop";
+        private bool detailedLog;
         private bool summaryLog;
         private bool metricsLog;
         private HashSet<string> rulesSpecies;
         private bool singleEpisode;
         private readonly System.Diagnostics.Stopwatch elapsed = System.Diagnostics.Stopwatch.StartNew();
         private readonly Dictionary<int, WorldAgent> agents = new Dictionary<int, WorldAgent>();
-        private StreamWriter output;
+        
         private long totalSteps;
         private int stepLimit;
         private string runId;
@@ -33,6 +36,7 @@ namespace Ecosystem
         private bool resetRequested;
         private readonly List<GameObject> foodViews = new List<GameObject>();
         private WorldObserver observer;
+        private FruitWorldView fruitView;
         private string policyMode;
         private WorldScenario scenario;
         private readonly List<GameObject> projectileViews = new List<GameObject>();
@@ -57,6 +61,8 @@ namespace Ecosystem
         private void InitializeWorld()
         {
             Application.runInBackground = true;
+            if (!Application.isBatchMode && Argument("-screen-width", "") == "" && Argument("-screen-height", "") == "")
+                Screen.SetResolution(1280, 720, FullScreenMode.Windowed);
             string replayPath = Argument("--replay", "");
             if (replayPath != "") replay = new WorldReplay(replayPath);
             string configPath = Argument("--world-config", "");
@@ -66,6 +72,7 @@ namespace Ecosystem
             world = new World(config, seed);
             control = replay != null ? "replay" : Argument("--control", "manual");
             replaySeek = Argument("--replay-seek", "");
+            exportReplaySnapshots = Argument("--replay-export", replaySeek == "" ? "false" : "true") == "true";
             summaryLog = Argument("--summary-log", "false") == "true";
             metricsLog = Argument("--metrics-log", "false") == "true";
             singleEpisode = Argument("--single-episode", "false") == "true";
@@ -95,26 +102,23 @@ namespace Ecosystem
             }
             Time.fixedDeltaTime = config.stepSeconds;
             stepLimit = int.Parse(Argument("--world-steps", "0"));
-            runId = Guid.NewGuid().ToString("N");
-            string logPath = Argument("--world-log", Path.Combine(Application.persistentDataPath, runId + ".jsonl"));
-            Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(logPath)));
-            output = new StreamWriter(new FileStream(logPath, FileMode.CreateNew, FileAccess.Write, FileShare.Read));
-            output.AutoFlush = true;
-            string recordingPath = Argument("--record-log", "");
-            if (recordingPath != "")
-            {
-                recordEpisodes = new HashSet<int>(Argument("--record-episodes", "1").Split(',').Select(int.Parse));
-                if (recordEpisodes.Any(value => value <= 0)) throw new ArgumentException("記錄輪次須為正數。");
-                recording = new StreamWriter(new FileStream(recordingPath, FileMode.CreateNew, FileAccess.Write, FileShare.Read));
-                recording.AutoFlush = true;
-            }
+            store = ArtifactStore.Current;
+            string requestedLog = Argument("--world-log", "");
+            var lease = store.Begin(requestedLog == "" ? null : Path.GetDirectoryName(Path.GetFullPath(requestedLog)));
+            runId = lease.Info.run;
+            string logPath = requestedLog == "" ? Path.Combine(lease.DirectoryPath, "world.jsonl") : requestedLog;
+            detailedLog = Argument("--diagnostic-log", "false") == "true";
+            bool fullRecording = Argument("--record", "false") == "true" || Argument("--record-log", "") != "";
             string runRecord = JsonUtility.ToJson(new RunRecord
             {
-                run = runId, seed = seed, unity = Application.unityVersion,
-                device = SystemInfo.graphicsDeviceName, config = config, control = control, policyMode = policyMode, scenario = scenario
+                run = runId, build = lease.Info.build, startedAt = lease.Info.startedAt, recordingMode = fullRecording ? "full" : "lightweight", diagnostic = detailedLog, seed = seed, unity = Application.unityVersion,
+                rules = replay == null ? WorldRules.Current : replay.Header.rules,
+                actionVersion = replay == null ? WorldRules.ActionVersion : replay.Header.actionVersion,
+                replayRules = replay?.Header.rules, replaySchemaVersion = replay?.Header.schemaVersion ?? 0,
+                replayActionVersion = replay?.Header.actionVersion ?? 0,
+                device = SystemInfo.graphicsDeviceName, config = config, control = control, policyMode = policyMode, scenario = scenario, rulesSpecies = rulesSpecies.ToArray(), singleEpisode = singleEpisode, summaryLog = summaryLog, metricsLog = metricsLog, worldSteps = stepLimit
             });
-            output.WriteLine(runRecord);
-            recording?.WriteLine(runRecord);
+            journal = new RunJournal(lease, runRecord, logPath, fullRecording, Argument("--record-log", "") == "" ? null : Argument("--record-log", ""));
             var camera = new GameObject("Camera").AddComponent<Camera>();
             camera.orthographic = true;
             camera.orthographicSize = config.halfExtent + 1f;
@@ -139,7 +143,7 @@ namespace Ecosystem
                 observer = gameObject.AddComponent<WorldObserver>();
                 observer.Initialize(world, camera, policyMode,
                     () => { if (replay == null) resetRequested = true; else SeekReplay(0); },
-                    () => Application.Quit(), ApplyFocus, replay, SeekReplay);
+                    () => Application.Quit(), ApplyFocus, replay, SeekReplay, Argument("--observer-diagnostics", "false") == "true");
             }
         }
 
@@ -198,17 +202,17 @@ namespace Ecosystem
             body.SetActive(false);
             var behavior = body.AddComponent<BehaviorParameters>();
             behavior.BehaviorName = individual.species;
-            behavior.BrainParameters.VectorObservationSize = 11;
-            behavior.BrainParameters.ActionSpec = new ActionSpec(4, new[] { 3, 3, 2, 2 });
+            behavior.BrainParameters.VectorObservationSize = 19;
+            behavior.BrainParameters.ActionSpec = new ActionSpec(4, new[] { 3, 3, 2, 2, 2, 7, 8 });
             var entities = body.AddComponent<BufferSensorComponent>();
             entities.SensorName = "Entities";
-            entities.ObservableSize = 7;
-            // 張量預留人口、五秒警戒記憶、可見食物與有限探索記憶；當前可見生物不截斷。
+            entities.ObservableSize = 10;
+            // 額外預留粗略果實與食物互動列；與規則使用相同有界情報。
             entities.MaxNumObservables = world.Config.foraging
                 ? checked(Mathf.Max(world.Config.populationLimit, world.Config.individualsPerSpecies * 3) *
                     (Mathf.CeilToInt(5f / (world.Config.maturityAge >= 5f ? Mathf.Max(world.Config.stepSeconds, world.Config.reproductionCooldown) : world.Config.stepSeconds)) + 1) +
-                    world.Config.foodSourceLimit + world.Config.foodMemoryLimit + world.Config.areaMemoryLimit)
-                : world.Config.individualsPerSpecies * 6;
+                    world.Config.foodSourceLimit + world.Config.foodMemoryLimit + world.Config.areaMemoryLimit + Mathf.CeilToInt(world.Config.episodeSteps * world.Config.stepSeconds / Mathf.Max(world.Config.stepSeconds, world.Config.reproductionCooldown)) + 66 + 32 * Mathf.Max(world.Config.smallFood.maxFruit, world.Config.largeFood.maxFruit) + 16 + 3 + 256)
+                : world.Config.individualsPerSpecies * 6 + 64;
             behavior.BehaviorType = control != "python" ? BehaviorType.HeuristicOnly : BehaviorType.Default;
             var agent = body.AddComponent<WorldAgent>();
             agent.World = world;
@@ -288,18 +292,32 @@ namespace Ecosystem
                 Record("episode_end");
                 if (singleEpisode)
                 {
-                    output.WriteLine("{\"kind\":\"episode_complete\"}");
+                    stopReason = "world_end";
+                    journal?.WriteDiagnostic("{\"kind\":\"world_stopped\"}");
                     Application.Quit();
                     return;
                 }
                 if ((control == "python" || !world.Config.foraging || Application.isBatchMode || stepLimit > 0) && (stepLimit <= 0 || totalSteps < stepLimit)) ResetWorld();
             }
             if ((control != "python" || policyMode == "fixed") && stepLimit > 0 && totalSteps >= stepLimit)
+            {
+                stopReason = "step_limit";
                 Application.Quit();
+            }
         }
 
         private void UpdateFoodViews()
         {
+            if (world.State.fruitInformationAvailable)
+            {
+                if (Application.isBatchMode) return;
+                foreach (var oldView in foodViews) oldView.SetActive(false);
+                if (fruitView == null) fruitView = new GameObject("FruitWorld").AddComponent<FruitWorldView>();
+                fruitView.gameObject.SetActive(true);
+                fruitView.Refresh(world);
+                return;
+            }
+            if (fruitView != null) fruitView.gameObject.SetActive(false);
             while (foodViews.Count < world.State.foods.Count)
             {
                 var food = world.State.foods[foodViews.Count];
@@ -330,10 +348,9 @@ namespace Ecosystem
         {
             while (areaViews.Count < world.State.areas.Count)
             {
-                var view = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                var view = GameObject.CreatePrimitive(PrimitiveType.Quad);
                 Destroy(view.GetComponent<Collider>());
-                view.transform.rotation = Quaternion.Euler(90, 0, 0);
-                view.GetComponent<Renderer>().sharedMaterial = new Material(Resources.Load<Material>("WorldMaterial"));
+                view.GetComponent<Renderer>().sharedMaterial = new Material(Resources.Load<Shader>("WorldArea"));
                 areaViews.Add(view);
             }
             for (int i = 0; i < areaViews.Count; i++)
@@ -343,9 +360,9 @@ namespace Ecosystem
                 if (!active) continue;
                 var area = world.State.areas[i];
                 areaViews[i].transform.position = new Vector3(area.x, area.y, 0.2f);
-                areaViews[i].transform.localScale = new Vector3(area.radius * 2, 0.02f, area.radius * 2);
+                areaViews[i].transform.localScale = new Vector3(area.radius * 2, area.radius * 2, 1);
                 areaViews[i].GetComponent<Renderer>().sharedMaterial.color = area.skill == WorldSkill.FrostTrap
-                    ? new Color(0.3f, 0.8f, 1f, 0.55f) : new Color(0.65f, 0.4f, 0.8f, 0.25f);
+                    ? new Color(0.3f, 0.8f, 1f, 0.55f) : new Color(0.75f, 0.5f, 0.9f, 0.18f);
             }
         }
 
@@ -447,15 +464,29 @@ namespace Ecosystem
             foreach (var view in views.Values)
                 foreach (var renderer in view.GetComponentsInChildren<Renderer>())
                     renderer.forceRenderingOff = selected != null && view.Individual != selected && !world.CanSee(selected, view.Individual);
-            for (int i = 0; i < world.State.foods.Count; i++)
+            if (fruitView != null && world.State.fruitInformationAvailable) fruitView.SetFocus(selected);
+            for (int i = 0; i < world.State.foods.Count && !world.State.fruitInformationAvailable; i++)
             {
                 var food = world.State.foods[i];
                 foodViews[i].GetComponent<Renderer>().forceRenderingOff = selected != null &&
                     !world.CanSeePoint(selected, new Vector2(food.x, food.y));
             }
-            for (int i = 0; i < areaViews.Count; i++)
-                areaViews[i].GetComponent<Renderer>().forceRenderingOff = selected != null && i < world.State.areas.Count &&
-                    !world.CanSeePoint(selected, new Vector2(world.State.areas[i].x, world.State.areas[i].y));
+            for (int i = 0; i < areaViews.Count && i < world.State.areas.Count; i++)
+            {
+                var area = world.State.areas[i];
+                var renderer = areaViews[i].GetComponent<Renderer>();
+                bool smoke = area.skill == WorldSkill.SporeSmoke;
+                renderer.forceRenderingOff = selected != null && (smoke
+                    ? !world.CanSeeCircle(selected, new Vector2(area.x, area.y), area.radius)
+                    : !world.CanSeePoint(selected, new Vector2(area.x, area.y)));
+                var material = renderer.sharedMaterial;
+                material.SetFloat("_Focused", smoke && selected != null ? 1 : 0);
+                if (selected != null)
+                {
+                    material.SetVector("_View", new Vector4(selected.x, selected.y, world.Config.observationRadius, 0));
+                    material.SetVector("_Facing", new Vector4(Mathf.Cos(selected.facing * Mathf.Deg2Rad), Mathf.Sin(selected.facing * Mathf.Deg2Rad), 0, 0));
+                }
+            }
             for (int i = 0; i < projectileViews.Count; i++)
                 projectileViews[i].GetComponent<Renderer>().forceRenderingOff = selected != null && i < world.State.projectiles.Count &&
                     !world.CanSeePoint(selected, new Vector2(world.State.projectiles[i].x, world.State.projectiles[i].y));
@@ -463,38 +494,34 @@ namespace Ecosystem
 
         private void Record(string kind, IndividualState individual = null, int unityObject = 0)
         {
-            string line = null;
-            if (!summaryLog || kind != "step" || (recording != null && recordEpisodes.Contains(world.State.episode)))
-                line = JsonUtility.ToJson(new StepRecord
-                { run = runId, kind = kind, totalSteps = totalSteps, state = world.State, individual = individual, unityObject = unityObject });
-            if (summaryLog && kind == "step")
-            {
-                if (world.State.events.Count > 0 || world.State.step % 50 == 0 || world.State.endReason != "")
-                    output.WriteLine(JsonUtility.ToJson(new SampleRecord { kind = "sample", totalSteps = totalSteps,
-                        step = world.State.step, time = world.State.time, events = world.State.events,
-                        rewards = world.State.rewards, statistics = world.State.statistics,
-                        foodAmount = world.State.foods.Sum(value => value.amount) }));
-            }
-            else output.WriteLine(line);
+            journal?.Observe(kind, world.State);
+            if (detailedLog || (kind == "snapshot" && exportReplaySnapshots)) journal?.WriteDiagnostic(JsonUtility.ToJson(new StepRecord
+                { run = runId, kind = kind, totalSteps = totalSteps, state = world.State, individual = individual, unityObject = unityObject }));
             if (metricsLog && kind == "step")
-                output.WriteLine(JsonUtility.ToJson(new MetricRecord { step = world.State.step,
+                journal?.WriteDiagnostic(JsonUtility.ToJson(new MetricRecord { step = world.State.step, time = world.State.time,
                     individuals = world.State.individuals.Select(value => new IndividualMetricRecord
                     {
                         individual = value.individual, species = value.species, x = value.x, y = value.y,
-                        energy = value.energy, exploredCells = value.rewardedCells.Count,
-                        rawTurn = value.rawTurn, actualTurn = value.actualTurn, scanIntervened = value.scanIntervened
+                        satiety = value.satiety, exploredCells = value.rewardedCells.Count,
+                        rawTurn = value.rawTurn, actualTurn = value.actualTurn, scanIntervened = value.scanIntervened,
+                        decision = value.decisionReason, productionDecision = value.productionDecision, lastProductionStopReason = value.productionStopReason,
+                        cultivatingFood = value.cultivatingFood, cultivateStartedAt = value.cultivateStartedAt,
+                        carriedCount = value.ownFruits.Count, foodOperation = value.foodOperation, skillManaSpent = value.skillManaSpent
                     }).ToList() }));
-            if (recording != null && recordEpisodes.Contains(world.State.episode)) recording.WriteLine(line);
+
         }
 
         private void OnApplicationQuit()
         {
-            if (output != null)
-                output.WriteLine(JsonUtility.ToJson(new ResourceRecord { elapsedSeconds = elapsed.Elapsed.TotalSeconds,
-                    peakWorkingSetBytes = System.Diagnostics.Process.GetCurrentProcess().PeakWorkingSet64 }));
-            output?.Dispose();
-            recording?.Dispose();
+            journal?.Finish(world.State, stopReason);
             replay?.Dispose();
+            try { store?.Cleanup(); } catch (Exception error) { Debug.LogError("產物清理失敗：" + error.Message); }
+            if (journal?.Failed == true) { Environment.ExitCode = 2; Application.Quit(2); }
+        }
+
+        private void OnGUI()
+        {
+            if (journal?.Failed == true) GUI.Label(new Rect(20, Screen.height - 40, 600, 30), "資料記錄失敗（不完整）");
         }
 
         [Serializable]
@@ -516,6 +543,8 @@ namespace Ecosystem
             public List<RewardRecord> rewards;
             public List<SpeciesStatistics> statistics;
             public float foodAmount;
+            public FruitLedger fruitLedger;
+            public int sourceFruits, carriedFruits, groundFruits, sources, population, lowSatiety;
         }
 
         [Serializable]
@@ -523,6 +552,7 @@ namespace Ecosystem
         {
             public string kind = "metric";
             public int step;
+            public float time;
             public List<IndividualMetricRecord> individuals;
         }
 
@@ -531,23 +561,35 @@ namespace Ecosystem
         {
             public int individual;
             public string species;
-            public float x, y, energy;
+            public float x, y, satiety;
             public int exploredCells;
             public int rawTurn, actualTurn;
             public bool scanIntervened;
+            public string decision, productionDecision, lastProductionStopReason;
+            public int cultivatingFood, carriedCount;
+            public float cultivateStartedAt, skillManaSpent;
+            public FoodAction foodOperation;
         }
 
         [Serializable]
         private sealed class RunRecord
         {
             public string kind = "run";
-            public string run;
+            public string run, build, startedAt, recordingMode;
             public int seed;
             public string unity;
             public string device;
             public string control;
             public string policyMode;
-            public string rules = "perception-v5";
+            public string rules = WorldRules.Current;
+            public string runtimeRules = WorldRules.Current;
+            public int runtimeActionVersion = WorldRules.ActionVersion;
+            public string replayRules;
+            public int replaySchemaVersion, replayActionVersion;
+            public int actionVersion = WorldRules.ActionVersion;
+            public bool diagnostic, singleEpisode, summaryLog, metricsLog;
+            public int worldSteps;
+            public string[] rulesSpecies;
             public WorldConfig config;
             public WorldScenario scenario;
         }

@@ -1,12 +1,14 @@
 # 學習成效對照
 
+> 2026-10-23 保存狀態更新：本文 artifacts 路徑保留為歷史驗證來源；大型原始紀錄與舊模型已淘汰，摘要及指定短回放的保存範圍見[產物清理紀錄](artifact-retention.md)。歷史操作範例須改用仍存在或新產生的來源。
+
 目前標記為「學習效果未驗證」。一份短訓練實驗加上獨立初始化的零更新參考策略，不足以證明訓練改善，也不是拆分技能配置策略的依據。
 
 ## 執行與輸出
 
 ```powershell
 ./scripts/world.ps1 -Mode train -WorldConfig training/evaluation.json -Seed 7 -TrainSteps 4096
-./scripts/world.ps1 -Mode evaluate -ResumeFrom './artifacts/runs/<上述訓練輸出>'
+./scripts/world.ps1 -Mode evaluate -ResumeFrom './artifacts/runs/<上述訓練輸出>' -DiagnosticLog
 ```
 
 先建置相同版本的 Player；來源須包含完整、相容的保存紀錄。入口沿用來源的完整世界配置，拒絕版本、checkpoint 雜湊或保存資料不符的模型，不覆寫來源。
@@ -66,3 +68,5 @@ Unity 最終建置、原有 bridge 512 世界步、Python compileall／Pyright�
 本機 Windows 虛擬環境會另啟實際 trainer，因此由程序自行回報PID，再以Windows API定期讀取trainer及其World子程序峰值。Unity/Mono內建峰值回傳0的舊評估紀錄保留為缺值。另以相同版本、配置、種子串行量測：54.47秒／201世界步，trainer峰值715,186,176 bytes、Unity峰值137,797,632 bytes，保存22,722,432 bytes，checkpoint共6,715,563 bytes。量測來源為 `artifacts/evaluation/verified-budget/train-20261022-202215-21b8e96b`，不是評估模型來源；資料與口徑均保存於報告。
 
 短樣本含啟動及模型匯出成本，線性外推約每百萬世界步75.3小時、完整紀錄33.6 GB，只作目前配置的粗略工作預算；須再以較長訓練確認。純推論平均約23.8世界步／秒，包含串行與最多三程序競爭，不能代替訓練速度。
+
+目前詳細評估須明確指定 DiagnosticLog；世界停止與資料完整分開判定，結束封裝後才檢查成功。日常固定模型觀察使用 observe 的輕量記錄，見[記錄契約](recording.md)。
