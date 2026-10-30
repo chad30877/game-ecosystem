@@ -549,7 +549,7 @@ namespace Ecosystem
         public WorldState State { get; private set; }
         private readonly System.Random random;
         private readonly System.Random effectRandom;
-        private readonly System.Random foodRandom;
+        private readonly System.Random foodRandom, sourceRandom, positionRandom;
         private int episode;
         private int nextIndividual;
         private readonly int[] loadoutCycle = new int[3];
@@ -569,6 +569,8 @@ namespace Ecosystem
             Config = config;
             random = new System.Random(seed);
             effectRandom = new System.Random(seed ^ 0x43f214);
+            sourceRandom = new System.Random(seed ^ 0x17c924);
+            positionRandom = new System.Random(seed ^ 0x2bc851);
             foodRandom = new System.Random(seed ^ 0x167d2b);
         }
 
@@ -588,16 +590,7 @@ namespace Ecosystem
                     AddIndividual(species, balancedLoadout: true);
             if (Config.foraging)
             {
-                for (int i = 0; i < Mathf.Min(4, Config.naturalFoodLimit); i++)
-                {
-                    var position = new Vector2((i % 2 == 0 ? -1 : 1) * Config.halfExtent * 0.45f,
-                        (i < 2 ? -1 : 1) * Config.halfExtent * 0.45f);
-                    if (!State.foods.Exists(value => Vector2.Distance(position, new Vector2(value.x, value.y)) < Config.naturalFoodSpacing))
-                        AddNaturalFood(position, FoodGrowthType.Large, true, 0);
-                }
-                for (int i = 4; i < Config.naturalFoodLimit && State.foods.Count < Config.foodSourceLimit; i++)
-                    TryAddNaturalFood(initial: true, time: 0);
-                State.nextNaturalSpawnAt = Config.naturalSpawnInterval;
+                SourcePlacementRules.Initialize(Config, State, sourceRandom);
             }
             UpdateIncompleteLives();
             RefreshPerception(awardExploration: true);
@@ -618,9 +611,9 @@ namespace Ecosystem
                 satiety = Config.initialSatiety, stamina = Config.initialStamina, mana = Config.initialMana,
                 age = Config.foraging ? Config.maturityAge : 0,
                 bornAt = Config.foraging ? State.time - Config.maturityAge : State.time,
-                x = (float)(random.NextDouble() - 0.5) * Config.halfExtent,
-                y = (float)(random.NextDouble() - 0.5) * Config.halfExtent,
-                facing = (float)random.NextDouble() * 360f
+                x = (float)(positionRandom.NextDouble() - 0.5) * Config.halfExtent,
+                y = (float)(positionRandom.NextDouble() - 0.5) * Config.halfExtent,
+                facing = (float)positionRandom.NextDouble() * 360f
             };
             CaptureResourceBaseline(individual, State.time, true);
             individual.loadout = CreateLoadout(species, balancedLoadout);
@@ -938,40 +931,14 @@ namespace Ecosystem
 
         private void AdvanceFood(float time)
         {
-            FruitRules.Advance(Config, State, random, time);
+            FruitRules.Advance(Config, State, sourceRandom, time);
             if (Config.foraging && time >= State.nextNaturalSpawnAt)
             {
                 State.nextNaturalSpawnAt = time + Config.naturalSpawnInterval;
                 int missing = Config.naturalFoodLimit - State.foods.FindAll(value => value.natural).Count;
                 for (int i = 0; i < Mathf.Min(missing, Config.naturalSpawnBatch) && State.foods.Count < Config.foodSourceLimit; i++)
-                    TryAddNaturalFood(initial: false, time: time);
+                    SourcePlacementRules.TryAddNatural(Config, State, sourceRandom, time);
             }
-        }
-
-        private bool TryAddNaturalFood(bool initial, float time)
-        {
-            for (int attempt = 0; attempt < 32; attempt++)
-            {
-                var point = new Vector2((float)(random.NextDouble() * 2 - 1) * Config.halfExtent * 0.9f,
-                    (float)(random.NextDouble() * 2 - 1) * Config.halfExtent * 0.9f);
-                if (State.foods.Exists(value => Vector2.Distance(point, new Vector2(value.x, value.y)) < Config.naturalFoodSpacing)) continue;
-                AddNaturalFood(point, FoodGrowthType.Small, initial, time);
-                return true;
-            }
-            return false;
-        }
-
-        private void AddNaturalFood(Vector2 position, FoodGrowthType type, bool initial, float time)
-        {
-            var growth = type == FoodGrowthType.Large ? Config.largeFood : Config.smallFood;
-            var food = new FoodState { food = ++State.nextFood, natural = true, patch = type == FoodGrowthType.Large,
-                growthType = type, x = position.x, y = position.y, capacity = growth.capacity,
-                amount = growth.capacity * (initial ? Config.foodInitialFraction : Config.newFoodFraction),
-                phase = initial && Config.foodInitialFraction >= growth.recoveryFraction ? FoodPhase.Available : FoodPhase.Recovering,
-                bornAt = time };
-            State.foods.Add(food);
-            FruitRules.Initialize(Config, food, time);
-            if (!initial) State.events.Add(new WorldEvent { kind = "food_spawned", food = food.food, x = food.x, y = food.y });
         }
 
         private void UpdateIncompleteLives()
