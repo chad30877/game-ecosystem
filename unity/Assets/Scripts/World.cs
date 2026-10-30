@@ -216,6 +216,9 @@ namespace Ecosystem
         public bool foodUnloading;
         public float foodAvoidRefillUntil;
         public List<FoodDiscardMemory> foodDiscarded = new List<FoodDiscardMemory>();
+        public float lastSowAttemptAt = -1000f;
+        public int lastSowAttemptStep = -1;
+        public string productionDecision = "", productionStopReason = "";
         public int protectionChild, protectionThreat, protectionEventChild, protectionEventThreat;
         public float protectionDamageStart;
         public bool protectionRetreat;

@@ -203,6 +203,7 @@ namespace Ecosystem
         static WorldAction? Revisit(World world,IndividualState actor)
         {
             if(world.State.time<actor.foodAvoidRefillUntil) return null;
+            if(actor.cultivatingFood!=0 && actor.visibleFoods.Any(f=>f.food==actor.cultivatingFood && f.phase!=FoodPhase.Waiting)) return null;
             var source=actor.foodMemory.Where(f=>!f.visible && f.stale).OrderBy(f=>
                 Vector2.Distance(CombatRules.Position(actor),new Vector2(f.x,f.y))).ThenBy(f=>f.food).FirstOrDefault();
             if(source==null) return null;
