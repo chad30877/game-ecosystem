@@ -12,12 +12,20 @@ namespace Ecosystem
         public float restSeconds;
         public float lifetimeSeconds;
         public float recoveryFraction = 0.25f;
+        public float firstMaturitySeconds = 10f, fruitingSeconds = 30f;
+        public int minFruit = 2, maxFruit = 4;
+        public float growthRadius = 4f;
 
         public void Validate()
         {
             if (!float.IsFinite(capacity) || capacity <= 0 || !float.IsFinite(growthRate) || growthRate <= 0 ||
                 !float.IsFinite(restSeconds) || restSeconds <= 0 || !float.IsFinite(lifetimeSeconds) || lifetimeSeconds <= 0 ||
-                !float.IsFinite(recoveryFraction) || recoveryFraction <= 0 || recoveryFraction > 1)
+                !float.IsFinite(recoveryFraction) || recoveryFraction <= 0 || recoveryFraction > 1 ||
+                !float.IsFinite(firstMaturitySeconds) || firstMaturitySeconds <= 0 ||
+                !float.IsFinite(fruitingSeconds) || fruitingSeconds <= 0 ||
+                !float.IsFinite(growthRadius) || growthRadius <= 0 ||
+                minFruit < 2 || maxFruit < minFruit || maxFruit > capacity || maxFruit > 64 ||
+                fruitingSeconds < 2 * (maxFruit - 1))
                 throw new ArgumentException("食物生長類型參數無效。");
         }
 
@@ -30,7 +38,7 @@ namespace Ecosystem
         }
     }
 
-    public enum FoodPhase { Available, Resting, Recovering }
+    public enum FoodPhase { Available, Resting, Recovering, Waiting }
     public enum FoodGrowthType { Small, Large }
 
     public static class ScanReasons
@@ -72,8 +80,8 @@ namespace Ecosystem
         public int removeStep = 64;
         public int addStep = 96;
         public bool foraging;
-        public FoodGrowthConfig smallFood = new FoodGrowthConfig { capacity = 15f, growthRate = 0.75f, restSeconds = 10f, lifetimeSeconds = 120f };
-        public FoodGrowthConfig largeFood = new FoodGrowthConfig { capacity = 30f, growthRate = 1.5f, restSeconds = 25f, lifetimeSeconds = 240f };
+        public FoodGrowthConfig smallFood = new FoodGrowthConfig { capacity = 4f, growthRate = 0.75f, restSeconds = 20f, lifetimeSeconds = 120f };
+        public FoodGrowthConfig largeFood = new FoodGrowthConfig { capacity = 7f, growthRate = 1.5f, restSeconds = 30f, lifetimeSeconds = 240f, firstMaturitySeconds = 15f, fruitingSeconds = 40f, minFruit = 5, maxFruit = 7, growthRadius = 5.5f };
         public float foodInitialFraction = 0.67f;
         public int foodSourceLimit = 64;
         public int naturalFoodLimit = 16;
@@ -362,12 +370,18 @@ namespace Ecosystem
         public bool natural;
         public bool mature = true;
         public float matureAt;
+        public bool cycleInitialized;
+        public float phaseProgress, lastAdvancedAt, lastFruitAt = -1000f, waitUntil;
+        public int cycle, nextMaturity;
+        public float[] maturitySchedule = Array.Empty<float>();
+        public float growthMultiplier = 1f;
     }
 
     [Serializable]
     public sealed class WorldEvent
     {
         public string kind;
+        public int fruit;
         public int individual;
         public int food;
         public float amount;
@@ -474,6 +488,9 @@ namespace Ecosystem
     public sealed class WorldState
     {
         public List<FoodState> foods = new List<FoodState>();
+        public List<FruitState> fruits = new List<FruitState>();
+        public FruitLedger fruitLedger = new FruitLedger();
+        public int nextFruit;
         public List<WorldEvent> events = new List<WorldEvent>();
         public List<RewardRecord> rewards = new List<RewardRecord>();
         public int episode;
@@ -785,26 +802,6 @@ namespace Ecosystem
                 if (!Config.foraging) continue;
                 individual.reproductionCooldown = Mathf.Max(0, individual.nextReproductionTime - time);
                 float distance = distances[individual.individual];
-                if (individual.health > 0 && individual.careTarget == 0 && individual.careReceivedFrom == 0 && actions[individual.individual].forage)
-                    foreach (var food in State.foods)
-                        if (food.mature && food.phase == FoodPhase.Available && Vector2.Distance(CombatRules.Position(individual), new Vector2(food.x, food.y)) <= Config.forageRadius)
-                        {
-                            float eaten = Mathf.Min(food.amount, Config.forageRate * Config.stepSeconds, 100f - individual.satiety);
-                            if (eaten <= 0) continue;
-                            food.amount -= eaten;
-                            individual.satiety += eaten; individual.foodReceived += eaten;
-                            individual.feeding = true; individual.fedAmount = eaten; individual.lastAteAt = time;
-                            individual.fedSourceX = food.x; individual.fedSourceY = food.y;
-                            State.events.Add(new WorldEvent { kind = "ate", individual = individual.individual, food = food.food, amount = eaten });
-                            if (food.amount <= 0.00001f)
-                            {
-                                food.amount = 0;
-                                food.phase = FoodPhase.Resting;
-                                food.restUntil = time + Growth(food).restSeconds;
-                                State.events.Add(new WorldEvent { kind = "food_depleted", food = food.food, x = food.x, y = food.y });
-                            }
-                            break;
-                        }
                 if (individual.health > 0 && individual.satiety <= 0)
                 {
                     float damage = Mathf.Min(individual.health, CombatRules.CurrentMaxHealth(Config, individual) * Config.starvationDamage * Config.stepSeconds);
@@ -954,37 +951,7 @@ namespace Ecosystem
 
         private void AdvanceFood(float time)
         {
-            for (int i = State.foods.Count - 1; i >= 0; i--)
-            {
-                var expired = State.foods[i];
-                if (time < expired.bornAt + Growth(expired).lifetimeSeconds) continue;
-                State.foods.RemoveAt(i);
-                foreach (var individual in State.individuals)
-                    if (individual.cultivatingFood == expired.food)
-                    {
-                        individual.cultivatingFood = 0;
-                        individual.cultivateUntil = 0;
-                        individual.cultivateRemaining = 0;
-                    }
-                State.events.Add(new WorldEvent { kind = "food_expired", food = expired.food, x = expired.x, y = expired.y });
-            }
-            foreach (var food in State.foods)
-            {
-                if (!food.mature && time >= food.matureAt)
-                {
-                    food.mature = true;
-                    State.events.Add(new WorldEvent { kind = "food_matured", food = food.food, x = food.x, y = food.y });
-                }
-                if (!food.mature || food.phase == FoodPhase.Resting && time < food.restUntil) continue;
-                if (food.phase == FoodPhase.Resting)
-                {
-                    food.phase = FoodPhase.Recovering;
-                    State.events.Add(new WorldEvent { kind = "food_recovering", food = food.food, x = food.x, y = food.y });
-                }
-                var growth = Growth(food);
-                if (growth.Grow(food, growth.growthRate * Config.stepSeconds))
-                    State.events.Add(new WorldEvent { kind = "food_available", food = food.food, x = food.x, y = food.y });
-            }
+            FruitRules.Advance(Config, State, random, time);
             if (Config.foraging && time >= State.nextNaturalSpawnAt)
             {
                 State.nextNaturalSpawnAt = time + Config.naturalSpawnInterval;
@@ -1016,6 +983,7 @@ namespace Ecosystem
                 phase = initial && Config.foodInitialFraction >= growth.recoveryFraction ? FoodPhase.Available : FoodPhase.Recovering,
                 bornAt = time };
             State.foods.Add(food);
+            FruitRules.Initialize(Config, food, time);
             if (!initial) State.events.Add(new WorldEvent { kind = "food_spawned", food = food.food, x = food.x, y = food.y });
         }
 
