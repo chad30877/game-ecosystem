@@ -75,12 +75,20 @@ namespace Ecosystem
                 float expiry = food.bornAt + growth.lifetimeSeconds;
                 float end = Mathf.Min(time, expiry);
                 float cursor = food.lastAdvancedAt;
-                float rate = Mathf.Clamp(food.growthMultiplier, 1f, 2f);
+                food.cultivatedSeconds = 0;
                 while (cursor < end)
                 {
+                    float rate = food.cultivator != 0 && cursor >= food.growthBoostUntil ? 1f : Mathf.Clamp(food.growthMultiplier, 1f, 2f);
+                    float limit = food.cultivator != 0 && cursor < food.growthBoostUntil ? Mathf.Min(end, food.growthBoostUntil) : end;
+                    void Consume(float next)
+                    {
+                        if (food.cultivator != 0 && rate > 1 && food.phase != FoodPhase.Waiting)
+                            food.cultivatedSeconds += next - cursor;
+                        cursor = next;
+                    }
                     if (food.phase == FoodPhase.Waiting)
                     {
-                        if (food.waitUntil > end) { cursor = end; break; }
+                        if (food.waitUntil > limit) { cursor = limit; continue; }
                         cursor = Mathf.Max(cursor, food.waitUntil);
                         food.phase = FoodPhase.Resting;
                         food.phaseProgress = 0;
@@ -90,13 +98,13 @@ namespace Ecosystem
                     {
                         float due = food.maturitySchedule[food.nextMaturity];
                         float at = Mathf.Max(cursor + Mathf.Max(0, due - food.phaseProgress) / rate, food.lastFruitAt + 1f);
-                        if (at > end || at >= expiry)
+                        if (at > limit || at >= expiry)
                         {
-                            food.phaseProgress += (end - cursor) * rate;
-                            cursor = end; break;
+                            food.phaseProgress += (limit - cursor) * rate;
+                            Consume(limit); continue;
                         }
                         food.phaseProgress += (at - cursor) * rate;
-                        cursor = at;
+                        Consume(at);
                         food.lastFruitAt = at;
                         var fruit = new FruitState { fruit = ++state.nextFruit, source = food.food,
                             x = food.x, y = food.y, maturedAt = at, expiresAt = at + PreservationSeconds };
@@ -115,12 +123,12 @@ namespace Ecosystem
                     }
                     float duration = food.phase == FoodPhase.Recovering ? growth.firstMaturitySeconds : growth.restSeconds;
                     float transition = cursor + Mathf.Max(0, duration - food.phaseProgress) / rate;
-                    if (transition > end || transition >= expiry)
+                    if (transition > limit || transition >= expiry)
                     {
-                        food.phaseProgress += (end - cursor) * rate;
-                        cursor = end; break;
+                        food.phaseProgress += (limit - cursor) * rate;
+                        Consume(limit); continue;
                     }
-                    cursor = transition;
+                    Consume(transition);
                     BeginCycle(growth, food, random);
                     // 階段終點當下可成熟第一顆，即使恰為本步終點。
                     if (cursor == end && cursor < expiry)

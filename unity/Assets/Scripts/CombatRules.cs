@@ -31,9 +31,10 @@ namespace Ecosystem
         public float slowDuration = 1f;
         public float slowMultiplier = 0.55f;
         public float cultivateRange = 1.5f;
-        public float cultivateMana = 8f;
-        public float cultivateCooldown = 6f;
-        public float cultivateDuration = 3f;
+        // 新規則為每秒費用；下列兩個舊計時欄位僅保留讀取相容。
+        public float cultivateMana = 6f;
+        public float cultivateCooldown;
+        public float cultivateDuration;
         public float cultivateRate = 4f;
         public float shieldMana = 10f;
         public float shieldCooldown = 8f;
@@ -97,7 +98,7 @@ namespace Ecosystem
                 chargeDistance, chargeSpeed, chargeDamage, chargeMana, chargeCooldown,
                 hitRadius, iceRange, iceSpeed, iceDamage,
                 iceMana, iceWindup, iceCooldown, slowDuration, slowMultiplier, cultivateRange, cultivateMana,
-                cultivateCooldown, cultivateDuration, cultivateRate, shieldMana, shieldCooldown, shieldDuration, shieldMultiplier, hotStrikeMana, hotStrikeCooldown, hotStrikeDamage, hotStrikeRange,
+                cultivateRate, shieldMana, shieldCooldown, shieldDuration, shieldMultiplier, hotStrikeMana, hotStrikeCooldown, hotStrikeDamage, hotStrikeRange,
                 roarMana, roarCooldown, roarRange, roarDuration, roarBias, maxMovementBias,
                 frostbindMana, frostbindCooldown, frostbindDamage, piercingMana, piercingCooldown, piercingDamage, piercingRange,
                 dashMana, dashCooldown, dashDistance, dashSpeed, trapMana, trapCooldown, trapRange, trapRadius, trapDuration, trapRootDuration, trapSlowDuration,
@@ -110,8 +111,10 @@ namespace Ecosystem
             if (maxMovementBias >= 1 || roarBias > maxMovementBias || smokeBias > maxMovementBias) throw new ArgumentException("移動偏向須保留個體操作能力。");
             if (slowDuration >= iceCooldown || slowMultiplier >= 1 || iceWindup >= iceCooldown)
                 throw new ArgumentException("減速時間及前搖須短於冰箭冷卻，減速倍率須介於 0 與 1。");
-            if (shieldMultiplier >= 1 || shieldDuration >= shieldCooldown || cultivateDuration >= cultivateCooldown)
+            if (shieldMultiplier >= 1 || shieldDuration >= shieldCooldown)
                 throw new ArgumentException("技能持續時間須短於冷卻，護盾倍率須介於 0 與 1。");
+            if (!float.IsFinite(cultivateCooldown) || cultivateCooldown < 0 || !float.IsFinite(cultivateDuration) || cultivateDuration < 0)
+                throw new ArgumentException("舊培育計時欄位須為有限非負數。");
         }
     }
 
