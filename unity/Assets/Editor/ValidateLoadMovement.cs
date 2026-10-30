@@ -145,7 +145,13 @@ namespace Ecosystem.Editor
             Near(actor.x, 3.2f, "三果衝鋒距離縮短且持續時間不變");
             Near(actor.chargeRemaining, 0, "負重不延長衝鋒");
             Ordinary(); DynamicInventory(); MobilitySkills();
+            var cultivated = Make("Moss", 3, 1); var grower = cultivated.State.individuals.Single();
+            grower.loadout = new[] { WorldSkill.Cultivate, WorldSkill.Sow };
+            var source = SourcePlacementRules.Create(cultivated.Config, cultivated.State, new Vector2(1, 0), FoodGrowthType.Small, false, 0);
+            Step(cultivated, new WorldAction(Vector2.zero, skill: WorldSkill.Cultivate, productionSource: source.food));
+            Near(source.phaseProgress, 2, "三果負重不拖慢培育"); Near(grower.skillManaSpent, 6, "負重不改培育費用");
             ValidateFruitTransfer.Run();
+            ValidateProduction.Run();
             Debug.Log("攜帶負重驗收通過：三物種走跑、容量變化、原控制效果、技能時間傷害與資源消耗");
         }
     }
