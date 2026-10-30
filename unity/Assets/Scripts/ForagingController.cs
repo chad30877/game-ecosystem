@@ -6,7 +6,13 @@ namespace Ecosystem
     public static class ForagingController
     {
         public static WorldAction Decide(World world, IndividualState individual)
-            => SmokeAvoidance.Adjust(world, individual, Choose(world, individual));
+        {
+            bool cultivated=individual.cultivatingFood!=0 || individual.productionDecision=="cultivate";
+            individual.productionDecision="";
+            var action=SmokeAvoidance.Adjust(world, individual, Choose(world, individual));
+            ProductionController.Record(individual,action,cultivated);
+            return action;
+        }
 
         private static WorldAction Choose(World world, IndividualState individual)
         {
@@ -160,9 +166,13 @@ namespace Ecosystem
                     aim: aim, attack: !weak && individual.species != "Moss", turn: Turn(individual, delta), skillSlot: skill,
                     run: individual.runPreferred && delta.magnitude > config.forageRadius*2);
             }
+            var production = ProductionController.Choose(world, individual);
+            if (production.HasValue) return production.Value;
             individual.decisionReason = lostTarget ? "food_lost" : "explore";
             individual.contestHealth = health;
             var exploration = Explore(world, individual, position);
+            if(individual.productionDecision=="sow_no_space" && exploration.movement==Vector2.zero)
+                return new WorldAction(Vector2.zero,turn:1);
             Vector2 supportAim = position;
             int support = ChooseSkill(world, individual, null, ref supportAim);
             return new WorldAction(exploration.movement, aim: supportAim, turn: exploration.turn, skillSlot: support,
@@ -211,17 +221,6 @@ namespace Ecosystem
                     case WorldSkill.FrostTrap: if (distance <= c.trapRange) return slot; break;
                     case WorldSkill.EntanglingRoots: if (distance <= c.rootsRange) return slot; break;
                     case WorldSkill.SporeSmoke: if (distance <= c.smokeRadius * growth) return slot; break;
-                    case WorldSkill.Cultivate:
-                        if (individual.visibleFoods.Exists(food => food.mature && food.phase != FoodPhase.Resting && food.amount < food.capacity &&
-                            Vector2.Distance(position, new Vector2(food.x, food.y)) <= c.cultivateRange)) return slot;
-                        break;
-                    case WorldSkill.Sow:
-                        if (individual.satiety >= 30)
-                        {
-                            aim = position + new Vector2(Mathf.Cos(individual.facing * Mathf.Deg2Rad), Mathf.Sin(individual.facing * Mathf.Deg2Rad)) * (c.sowRange * 0.7f);
-                            return slot;
-                        }
-                        break;
                 }
             }
             return -1;
