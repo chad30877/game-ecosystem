@@ -1,9 +1,9 @@
 # 產物記錄、保留與同建置回放任務
 
-- 正式需求：[spec.md](spec.md)。已確認背景：[共同理解](../../docs/design/artifact-recording-and-retention-summary.md)、[訪談](../../docs/design/artifact-recording-and-retention.md)、[ADR 0001](../../docs/adr/0001-build-scoped-recording.md)。
+- 正式需求：[spec.md](spec.md)。已確認背景：[共同理解](../../../docs/design/artifact-recording-and-retention-summary.md)、[訪談](../../../docs/design/artifact-recording-and-retention.md)、[ADR 0001](../../../docs/adr/0001-build-scoped-recording.md)。
 - 2026-10-30 使用者確認共同理解，授權整理本機正式規格與任務，明確要求先不實作。當時僅發佈為 ready-for-agent；後續本輪implement授權與交付進度見下方。
 - ready-for-agent 不是執行授權；後續取得實作授權且前置全部 resolved，才可將任務改為 claimed。逐張任務的 Status、討論與完成紀錄為狀態依據。
-- 遵守[本機追蹤器](../../docs/agents/issue-tracker.md)及[狀態規範](../../docs/agents/triage-labels.md)，不建立 GitHub issues。
+- 遵守[本機追蹤器](../../../docs/agents/issue-tracker.md)及[狀態規範](../../../docs/agents/triage-labels.md)，不建立 GitHub issues。
 
 ## 任務與前置
 
@@ -36,12 +36,10 @@
 
 01–06 建立並驗證新流程後，07 才整理真實舊資料；先處理仍有效的測試素材與正式報告，再依已確認範圍清理。08 將已驗收行為整合至正式文件，全部完成才歸檔本功能。
 
-本輪不恢復 [fruit-supply-and-flow 12／13](../fruit-supply-and-flow/README.md)，不執行六場生態或 PPO；11 的既有完成證據保留。歷史回放要求已由本規格取代為未來政策，不能宣稱現行程式已完成切換。
+本輪不恢復 [fruit-supply-and-flow 12／13](../../fruit-supply-and-flow/README.md)，不執行六場生態或 PPO；11 的既有完成證據保留。歷史回放要求由本規格取代並已落地；歷史驗收結果不改寫。
 
-## 後續人工驗收方向
+## 人工驗收與最終結果
 
-一般啟動查看只有輕量資料；明確錄製後重建世界並提前停止，核對每段可跳轉；連跑超過五次、完成／失敗錄製及更換建置後核對保留；模擬記錄失敗時核對畫面繼續且資料標示不完整。確切命令與實際結果由各任務交付，本次未執行。
+操作見[記錄契約](../../../docs/recording.md)及[可重複清理](../../../docs/legacy-artifact-cleanup.md)。本輪已完成程式、短程回歸、可見操作、384份手動清理稽核及清理後驗收；數值證據見[驗收報告](../../../docs/recording-results.md)與[清理結果](../../../docs/artifact-cleanup-results.json)。
 
-## 2026-10-30實作進度
-
-本輪使用者以implement授權實作。01–06完成驗收，證據見[正式報告](../../docs/recording-results.md)。07已盤點，但實際刪除被自動核准審查拒絕，改為ready-for-human；08前置未完成，功能留在原位，不宣稱全部結案。
+2026-10-30最終狀態：01–08全部resolved。先前自動刪除受阻後，使用者手動完成384份清理；核對路徑與bytes逐項相同且全部不存在，再完成07與08並歸檔。非受管清理後續採每批清單與手動套用，.simulation自動政策維持不變。舊fruit-supply-and-flow 12／13仍deferred。

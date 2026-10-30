@@ -37,7 +37,7 @@ resolved
 
 BuildWorld 產生並嵌入獨立建置識別，多次成功建置識別均不同；失敗 Editor 啟動未改 current.json。ValidateArtifacts.Identity、Paths 與實際 Player 執行識別通過。
 
-完整命令、來源與限制見 [正式驗收報告](../../../docs/recording-results.md)。
+完整命令、來源與限制見 [正式驗收報告](../../../../docs/recording-results.md)。
 
 - 2026-10-30：使用者以 implement 授權本功能實作；已確認公開介面與入口測試邊界。
 

@@ -38,6 +38,6 @@ resolved
 
 ValidateArtifacts.Failures 在模擬第100步確認資料失敗但世界繼續；初始化拒絕、記錄不完整與來源保留通過。Python require_complete 拒絕失敗及缺少分段。
 
-完整命令、來源與限制見 [正式驗收報告](../../../docs/recording-results.md)。
+完整命令、來源與限制見 [正式驗收報告](../../../../docs/recording-results.md)。
 
 - 2026-10-30：本輪依前置順序核對驗收並結案；前置已 resolved。

@@ -38,6 +38,6 @@ resolved
 
 ValidateArtifacts.Recording 及實際 Player 兩輪 3+2 步錄製與 0→last→0 比對通過；可見重建與正常提前停止產生兩段成功錄製。錯建置、毀損與缺幀拒絕；退役歷史分支。
 
-完整命令、來源與限制見 [正式驗收報告](../../../docs/recording-results.md)。
+完整命令、來源與限制見 [正式驗收報告](../../../../docs/recording-results.md)。
 
 - 2026-10-30：本輪依前置順序核對驗收並結案；前置已 resolved。

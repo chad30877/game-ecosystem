@@ -2,7 +2,7 @@
 
 ## 訪談狀態
 
-- 2026-10-30 使用者已確認[共同理解摘要](artifact-recording-and-retention-summary.md)，授權整理本機正式規格與任務並明確要求先不實作；[正式規格](../../.scratch/artifact-recording-and-retention/spec.md)與[八張任務](../../.scratch/artifact-recording-and-retention/README.md)已發佈，均尚未開始。
+- 2026-10-30 使用者已確認[共同理解摘要](artifact-recording-and-retention-summary.md)，授權整理本機正式規格與任務並明確要求先不實作；[正式規格](../../.scratch/archive/artifact-recording-and-retention/spec.md)與[八張任務](../../.scratch/archive/artifact-recording-and-retention/README.md)已發佈，均尚未開始。
 - 2026-10-30 開始；使用者希望在環境快速變動期間暫不解決 fruit-supply-and-flow 11、12、13 涉及的回放相容性問題，另開一輪配合「產物記錄預設與保留規則」規劃。
 - 本文件保留設計背景，實作需求以新正式規格為準；尚未授權程式修改。Q1–Q3、Q5–Q7 已確認日常輕量記錄、同建置回放、正常提前停止可播放及驗證後移除冗餘來源。Q9 澄清資料供 Codex 或其他 LLM 閱讀，不是專案內的生物 AI。Q10–Q13 已確認新建置採用後淘汰舊模擬產物、保留 Git 正式結果、異常錄製不搶救，以及退役歷史相容分支與驗收。
 - Q14–Q16 已確認供 LLM 先讀摘要再查每秒群體統計、同建置五次輕量資料與一次成功錄製的保留數量，以及日常程式自動清理／LLM 首次整理與調整規則的分工。自動管理限定專案內專用模擬產物目錄。

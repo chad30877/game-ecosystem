@@ -1,6 +1,8 @@
 # 產物記錄、保留與同建置回放：正式規格
 
-2026-10-30 使用者已確認[共同理解](../../docs/design/artifact-recording-and-retention-summary.md)，授權發佈本機正式規格與任務，並明確要求先不實作。Status：ready-for-agent。此狀態表示規格已準備好，不代表已取得實作或清理授權。任務見 [README](README.md)，決策背景見[完整訪談](../../docs/design/artifact-recording-and-retention.md)及 [ADR 0001](../../docs/adr/0001-build-scoped-recording.md)。
+最終狀態：resolved（2026-10-30），01–08全部完成。下列原始發佈限制保留為歷史，後續授權、補充與交付見文末；操作及證據以正式文件為準。
+
+2026-10-30 使用者已確認[共同理解](../../../docs/design/artifact-recording-and-retention-summary.md)，授權發佈本機正式規格與任務，並明確要求先不實作。Status：ready-for-agent。此狀態表示規格已準備好，不代表已取得實作或清理授權。任務見 [README](README.md)，決策背景見[完整訪談](../../../docs/design/artifact-recording-and-retention.md)及 [ADR 0001](../../../docs/adr/0001-build-scoped-recording.md)。
 
 ## S01 目標、範圍與執行界線
 
@@ -65,8 +67,8 @@
 
 - 一般可見／無畫面模擬、腳本入口及直接啟動 Player 均須遵守輕量預設；相關 bridge、固定模型觀察及驗收工具不得暗中重新打開全量紀錄。只調整記錄契約所需整合，不進行 PPO 訓練、模型遷移或成效實驗。
 - ReloadRun 等重跑入口須讀取新的來源資訊，與讀快照回放區分；只保證現有必要功能在本輪契約下正常，不新增歷史重跑相容承諾。既有詳細診斷、指定場景與素材生成工具須採明確記錄意圖。
-- [fruit-supply-and-flow 11](../fruit-supply-and-flow/issues/11-record-replay.md) 保留 resolved 與原證據；新的未來回放政策由本規格承接，現有程式直到實作落地前仍可能包含歷史分支。
-- [12](../fruit-supply-and-flow/issues/12-integration-ecology.md)／[13](../fruit-supply-and-flow/issues/13-docs-closeout.md) 維持 deferred。舊 v9–v14 相容要求由本規格取代，但其他固定情境、六場生態、果數觀察與整體結案不免除、不自動恢復，也不能因本輪完成將舊功能歸檔。
+- [fruit-supply-and-flow 11](../../fruit-supply-and-flow/issues/11-record-replay.md) 保留 resolved 與原證據；新的未來回放政策由本規格承接，現有程式直到實作落地前仍可能包含歷史分支。
+- [12](../../fruit-supply-and-flow/issues/12-integration-ecology.md)／[13](../../fruit-supply-and-flow/issues/13-docs-closeout.md) 維持 deferred。舊 v9–v14 相容要求由本規格取代，但其他固定情境、六場生態、果數觀察與整體結案不免除、不自動恢復，也不能因本輪完成將舊功能歸檔。
 
 ## S09 驗收與交付
 
@@ -78,4 +80,12 @@
 
 ## 2026-10-30後續授權與進度
 
-本輪使用者以implement另行授權實作與既定整理。01–06已交付；07刪除操作被自動核准審查拒絕，08尚不能結案歸檔。原發佈時的先不實作限制保留為歷史，不推翻本輪授權。實際證據及限制見[驗收報告](../../docs/recording-results.md)。
+本輪使用者以implement另行授權實作與既定整理。01–06已交付；07刪除操作被自動核准審查拒絕，08尚不能結案歸檔。原發佈時的先不實作限制保留為歷史，不推翻本輪授權。實際證據及限制見[驗收報告](../../../docs/recording-results.md)。
+
+## S10 後續補充：可重複的非受管清理
+
+使用者另要求非受管產物由LLM盤點並產生每批清單，使用者先預覽再手動套用；.simulation保留原自動淘汰。可重複工具接受不同清單，以預覽雜湊綁定套用及驗證；來源與清單變動時拒絕。操作與agent入口見[手動清理](../../../docs/legacy-artifact-cleanup.md)。
+
+## 最終交付
+
+01–08全部resolved；使用者手動清理384份後，逐項稽核、Verify與清理後回歸通過。程式與正式操作文件已交付，本功能歸檔；完整來源見[驗收報告](../../../docs/recording-results.md)及[清理結果](../../../docs/artifact-cleanup-results.json)。

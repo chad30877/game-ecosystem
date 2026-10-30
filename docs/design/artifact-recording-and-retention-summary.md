@@ -1,6 +1,6 @@
 # 產物記錄、保留與回放支援：共同理解
 
-狀態：2026-10-30 使用者已確認整體共同理解，授權整理[正式規格](../../.scratch/artifact-recording-and-retention/spec.md)與[任務](../../.scratch/artifact-recording-and-retention/README.md)，並明確要求先不實作。本摘要為設計背景，實作需求以正式規格為準。完整依據見[訪談 Q1–Q19](artifact-recording-and-retention.md)。
+狀態：2026-10-30 使用者已確認整體共同理解，授權整理[正式規格](../../.scratch/archive/artifact-recording-and-retention/spec.md)與[任務](../../.scratch/archive/artifact-recording-and-retention/README.md)，並明確要求先不實作。本摘要為設計背景，實作需求以正式規格為準。完整依據見[訪談 Q1–Q19](artifact-recording-and-retention.md)。
 
 ## 目標與範圍
 

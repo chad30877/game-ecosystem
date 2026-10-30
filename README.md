@@ -10,7 +10,7 @@
 
 果實供給與流轉的新一輪設計已確認，[正式規格與十三張任務](.scratch/fruit-supply-and-flow/README.md)已整理；2026-10-30 已於 `codex/fruit-supply-and-flow` 完成 01–10 機制／AI／畫面，11 記錄契約也已完成；使用者後續要求確認後停工，12／13 延後。新契約見[果實資料契約](docs/fruit-data-contract.md)，驗收與停工狀態見任務索引。下方舊版規則說明尚未全面更新，不視為新果實制規格。
 
-2026-10-30 已實作[輕量記錄與同建置錄製](docs/recording.md)：預設只留群體摘要，`-Record` 錄製所有輪次，正常提前停止仍可播放；`.simulation/` 保留最近五次輕量資料與一次成功錄製，新建置採用後淘汰舊資料。模型及自訂輸出不自動清理，歷史處置見[清理紀錄](docs/artifact-retention.md)。
+2026-10-30 已實作[輕量記錄與同建置錄製](docs/recording.md)：預設只留群體摘要，`-Record` 錄製所有輪次，正常提前停止仍可播放；`.simulation/` 保留最近五次輕量資料與一次成功錄製，新建置採用後淘汰舊資料。模型及自訂輸出不自動清理，歷史處置見[清理紀錄](docs/artifact-retention.md)。非受管產物採[LLM盤點清單、使用者預覽與手動清理](docs/legacy-artifact-cleanup.md)。
 
 在專案根目錄使用 PowerShell：
 

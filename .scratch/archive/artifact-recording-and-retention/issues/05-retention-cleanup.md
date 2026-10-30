@@ -40,6 +40,6 @@ resolved
 
 ValidateArtifacts.Retention／Paths 通過五次以外成功錄製、失敗不替換、播放保護、跨建置、未知／模型檔案及junction界線；實際受管八場留下五次輕量加一次全批錄製，共六次。
 
-完整命令、來源與限制見 [正式驗收報告](../../../docs/recording-results.md)。
+完整命令、來源與限制見 [正式驗收報告](../../../../docs/recording-results.md)。
 
 - 2026-10-30：本輪依前置順序核對驗收並結案；前置已 resolved。

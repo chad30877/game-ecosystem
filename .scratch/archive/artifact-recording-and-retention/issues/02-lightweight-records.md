@@ -37,6 +37,6 @@ resolved
 
 ValidateArtifacts.Recording 核對每秒／輪次資料無個體快照；實際整合八場的輕量／完整錄製摘要逐欄一致。群體流量沿用 World 果實帳與統計，不改世界規則。
 
-完整命令、來源與限制見 [正式驗收報告](../../../docs/recording-results.md)。
+完整命令、來源與限制見 [正式驗收報告](../../../../docs/recording-results.md)。
 
 - 2026-10-30：本輪依前置順序核對驗收並結案；前置已 resolved。

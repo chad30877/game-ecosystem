@@ -31,7 +31,7 @@
 ### 果實供給後續整合驗收
 
 - 狀態：延後（deferred）；2026-10-30 使用者要求先確認 01–10 後停工，回放相容不再追加。
-- 2026-10-30 新規劃：使用者指出 11、12、13 涉及回放相容性問題，考量環境快速變動暫不修復；已確認並發佈[產物記錄與同建置回放規格](../.scratch/artifact-recording-and-retention/spec.md)，取代未來 v9–v14 相容承諾；本輪已獲implement授權並落地同建置政策，首次舊資料清理仍受阻。原問題未重現或定位，11 原完成紀錄保留，12／13 不恢復、不視為通過。
+- 2026-10-30 新規劃：使用者指出 11、12、13 涉及回放相容性問題，考量環境快速變動暫不修復；已確認並發佈[產物記錄與同建置回放規格](../.scratch/archive/artifact-recording-and-retention/spec.md)，取代未來 v9–v14 相容承諾；本輪已獲implement授權並落地同建置政策，首次舊資料已由使用者手動清理並逐項核對完成。原問題未重現或定位，11 原完成紀錄保留，12／13 不恢復、不視為通過。
 - 已交付：01–10 的機制、規則 AI 與可見畫面均已驗收；11 記錄／回放與入口相容在停工要求前已完成，保留既有成果。見[任務索引](../.scratch/fruit-supply-and-flow/README.md)。
 - 未執行：[12 整合與六場生態觀察](../.scratch/fruit-supply-and-flow/issues/12-integration-ecology.md)、[13 正式文件結案與歸檔](../.scratch/fruit-supply-and-flow/issues/13-docs-closeout.md)。尚無本輪六場結果，也未執行最終全規格雙軸審查；固定情境通過不代表長期生態穩定。
 - 恢復條件：使用者重新排入後，確認是否保留原六場配置、回放範圍與驗收要求，再恢復任務。下一輪果數檢視及其他既有延後項目維持原狀。
@@ -45,11 +45,11 @@
 
 ### 產物記錄預設與保留規則
 
-- 狀態：程式已交付、首次清理待處理；2026-10-30 使用者確認[共同理解](design/artifact-recording-and-retention-summary.md)，[正式規格](../.scratch/artifact-recording-and-retention/spec.md)與[八張任務](../.scratch/artifact-recording-and-retention/README.md)已由本輪 implement 授權實作；01–06完成驗收，07實際刪除被自動核准審查阻擋，08尚不能結案歸檔。
+- 狀態：已完成並歸檔；01–08均resolved，程式、首次清理及可重複手動清理流程已交付。規格與證據見[任務](../.scratch/archive/artifact-recording-and-retention/README.md)、[驗收報告](recording-results.md)及[清理結果](artifact-cleanup-results.json)。
 - 方向：日常只留供 Codex／其他 LLM 分析的摘要、每秒群體統計與來源資訊；完整錄製明確開啟，涵蓋整次執行，正常提前停止可播放，僅支援同建置。
 - 保留：同建置最近五次輕量資料與一次成功錄製，新建置採用後淘汰舊模擬產物，長期結果留在 Git。程式管理日常清理，LLM 負責首次整理、規則調整及開發比對資料另存；詳細邊界以正式規格為準。
 - 關係：新政策接續[過往清理](artifact-retention.md)與原果實任務的回放承諾；歷史結果保留，11 不改寫，12／13 其他延後工作與生態觀察、調參、PPO 均不啟動。
-- 結果：[操作契約](recording.md)與[驗收／限制](recording-results.md)已保存；舊資料僅完成384份盤點，未實際刪除。
+
 
 ### 繁殖後供給與苔靈產出差異
 
