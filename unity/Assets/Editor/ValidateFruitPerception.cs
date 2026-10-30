@@ -18,7 +18,7 @@ namespace Ecosystem.Editor
         public static void RunAll()
         {
             RunOccludedTarget(); Limits(); Family(); Isolation();
-            ValidateSmoke.Run();ValidateProduction.RunRegression();
+            ValidateSmoke.Run();ValidateLoadMovement.Run();
             Debug.Log("果實感知與有限記憶驗收通過：粗略新鮮度、資訊隔離、三種記憶及親子關係");
         }
         static void Limits()
