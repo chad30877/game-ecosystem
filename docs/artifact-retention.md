@@ -6,6 +6,8 @@
 
 自動核准審查拒絕依此清單刪除，只回報 `blocked by policy`，未提供具體原因；沒有執行任何刪除，尚未回收這24GB。07仍未完成，功能未歸檔。以下是2026-10-23歷史紀錄，保留當時結論；八份舊回放已列入本次待清理清單，不再是新流程相容性驗收依賴。
 
+後續使用者改採[先預覽、再手動清理](legacy-artifact-cleanup.md)。腳本及384份完整SHA-256清單已納入Git，預覽確認24,032,917,856 bytes、實際刪除0；07／08等手動清理結果與後續驗收再結案。
+
 ## 本次範圍
 
 - 清理 `artifacts/downloads`、`artifacts/cache` 與 `artifacts/migration/previous-toolchains`；現行 `.tools`、`.python`、`.venv` 及 `unity/Builds` 保持原位。

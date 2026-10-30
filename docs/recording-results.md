@@ -41,6 +41,8 @@
 
 07清理維持未完成，08尚不能結案歸檔；本功能留在 `.scratch/artifact-recording-and-retention`。正式程式操作文件已更新。歷史果實11的驗收結論不改寫，12／13不恢復、不歸檔。
 
+後續已交付[手動清理腳本](legacy-artifact-cleanup.md)與固定384項完整SHA-256清單。Windows PowerShell 5.1已完成只讀預覽（刪除0），並以隔離資料核對變動檔、遭修改清單、junction、全數不存在及`-Apply -WhatIf`；測試不執行刪除。等待使用者手動清理後才續辦07／08。
+
 注入故障驗收透過公開記錄介面的I/O邊界；未實際耗盡磁碟。固定模型觀察的整合契約、來源分離及完整性檢查已更新；本輪沒有可用的相容模型，也未為此新訓練模型。套件本身的既有deprecated警告仍存在。
 
 既有 `ecosystem_observation.py`／`juvenile_ecology.py` 另有10項型別診斷；與基準618cf6a的原檔逐項相同（本機 `baseline-typecheck`），本輪只調整明確診斷旗標與讀取位置，未擴充成生態工具型別修復。

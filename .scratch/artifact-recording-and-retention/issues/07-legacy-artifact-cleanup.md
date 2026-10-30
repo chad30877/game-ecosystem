@@ -32,6 +32,7 @@ ready-for-human
 ## 討論紀錄
 
 - 2026-10-30：依已確認共同理解發佈任務，僅完成規劃文件，尚未實作。
+- 2026-10-30：使用者要求先預覽、再手動清理。已建立固定384份清單的 `scripts/cleanup-legacy-artifacts.ps1`，預設預覽，`-Apply` 才刪檔，`-Verify` 核對全部不存在；綁定清單及各檔完整SHA-256，逐次保存稽核。預覽刪除數0，仍為ready-for-human，待手動結果後完成剩餘驗收及08。操作見[手動清理](../../../docs/legacy-artifact-cleanup.md)。
 
 ## 完成紀錄
 
