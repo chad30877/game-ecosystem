@@ -250,31 +250,7 @@ namespace Ecosystem
                 if (Mathf.Abs(end.x) > config.halfExtent || Mathf.Abs(end.y) > config.halfExtent) projectile.remaining = 0;
             }
             state.projectiles.RemoveAll(value => value.remaining <= 0);
-            foreach (var food in state.foods)
-            {
-                if (!food.mature || food.phase == FoodPhase.Resting) continue;
-                float cursor = state.time;
-                float stepEnd = state.time + config.stepSeconds;
-                while (cursor < stepEnd)
-                {
-                    IndividualState strongest = null;
-                    foreach (var individual in state.individuals)
-                    {
-                        if (individual.health <= 0 || individual.cultivatingFood != food.food || individual.cultivateUntil <= cursor ||
-                            Vector2.Distance(Position(individual), new Vector2(food.x, food.y)) > config.combat.cultivateRange) continue;
-                        if (strongest == null || individual.cultivateGrowth > strongest.cultivateGrowth) strongest = individual;
-                    }
-                    if (strongest == null) break;
-                    float end = Mathf.Min(stepEnd, strongest.cultivateUntil);
-                    float grown = Mathf.Min(food.capacity - food.amount, config.combat.cultivateRate * strongest.cultivateGrowth * (end - cursor));
-                    if (grown <= 0) break;
-                    var growth = food.growthType == FoodGrowthType.Large ? config.largeFood : config.smallFood;
-                    bool available = growth.Grow(food, grown);
-                    state.events.Add(new WorldEvent { kind = "cultivated", individual = strongest.individual, food = food.food, amount = grown });
-                    if (available) state.events.Add(new WorldEvent { kind = "food_available", food = food.food, x = food.x, y = food.y });
-                    cursor = end;
-                }
-            }
+
         }
 
         // 線段掃掠回傳第一個異種碰撞，避免快速衝鋒穿透；同種不受傷也不攔截。
