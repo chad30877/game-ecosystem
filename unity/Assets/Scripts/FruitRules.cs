@@ -7,7 +7,7 @@ namespace Ecosystem
     [Serializable]
     public sealed class FruitState
     {
-        public int fruit, source, holder;
+        public int fruit, source, holder, claimedBy;
         public float x, y, maturedAt, expiresAt;
         public bool NearRot(float time) => time >= expiresAt - 10f;
     }

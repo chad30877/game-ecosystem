@@ -200,6 +200,9 @@ namespace Ecosystem
         public string[] recoveryStatus = new string[3];
         public bool running;
         public bool feeding;
+        public FoodAction foodOperation;
+        public int operationFruit, operationTarget, reservedCapacity;
+        public float operationStartedAt, operationProgress;
         public float fedSourceX, fedSourceY, fedAmount;
         public bool hasFoodTarget, runPreferred;
         public float foodTargetX, foodTargetY, contestHealth, retreatUntil, retreatX, retreatY;
@@ -464,17 +467,20 @@ namespace Ecosystem
         public readonly Vector2 movement;
         public readonly bool forage;
         public readonly int feedChild;
+        public readonly FoodAction foodAction;
+        public readonly int fruit, recipient;
         public readonly bool run;
         public readonly Vector2 aim;
         public readonly bool attack;
         public readonly WorldSkill skill;
         public readonly int turn;
         public readonly int skillSlot;
-        public WorldAction(Vector2 movement, bool forage = false, Vector2 aim = default, bool attack = false, WorldSkill skill = WorldSkill.None, int turn = 0, int skillSlot = -1, bool run = false, int feedChild = 0)
+        public WorldAction(Vector2 movement, bool forage = false, Vector2 aim = default, bool attack = false, WorldSkill skill = WorldSkill.None, int turn = 0, int skillSlot = -1, bool run = false, int feedChild = 0, FoodAction foodAction = FoodAction.None, int fruit = 0, int recipient = 0)
         {
             this.movement = movement;
             this.forage = forage;
             this.feedChild = feedChild;
+            this.foodAction = foodAction; this.fruit = fruit; this.recipient = recipient;
             this.run = run;
             this.aim = aim;
             this.attack = attack;
@@ -543,7 +549,7 @@ namespace Ecosystem
         public WorldState State { get; private set; }
         private readonly System.Random random;
         private readonly System.Random effectRandom;
-        private readonly System.Random foodRandom, positionRandom;
+        private readonly System.Random foodRandom, sourceRandom, positionRandom;
         private int episode;
         private int nextIndividual;
         private readonly int[] loadoutCycle = new int[3];
@@ -563,8 +569,9 @@ namespace Ecosystem
             Config = config;
             random = new System.Random(seed);
             effectRandom = new System.Random(seed ^ 0x43f214);
-            foodRandom = new System.Random(seed ^ 0x17c924);
+            sourceRandom = new System.Random(seed ^ 0x17c924);
             positionRandom = new System.Random(seed ^ 0x2bc851);
+            foodRandom = new System.Random(seed ^ 0x167d2b);
         }
 
         internal void ReadSnapshot(WorldState snapshot) => State = snapshot;
@@ -583,7 +590,7 @@ namespace Ecosystem
                     AddIndividual(species, balancedLoadout: true);
             if (Config.foraging)
             {
-                SourcePlacementRules.Initialize(Config, State, foodRandom);
+                SourcePlacementRules.Initialize(Config, State, sourceRandom);
             }
             UpdateIncompleteLives();
             RefreshPerception(awardExploration: true);
@@ -647,6 +654,8 @@ namespace Ecosystem
 
         public void RemoveIndividual(int individual)
         {
+            var actor = State.individuals.Find(value => value.individual == individual);
+            if (actor != null) FoodOperations.Cancel(State, actor);
             if (State.individuals.RemoveAll(value => value.individual == individual) != 1)
                 throw new ArgumentException("個體不存在。");
         }
@@ -706,15 +715,10 @@ namespace Ecosystem
             foreach (var individual in State.individuals)
                 if (!actions.TryGetValue(individual.individual, out var action) ||
                     !float.IsFinite(action.movement.x) || !float.IsFinite(action.movement.y) ||
-                    !float.IsFinite(action.aim.x) || !float.IsFinite(action.aim.y) || (action.turn < -1 || action.turn > 1) || action.skillSlot < -1 || action.skillSlot > 1 || !Enum.IsDefined(typeof(WorldSkill), action.skill))
+                    !float.IsFinite(action.aim.x) || !float.IsFinite(action.aim.y) || (action.turn < -1 || action.turn > 1) || action.skillSlot < -1 || action.skillSlot > 1 || !Enum.IsDefined(typeof(WorldSkill), action.skill) || !Enum.IsDefined(typeof(FoodAction), action.foodAction) || action.fruit < 0 || action.recipient < 0)
                     throw new ArgumentException("每隻個體都必須取得有限數值的動作。");
-            var priorCare = new Dictionary<int, int>();
-            var canStartCare = new HashSet<int>();
             foreach (var individual in State.individuals)
             {
-                priorCare[individual.individual] = individual.careTarget;
-                var child = State.individuals.Find(value => value.individual == actions[individual.individual].feedChild);
-                if (child != null && CanSee(individual, child)) canStartCare.Add(individual.individual);
                 individual.careTarget = individual.careReceivedFrom = 0;
                 individual.feeding = false;
                 individual.fedAmount = 0;
@@ -730,6 +734,10 @@ namespace Ecosystem
             }
             State.rewards.Clear();
             float time = (State.step + 1) * Config.stepSeconds;
+            foreach (var actor in State.individuals)
+                if (FoodOperations.Requested(State, actor, actions[actor.individual]) != FoodAction.None &&
+                    actions[actor.individual].skill == WorldSkill.None && actions[actor.individual].skillSlot < 0)
+                { actor.cultivatingFood = 0; actor.cultivateUntil = actor.cultivateRemaining = 0; }
             AdvanceFood(time);
             if (Config.foraging)
             {
@@ -758,38 +766,14 @@ namespace Ecosystem
             }
             if (Config.foraging)
             {
-                // 先共同結算老化與基本消耗，再結算餵養，避免順序影響收支與採食互斥。
+                // 先共同結算老化與基本消耗，再結算逐顆操作，避免個體順序改變營養收入。
                 foreach (var individual in State.individuals)
                 {
                     if (!Config.disableAging) individual.age = time - individual.bornAt;
                     float basal = Mathf.Min(individual.satiety, Config.idleCost * Config.stepSeconds);
                     individual.satiety -= basal; individual.basalSpent += basal;
                 }
-                foreach (var parent in State.individuals)
-                {
-                    var action = actions[parent.individual];
-                    var child = State.individuals.Find(value => value.individual == action.feedChild);
-                    bool continued = priorCare[parent.individual] == action.feedChild && action.feedChild != 0;
-                    if (child == null || child.parentId != parent.individual || parent.health <= 0 || child.health <= 0 ||
-                        (!Config.disableAging && (parent.age >= Config.lifespan || child.age >= Config.lifespan)) ||
-                        child.age >= Config.maturityAge || action.attack || action.skill != WorldSkill.None || action.skillSlot >= 0 ||
-                        parent.windupActiveThisStep || parent.chargeActiveThisStep || parent.dashActiveThisStep ||
-                        (!continued && !canStartCare.Contains(parent.individual)) ||
-                        Vector2.Distance(CombatRules.Position(parent), CombatRules.Position(child)) > Config.careRadius) continue;
-                    float amount = Mathf.Min(Config.careRate * Config.stepSeconds, Mathf.Max(0, parent.satiety - Config.careReserve), 100f - child.satiety);
-                    if (amount <= 0) continue;
-                    parent.satiety -= amount; child.satiety += amount;
-                    parent.careGiven += amount; child.careReceived += amount;
-                    var knownChild = parent.children.Find(value => value.child == child.individual);
-                    if (knownChild != null && (!continued || knownChild.visible)) parent.careEstimatedSatiety = knownChild.satiety;
-                    parent.careEstimatedSatiety = Mathf.Min(100f, parent.careEstimatedSatiety + amount);
-                    parent.careTarget = child.individual; child.careReceivedFrom = parent.individual;
-                    if (!continued) State.events.Add(new WorldEvent { kind = "care_started", individual = parent.individual, target = child.individual });
-                    State.events.Add(new WorldEvent { kind = "care_feed", individual = parent.individual, target = child.individual, amount = amount });
-                }
-                foreach (var parent in State.individuals)
-                    if (priorCare[parent.individual] != 0 && priorCare[parent.individual] != parent.careTarget)
-                        State.events.Add(new WorldEvent { kind = "care_stopped", individual = parent.individual, target = priorCare[parent.individual] });
+                FoodOperations.Resolve(this, actions, foodRandom, time);
             }
             foreach (var individual in State.individuals)
             {
@@ -810,6 +794,8 @@ namespace Ecosystem
                 {
                     if (cause == "old_age") individual.agingHealthLost += individual.health;
                     individual.health = 0;
+                    FoodOperations.Cancel(State, individual);
+                    individual.feeding = false;
                     CaptureDiagnostics(individual, time);
                     State.events.Add(new WorldEvent { kind = cause, individual = individual.individual,
                         species = individual.species, cause = cause, age = individual.age });
@@ -945,13 +931,13 @@ namespace Ecosystem
 
         private void AdvanceFood(float time)
         {
-            FruitRules.Advance(Config, State, foodRandom, time);
+            FruitRules.Advance(Config, State, sourceRandom, time);
             if (Config.foraging && time >= State.nextNaturalSpawnAt)
             {
                 State.nextNaturalSpawnAt = time + Config.naturalSpawnInterval;
                 int missing = Config.naturalFoodLimit - State.foods.FindAll(value => value.natural).Count;
                 for (int i = 0; i < Mathf.Min(missing, Config.naturalSpawnBatch) && State.foods.Count < Config.foodSourceLimit; i++)
-                    SourcePlacementRules.TryAddNatural(Config, State, foodRandom, time);
+                    SourcePlacementRules.TryAddNatural(Config, State, sourceRandom, time);
             }
         }
 
