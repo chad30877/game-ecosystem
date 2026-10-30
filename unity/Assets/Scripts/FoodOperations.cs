@@ -9,6 +9,7 @@ namespace Ecosystem
     public static class FoodOperations
     {
         public static int Carried(WorldState state, IndividualState actor) => state.fruits.Count(f => f.holder == actor.individual);
+        public static float LoadMultiplier(WorldState state, IndividualState actor) => Carried(state, actor) switch { 2 => .9f, >= 3 => .8f, _ => 1f };
         public static int Capacity(WorldConfig config, IndividualState actor) => actor.age >= config.maturityAge ? 3 : 1;
         public static FoodAction Requested(WorldState state, IndividualState actor, WorldAction action) =>
             action.foodAction != FoodAction.None ? action.foodAction : action.forage ?
