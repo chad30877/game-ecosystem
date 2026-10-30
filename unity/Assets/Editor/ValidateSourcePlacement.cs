@@ -20,6 +20,12 @@ namespace Ecosystem.Editor
                     Require(Vector2.Distance(new Vector2(food.x,food.y), new Vector2(other.x,other.y)) >= radius + (other.growthType == FoodGrowthType.Large ? world.Config.largeFood.growthRadius : world.Config.smallFood.growthRadius), "補生整圓不可重疊");
             }
         }
+        public static void RunRegression()
+        {
+            ValidateFruitCycle.Run();
+            ValidateFruitOperations.Run();
+            Run();
+        }
         public static void Run()
         {
             var world = new World(new WorldConfig { foraging = true, halfExtent = 20, individualsPerSpecies = 10 }, 101);
