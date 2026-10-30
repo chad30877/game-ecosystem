@@ -1,0 +1,160 @@
+{
+  "rules": "survival-v15",
+  "actionVersion": 2,
+  "replaySchema": 2,
+  "scriptedFrames": 151,
+  "reloadExactFrames": 151,
+  "seekExactFrames": 7,
+  "seekSteps": [
+    0,
+    1,
+    50,
+    150,
+    50,
+    1,
+    0
+  ],
+  "nutritionAfterDelivery": [
+    60,
+    60
+  ],
+  "nutritionAfterEating": [
+    60,
+    80
+  ],
+  "delivered": 1,
+  "eaten": 1,
+  "ledgerResidual": 0,
+  "bridge": {
+    "seed": 101,
+    "visible": false,
+    "requested_steps": 512,
+    "world_steps": 512,
+    "observations": 2886,
+    "seconds": 1.654260500014061,
+    "steps_per_second": 309.50385383417427,
+    "moved": {
+      "Moss": true,
+      "Flame": true,
+      "Frost": true
+    },
+    "behaviors": [
+      "Flame?team=0",
+      "Frost?team=0",
+      "Moss?team=0"
+    ],
+    "unique_agents": 18,
+    "terminal_agents": 12,
+    "device": "Null Device"
+  },
+  "legacy": [
+    {
+      "rules": "survival-v9",
+      "snapshots": 3,
+      "checkedSteps": [
+        0,
+        1000,
+        0
+      ],
+      "sourceDataPreserved": true,
+      "resourceDataPreserved": true,
+      "fruitInformationAvailable": false,
+      "runtimeRules": "survival-v15",
+      "replaySchemaVersion": 1
+    },
+    {
+      "rules": "survival-v10",
+      "snapshots": 3,
+      "checkedSteps": [
+        0,
+        50,
+        0
+      ],
+      "sourceDataPreserved": true,
+      "resourceDataPreserved": true,
+      "fruitInformationAvailable": false,
+      "runtimeRules": "survival-v15",
+      "replaySchemaVersion": 1
+    },
+    {
+      "rules": "survival-v11",
+      "snapshots": 3,
+      "checkedSteps": [
+        0,
+        80,
+        0
+      ],
+      "sourceDataPreserved": true,
+      "resourceDataPreserved": true,
+      "fruitInformationAvailable": false,
+      "runtimeRules": "survival-v15",
+      "replaySchemaVersion": 1
+    },
+    {
+      "rules": "survival-v12",
+      "snapshots": 3,
+      "checkedSteps": [
+        0,
+        50,
+        0
+      ],
+      "sourceDataPreserved": true,
+      "resourceDataPreserved": true,
+      "fruitInformationAvailable": false,
+      "runtimeRules": "survival-v15",
+      "replaySchemaVersion": 1
+    },
+    {
+      "rules": "survival-v13",
+      "snapshots": 3,
+      "checkedSteps": [
+        0,
+        35,
+        0
+      ],
+      "sourceDataPreserved": true,
+      "resourceDataPreserved": true,
+      "fruitInformationAvailable": false,
+      "runtimeRules": "survival-v15",
+      "replaySchemaVersion": 1
+    },
+    {
+      "rules": "survival-v14",
+      "snapshots": 4,
+      "checkedSteps": [
+        0,
+        1,
+        650,
+        0
+      ],
+      "sourceDataPreserved": true,
+      "resourceDataPreserved": true,
+      "fruitInformationAvailable": false,
+      "runtimeRules": "survival-v15",
+      "replaySchemaVersion": 1
+    }
+  ],
+  "actionBranches": [
+    3,
+    3,
+    2,
+    2,
+    2,
+    7,
+    8
+  ],
+  "selfObservationWidth": 19,
+  "entityObservationWidth": 10,
+  "modelV14Rejected": true,
+  "corruptionRejected": true,
+  "wrongReplaySchemaRejected": true,
+  "newDiagnosticSnapshotsExact": true,
+  "powershell51BomAndParser": true,
+  "mechanismRegression": "01–09 與煙幕通過；後續僅回放包裝來源版本中繼資料改動，另建置並核對新舊實際 Player。",
+  "evidence": "artifacts/fruit-supply/11/",
+  "limitations": [
+    "六場生態觀察由 12 執行。",
+    "未執行 PPO 或混合控制實驗。",
+    "固定外觀診斷回放不是自然生態或操作時長證據。"
+  ]
+}

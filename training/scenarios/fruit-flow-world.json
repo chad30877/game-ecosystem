@@ -1,0 +1,13 @@
+{
+  "foraging": true,
+  "halfExtent": 20,
+  "stepSeconds": 0.02,
+  "observationRadius": 6,
+  "initialSpecies": "Moss",
+  "individualsPerSpecies": 2,
+  "naturalFoodLimit": 0,
+  "idleCost": 0,
+  "disableAging": true,
+  "disableReproduction": true,
+  "episodeSteps": 150
+}

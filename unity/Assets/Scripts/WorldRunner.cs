@@ -114,7 +114,11 @@ namespace Ecosystem
             string runRecord = JsonUtility.ToJson(new RunRecord
             {
                 run = runId, seed = seed, unity = Application.unityVersion,
-                device = SystemInfo.graphicsDeviceName, config = config, control = control, policyMode = policyMode, scenario = scenario, rulesSpecies = rulesSpecies.ToArray()
+                rules = replay == null ? WorldRules.Current : replay.Header.rules,
+                actionVersion = replay == null ? WorldRules.ActionVersion : replay.Header.actionVersion,
+                replayRules = replay?.Header.rules, replaySchemaVersion = replay?.Header.schemaVersion ?? 0,
+                replayActionVersion = replay?.Header.actionVersion ?? 0,
+                device = SystemInfo.graphicsDeviceName, config = config, control = control, policyMode = policyMode, scenario = scenario, rulesSpecies = rulesSpecies.ToArray(), singleEpisode = singleEpisode, summaryLog = summaryLog, metricsLog = metricsLog, worldSteps = stepLimit
             });
             output.WriteLine(runRecord);
             recording?.WriteLine(runRecord);
@@ -202,7 +206,7 @@ namespace Ecosystem
             var behavior = body.AddComponent<BehaviorParameters>();
             behavior.BehaviorName = individual.species;
             behavior.BrainParameters.VectorObservationSize = 19;
-            behavior.BrainParameters.ActionSpec = new ActionSpec(4, new[] { 3, 3, 2, 2, 2, 2 });
+            behavior.BrainParameters.ActionSpec = new ActionSpec(4, new[] { 3, 3, 2, 2, 2, 7, 8 });
             var entities = body.AddComponent<BufferSensorComponent>();
             entities.SensorName = "Entities";
             entities.ObservableSize = 10;
@@ -499,16 +503,22 @@ namespace Ecosystem
                     output.WriteLine(JsonUtility.ToJson(new SampleRecord { kind = "sample", totalSteps = totalSteps,
                         step = world.State.step, time = world.State.time, events = world.State.events,
                         rewards = world.State.rewards, statistics = world.State.statistics,
-                        foodAmount = world.State.foods.Sum(value => value.amount) }));
+                        foodAmount = world.State.foods.Sum(value => value.amount), fruitLedger = world.State.fruitLedger,
+                        sourceFruits = world.State.fruits.Count(f => f.source != 0), carriedFruits = world.State.fruits.Count(f => f.holder != 0),
+                        groundFruits = world.State.fruits.Count(f => f.source == 0 && f.holder == 0), sources = world.State.foods.Count,
+                        population = world.State.individuals.Count, lowSatiety = world.State.individuals.Count(a => a.satiety <= 45) }));
             }
             else output.WriteLine(line);
             if (metricsLog && kind == "step")
-                output.WriteLine(JsonUtility.ToJson(new MetricRecord { step = world.State.step,
+                output.WriteLine(JsonUtility.ToJson(new MetricRecord { step = world.State.step, time = world.State.time,
                     individuals = world.State.individuals.Select(value => new IndividualMetricRecord
                     {
                         individual = value.individual, species = value.species, x = value.x, y = value.y,
                         satiety = value.satiety, exploredCells = value.rewardedCells.Count,
-                        rawTurn = value.rawTurn, actualTurn = value.actualTurn, scanIntervened = value.scanIntervened
+                        rawTurn = value.rawTurn, actualTurn = value.actualTurn, scanIntervened = value.scanIntervened,
+                        decision = value.decisionReason, productionDecision = value.productionDecision, lastProductionStopReason = value.productionStopReason,
+                        cultivatingFood = value.cultivatingFood, cultivateStartedAt = value.cultivateStartedAt,
+                        carriedCount = value.ownFruits.Count, foodOperation = value.foodOperation, skillManaSpent = value.skillManaSpent
                     }).ToList() }));
             if (recording != null && recordEpisodes.Contains(world.State.episode)) recording.WriteLine(line);
         }
@@ -543,6 +553,8 @@ namespace Ecosystem
             public List<RewardRecord> rewards;
             public List<SpeciesStatistics> statistics;
             public float foodAmount;
+            public FruitLedger fruitLedger;
+            public int sourceFruits, carriedFruits, groundFruits, sources, population, lowSatiety;
         }
 
         [Serializable]
@@ -550,6 +562,7 @@ namespace Ecosystem
         {
             public string kind = "metric";
             public int step;
+            public float time;
             public List<IndividualMetricRecord> individuals;
         }
 
@@ -562,6 +575,10 @@ namespace Ecosystem
             public int exploredCells;
             public int rawTurn, actualTurn;
             public bool scanIntervened;
+            public string decision, productionDecision, lastProductionStopReason;
+            public int cultivatingFood, carriedCount;
+            public float cultivateStartedAt, skillManaSpent;
+            public FoodAction foodOperation;
         }
 
         [Serializable]
@@ -574,7 +591,14 @@ namespace Ecosystem
             public string device;
             public string control;
             public string policyMode;
-            public string rules = "survival-v14";
+            public string rules = WorldRules.Current;
+            public string runtimeRules = WorldRules.Current;
+            public int runtimeActionVersion = WorldRules.ActionVersion;
+            public string replayRules;
+            public int replaySchemaVersion, replayActionVersion;
+            public int actionVersion = WorldRules.ActionVersion;
+            public bool singleEpisode, summaryLog, metricsLog;
+            public int worldSteps;
             public string[] rulesSpecies;
             public WorldConfig config;
             public WorldScenario scenario;

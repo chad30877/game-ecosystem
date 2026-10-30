@@ -50,7 +50,7 @@ def smoke_contract(args, config):
                     assert len(actual) == len(expected) and np.allclose(sorted(actual), sorted(expected), atol=1e-5)
                     compared += len(actual)
                 continuous = np.zeros((len(decisions), 4), dtype=np.float32)
-                discrete = np.tile(np.array([1, 1 if species == "Moss" and step == 0 else 0, 0, 0, 0, 0], dtype=np.int32), (len(decisions), 1))
+                discrete = np.tile(np.array([1, 1 if species == "Moss" and step == 0 else 0, 0, 0, 0, 0, 0], dtype=np.int32), (len(decisions), 1))
                 env.set_actions(behavior, ActionTuple(continuous=continuous, discrete=discrete))
             if step < args.steps:
                 env.step()
@@ -104,6 +104,8 @@ def main():
                 expected = config["individualsPerSpecies"] - int(config["removeStep"] <= local_step < config["addStep"])
                 for behavior in env.behavior_specs:
                     species = behavior.split("?")[0]
+                    if list(env.behavior_specs[behavior].action_spec.discrete_branches) != [3, 3, 2, 2, 2, 7, 8]:
+                        raise RuntimeError("動作版本 2 的七分支契約不符")
                     decisions, terminals = env.get_steps(behavior)
                     decision_ids = set(map(int, decisions.agent_id))
                     terminal_ids = set(map(int, terminals.agent_id))
@@ -133,7 +135,7 @@ def main():
                         signs = np.array([1 if int(agent_id) % 2 else -1 for agent_id in decisions.agent_id], dtype=np.float32)
                         env.set_actions(behavior, ActionTuple(
                             continuous=np.concatenate((signs[:, None] * direction, signs[:, None] * direction), axis=1),
-                            discrete=np.tile(np.array([2, 0, 0, 0, 0, 0], dtype=np.int32), (expected, 1))))
+                            discrete=np.tile(np.array([2, 0, 0, 0, 0, 0, 0], dtype=np.int32), (expected, 1))))
                 if step < args.steps:
                     env.step()
         elapsed = time.perf_counter() - started

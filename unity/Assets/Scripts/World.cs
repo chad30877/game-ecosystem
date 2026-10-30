@@ -738,9 +738,12 @@ namespace Ecosystem
             if (State == null || State.endReason != "")
                 throw new InvalidOperationException("請先重建世界。");
             foreach (var individual in State.individuals)
+                if (actions.TryGetValue(individual.individual, out var legacy) && legacy.feedChild != 0)
+                    throw new ArgumentException("survival-v15 不接受 feedChild；請使用 Deliver／Receive 果實交付動作。");
+            foreach (var individual in State.individuals)
                 if (!actions.TryGetValue(individual.individual, out var action) ||
                     !float.IsFinite(action.movement.x) || !float.IsFinite(action.movement.y) ||
-                    !float.IsFinite(action.aim.x) || !float.IsFinite(action.aim.y) || (action.turn < -1 || action.turn > 1) || action.skillSlot < -1 || action.skillSlot > 1 || !Enum.IsDefined(typeof(WorldSkill), action.skill) || !Enum.IsDefined(typeof(FoodAction), action.foodAction) || action.fruit < 0 || action.recipient < 0)
+                    !float.IsFinite(action.aim.x) || !float.IsFinite(action.aim.y) || (action.turn < -1 || action.turn > 1) || action.skillSlot < -1 || action.skillSlot > 1 || !Enum.IsDefined(typeof(WorldSkill), action.skill) || !Enum.IsDefined(typeof(FoodAction), action.foodAction) || action.fruit < 0 || action.recipient < 0 || action.productionSource < 0)
                     throw new ArgumentException("每隻個體都必須取得有限數值的動作。");
             foreach (var individual in State.individuals)
             {
