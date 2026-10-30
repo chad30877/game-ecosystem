@@ -514,6 +514,7 @@ namespace Ecosystem
     [Serializable]
     public sealed class WorldState
     {
+        public bool fruitInformationAvailable;
         public List<FoodState> foods = new List<FoodState>();
         public List<FruitState> fruits = new List<FruitState>();
         public FruitLedger fruitLedger = new FruitLedger();
@@ -602,7 +603,7 @@ namespace Ecosystem
 
         public WorldState Reset()
         {
-            State = new WorldState { episode = ++episode };
+            State = new WorldState { episode = ++episode, fruitInformationAvailable = true };
             foreach (string species in Species)
                 State.statistics.Add(new SpeciesStatistics { species = species });
             Array.Clear(loadoutCycle, 0, loadoutCycle.Length);

@@ -9,6 +9,7 @@ namespace Ecosystem
         private TrailRenderer trail;
         private LineRenderer aimView;
         private LineRenderer aura;
+        private LineRenderer foodGesture;
 
         public void UpdateView(bool clearTrail = false)
         {
@@ -61,12 +62,69 @@ namespace Ecosystem
                 float angle = i * Mathf.PI / 16;
                 aura.SetPosition(i, transform.position + new Vector3(Mathf.Cos(angle) * radius, Mathf.Sin(angle) * radius, -0.1f));
             }
+            if (!Application.isBatchMode) UpdateFoodGesture();
+        }
+
+        private void UpdateFoodGesture()
+        {
+            bool cultivating = Individual.cultivatingFood != 0 && Individual.cultivateRemaining > 0;
+            bool active = World.State.fruitInformationAvailable && (Individual.foodOperation != FoodAction.None || cultivating || Individual.deliveryInviteTo != 0);
+            if (foodGesture == null && !active) return;
+            if (foodGesture == null)
+            {
+                foodGesture = new GameObject("FoodGesture").AddComponent<LineRenderer>();
+                foodGesture.transform.SetParent(transform);
+                foodGesture.sharedMaterial = new Material(Resources.Load<Material>("WorldMaterial"));
+                foodGesture.startWidth = foodGesture.endWidth = .065f;
+                foodGesture.positionCount = 4;
+            }
+            foodGesture.enabled = active;
+            if (!active) return;
+            Vector3 p = new Vector3(Individual.x, Individual.y, -.45f);
+            Vector3 forward = new Vector3(Mathf.Cos(Individual.facing * Mathf.Deg2Rad), Mathf.Sin(Individual.facing * Mathf.Deg2Rad), 0);
+            Vector3 side = new Vector3(-forward.y, forward.x, 0);
+            float pulse = Mathf.Sin(World.State.time * 9) * .08f;
+            Vector3[] points;
+            Color tint = new Color(1, .8f, .25f);
+            switch (Individual.foodOperation)
+            {
+                case FoodAction.Pickup:
+                    points = new[] { p + side * .2f, p + forward * .25f - Vector3.up * (.5f + pulse), p - Vector3.up * .65f, p }; break;
+                case FoodAction.Eat:
+                    points = new[] { p + forward * .15f - side * .2f, p + forward * (.4f + pulse), p + forward * .15f + side * .2f, p + forward * .15f - side * .2f };
+                    tint = new Color(1, .95f, .75f); break;
+                case FoodAction.Drop:
+                    points = new[] { p + forward * .3f, p + forward * .5f - Vector3.up * .3f, p + forward * .5f - Vector3.up * .65f, p + forward * .25f - Vector3.up * .65f };
+                    tint = new Color(.8f, .55f, .3f); break;
+                case FoodAction.Receive:
+                    points = new[] { p + forward * .8f + side * .25f, p + forward * .3f, p + forward * .8f - side * .25f, p + forward * .3f };
+                    tint = Color.cyan; break;
+                case FoodAction.Deliver:
+                    points = new[] { p + side * .2f, p + forward * (.9f + pulse), p + forward * .7f - side * .2f, p + forward * .3f };
+                    tint = Color.cyan; break;
+                default:
+                    if (cultivating)
+                    {
+                        points = new[] { p + Vector3.up * .55f, p + Vector3.up * (1 + pulse) - side * .2f, p + Vector3.up * .8f, p + Vector3.up * (1 + pulse) + side * .2f };
+                        tint = new Color(.65f, 1, .45f);
+                    }
+                    else if (Individual.deliveryInviteTo != 0)
+                    {
+                        points = new[] { p + side * .2f, p + forward * (.9f + pulse), p + forward * .7f - side * .2f, p + forward * .3f };
+                        tint = Color.cyan;
+                    }
+                    else points = new[] { p + side * .2f, p + forward * (.65f + pulse) + side * .25f, p + forward * .9f, p + forward * .5f };
+                    break;
+            }
+            foodGesture.sharedMaterial.color = tint;
+            foodGesture.SetPositions(points);
         }
 
         private void OnDestroy()
         {
             Destroy(GetComponent<Renderer>().sharedMaterial);
             if (aura != null) Destroy(aura.sharedMaterial);
+            if (foodGesture != null) Destroy(foodGesture.sharedMaterial);
         }
     }
 }
