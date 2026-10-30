@@ -1,6 +1,6 @@
 # 繁殖供給與果實流轉：正式規格
 
-2026-10-30：使用者已確認共同理解，授權整理正式規格及任務，並明確要求先不實作。Status：ready-for-agent（規格已備妥；執行授權尚未開放）。本文件是本輪需求依據；任務見 [README](README.md)，術語依根目錄 [GLOSSARY](../../GLOSSARY.md)。已確認背景見[共同理解](../../docs/design/reproduction-supply-and-moss-summary.md)及[完整訪談](../../docs/design/reproduction-supply-and-moss.md)，被替換的早期提案不適用。
+2026-10-30：使用者已確認共同理解，授權整理正式規格及任務，並明確要求先不實作。Status：ready-for-agent（2026-10-30 後續已由使用者以 implement-spec 授權實作；先不實作為發佈時歷史紀錄）。本文件是本輪需求依據；任務見 [README](README.md)，術語依根目錄 [GLOSSARY](../../GLOSSARY.md)。已確認背景見[共同理解](../../docs/design/reproduction-supply-and-moss-summary.md)及[完整訪談](../../docs/design/reproduction-supply-and-moss.md)，被替換的早期提案不適用。
 
 ## S01 目標與範圍
 
@@ -85,7 +85,7 @@
 
 ## S08 執行與變更邊界
 
-本次僅發佈文件，所有任務尚未開始；不得因前置完成或狀態為 ready-for-agent 就視為使用者已授權實作。後續獲授權時先讀本規格、任務、前置完成紀錄及討論，再開始 claimed。不得將本輪已定數值、延後項目或共存要求自行改寫；遇到影響既定行為的衝突須記錄並回報。演算法與資料結構可在不改變本規格外部行為及資訊邊界下由實作者選擇，須記錄關鍵取捨與驗證。
+原發佈階段僅整理文件；2026-10-30 使用者後續已以 implement-spec 明確授權實作。任務仍須依前置與驗收條件推進，不得僅因狀態為 ready-for-agent 就跳過驗收。後續獲授權時先讀本規格、任務、前置完成紀錄及討論，再開始 claimed。不得將本輪已定數值、延後項目或共存要求自行改寫；遇到影響既定行為的衝突須記錄並回報。演算法與資料結構可在不改變本規格外部行為及資訊邊界下由實作者選擇，須記錄關鍵取捨與驗證。
 
 ## S09 結算不變條件與補充細則
 
