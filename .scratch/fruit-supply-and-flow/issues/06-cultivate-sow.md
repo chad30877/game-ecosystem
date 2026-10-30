@@ -4,7 +4,7 @@
 
 ready-for-agent
 
-執行限制：使用者目前只授權正式規格與任務拆分，先不實作。本任務尚未 claimed，也沒有執行或驗收通過紀錄；需待後續實作授權及全部前置 resolved。
+執行授權：2026-10-30 使用者已以 implement-spec 授權實作；全部前置 resolved 後才可 claimed，驗收通過後才可 resolved。
 
 ## What to build
 
