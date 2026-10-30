@@ -8,7 +8,7 @@
 
 ## 執行
 
-果實供給與流轉的新一輪設計已確認，[正式規格與十三張任務](.scratch/fruit-supply-and-flow/README.md)已整理；2026-10-30 已授權於 `codex/fruit-supply-and-flow` 分支實作，完成整合驗收前以下仍為既有版本操作。
+果實供給與流轉的新一輪設計已確認，[正式規格與十三張任務](.scratch/fruit-supply-and-flow/README.md)已整理；2026-10-30 已於 `codex/fruit-supply-and-flow` 完成 01–10 機制／AI／畫面，11 記錄契約也已完成；使用者後續要求確認後停工，12／13 延後。新契約見[果實資料契約](docs/fruit-data-contract.md)，驗收與停工狀態見任務索引。下方舊版規則說明尚未全面更新，不視為新果實制規格。
 
 2026-10-23 已確認[歷史產物清理與保留方案](docs/artifact-retention.md)：保留摘要及八個代表回放，舊模型與大型原始紀錄淘汰。以下命令中的模型／紀錄來源須使用仍存在或新建立的資料；記錄預設尚未調整。
 
