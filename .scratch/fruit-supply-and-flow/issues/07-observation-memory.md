@@ -2,7 +2,7 @@
 
 ## Status
 
-ready-for-agent
+claimed
 
 執行授權：2026-10-30 使用者已以 implement-spec 授權實作；全部前置 resolved 後才可 claimed，驗收通過後才可 resolved。
 

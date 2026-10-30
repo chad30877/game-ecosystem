@@ -205,11 +205,11 @@ namespace Ecosystem
             var entities = body.AddComponent<BufferSensorComponent>();
             entities.SensorName = "Entities";
             entities.ObservableSize = 10;
-            // 張量另預留 64 列煙幕情報；與規則使用相同截斷結果。
+            // 額外預留粗略果實與食物互動列；與規則使用相同有界情報。
             entities.MaxNumObservables = world.Config.foraging
                 ? checked(Mathf.Max(world.Config.populationLimit, world.Config.individualsPerSpecies * 3) *
                     (Mathf.CeilToInt(5f / (world.Config.maturityAge >= 5f ? Mathf.Max(world.Config.stepSeconds, world.Config.reproductionCooldown) : world.Config.stepSeconds)) + 1) +
-                    world.Config.foodSourceLimit + world.Config.foodMemoryLimit + world.Config.areaMemoryLimit + Mathf.CeilToInt(world.Config.episodeSteps * world.Config.stepSeconds / Mathf.Max(world.Config.stepSeconds, world.Config.reproductionCooldown)) + 66)
+                    world.Config.foodSourceLimit + world.Config.foodMemoryLimit + world.Config.areaMemoryLimit + Mathf.CeilToInt(world.Config.episodeSteps * world.Config.stepSeconds / Mathf.Max(world.Config.stepSeconds, world.Config.reproductionCooldown)) + 66 + 32 * Mathf.Max(world.Config.smallFood.maxFruit, world.Config.largeFood.maxFruit) + 16 + 3 + 256)
                 : world.Config.individualsPerSpecies * 6 + 64;
             behavior.BehaviorType = control != "python" ? BehaviorType.HeuristicOnly : BehaviorType.Default;
             var agent = body.AddComponent<WorldAgent>();
