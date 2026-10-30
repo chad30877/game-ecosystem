@@ -6,6 +6,12 @@ import json
 from pathlib import Path
 
 
+LEGACY_RULES = tuple(f"survival-v{version}" for version in range(9, 15))
+CURRENT_RULES = "survival-v15"
+
+def compatible(rules, schema):
+    return (rules == CURRENT_RULES and schema == 2) or (rules in LEGACY_RULES and schema == 1)
+
 def encode(value):
     return (json.dumps(value, ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8")
 
@@ -18,9 +24,14 @@ def pack(source: Path, destination: Path, episode: int, model=None):
     complete = False
     with source.open(encoding="utf-8-sig") as log, temporary.open("xb") as output:
         run = json.loads(next(log))
-        if run.get("kind") != "run" or run.get("rules") not in ("survival-v9", "survival-v10", "survival-v11", "survival-v12", "survival-v13", "survival-v14") or not run["config"]["foraging"]:
+        if run.get("kind") != "run" or run.get("rules") not in (*LEGACY_RULES, CURRENT_RULES) or not run["config"]["foraging"]:
             raise ValueError("記錄缺少相容的世界設定。")
-        header = {"kind": "replay", "schemaVersion": 1, "rules": run["rules"],
+        if run["rules"] == CURRENT_RULES and run.get("actionVersion") != 2:
+            raise ValueError("新規則須提供 actionVersion=2，舊動作格式不能直接使用。")
+        header = {"kind": "replay", "schemaVersion": 2 if run["rules"] == CURRENT_RULES else 1, "rules": run["rules"],
+                  "actionVersion": run.get("actionVersion", 1), "diagnostic": run.get("diagnostic", False),
+                  "singleEpisode": run.get("singleEpisode", False), "worldSteps": run.get("worldSteps", 0),
+                  "summaryLog": run.get("summaryLog", False), "metricsLog": run.get("metricsLog", False),
                   "config": run["config"], "seed": run["seed"], "episode": episode,
                   "sourceRun": run["run"], "control": run["control"],
                   "policyMode": run.get("policyMode"), "model": model,
@@ -37,6 +48,8 @@ def pack(source: Path, destination: Path, episode: int, model=None):
             if state is None or state["episode"] != episode:
                 continue
             if row["kind"] in ("reset", "step"):
+                if run["rules"] == CURRENT_RULES and not state.get("fruitInformationAvailable"):
+                    raise ValueError("新規則快照缺少果實資訊。")
                 if state["step"] != count:
                     raise ValueError("指定場次影格缺漏或重複。")
                 write({"kind": "frame", "state": state})
@@ -66,8 +79,10 @@ def validate(path: Path):
     with path.open("rb") as source:
         raw = next(source)
         header = json.loads(raw)
-        if header.get("kind") != "replay" or header.get("schemaVersion") != 1 or header.get("rules") not in ("survival-v9", "survival-v10", "survival-v11", "survival-v12", "survival-v13", "survival-v14"):
+        if header.get("kind") != "replay" or not compatible(header.get("rules"), header.get("schemaVersion")):
             raise ValueError("不相容的回放版本。")
+        if header["rules"] == CURRENT_RULES and header.get("actionVersion") != 2:
+            raise ValueError("新規則動作版本不相容。")
         digest.update(raw)
         for raw in source:
             row = json.loads(raw)
@@ -78,6 +93,8 @@ def validate(path: Path):
             state = row.get("state", {})
             if row.get("kind") != "frame" or state.get("step") != count or state.get("episode") != header["episode"]:
                 raise ValueError("回放影格缺漏或順序錯誤。")
+            if header["rules"] == CURRENT_RULES and not state.get("fruitInformationAvailable"):
+                raise ValueError("新規則快照缺少果實資訊。")
             digest.update(raw)
             count += 1
     raise ValueError("回放缺少完整結尾。")

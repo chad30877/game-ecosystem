@@ -1,4 +1,3 @@
-using System.Linq;
 using Unity.MLAgents;
 using Unity.MLAgents.Actuators;
 using Unity.MLAgents.Sensors;
@@ -12,6 +11,8 @@ namespace Ecosystem
         public IndividualState Individual { get; set; }
         public WorldAction Action { get; private set; }
         private BufferSensorComponent entitySensor;
+        private bool transferKeyHeld;
+        private FoodAction manualTransferRole;
 
         public override void CollectObservations(VectorSensor sensor)
         {
@@ -24,13 +25,15 @@ namespace Ecosystem
         {
             var continuous = actions.ContinuousActions;
             var discrete = actions.DiscreteActions;
+            if (continuous.Length != 4 || discrete.Length != 7)
+                throw new System.ArgumentException("動作格式須為版本 2：四個連續值、七個離散分支，舊模型不能直接使用。");
             Vector2 aim = new Vector2(Individual.x, Individual.y) + new Vector2(continuous[2], continuous[3]) * (World.Config.halfExtent * 2f);
-            int child = discrete[5] == 0 ? 0 : Individual.careTarget != 0 ? Individual.careTarget :
-                Individual.children.Where(value => value.visible && !value.confirmedDead)
-                    .OrderBy(value => Vector2.Distance(aim, new Vector2(value.x, value.y))).Select(value => value.child).FirstOrDefault();
-            Action = new WorldAction(new Vector2(continuous[0], continuous[1]), discrete[3] == 1,
-                aim, discrete[2] == 1,
-                turn: discrete[0] - 1, skillSlot: discrete[1] - 1, run: discrete[4] == 1, feedChild: child);
+            int[] sizes = { 3, 3, 2, 2, 2, 7, 8 };
+            for (int i = 0; i < sizes.Length; i++)
+                if (discrete[i] < 0 || discrete[i] >= sizes[i]) throw new System.ArgumentException("離散動作超出版本 2 分支範圍。");
+            Action = WorldInput.Decode(World, Individual, new Vector2(continuous[0], continuous[1]), aim,
+                discrete[0] - 1, discrete[1] - 1, discrete[2] == 1, discrete[3] == 1, discrete[4] == 1,
+                (FoodAction)discrete[5], discrete[6]);
         }
 
         public override void Heuristic(in ActionBuffers actionsOut)
@@ -48,7 +51,12 @@ namespace Ecosystem
             discrete[2] = Input.GetKey(KeyCode.A) ? 1 : 0;
             discrete[3] = Input.GetKey(KeyCode.Space) ? 1 : 0;
             discrete[4] = Input.GetKey(KeyCode.LeftShift) ? 1 : 0;
-            discrete[5] = Input.GetKey(KeyCode.F) ? 1 : 0;
+            bool transfer = Input.GetKey(KeyCode.F);
+            if (transfer && !transferKeyHeld) manualTransferRole = Individual.ownFruits.Count > 0 ? FoodAction.Deliver : FoodAction.Receive;
+            transferKeyHeld = transfer;
+            discrete[5] = (int)(Input.GetKey(KeyCode.X) ? FoodAction.Drop : Input.GetKey(KeyCode.G) ? FoodAction.Pickup :
+                Input.GetKey(KeyCode.C) ? FoodAction.Eat : transfer ? manualTransferRole : FoodAction.None);
+            discrete[6] = 0;
         }
 
     }

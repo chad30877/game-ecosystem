@@ -18,6 +18,9 @@
     [string]$Scenario = '',
     [string]$RulesSpecies = '',
     [switch]$Visible,
+    [switch]$SingleEpisode,
+    [switch]$SummaryLog,
+    [switch]$MetricsLog,
     [ValidateSet('rules', 'idle', 'manual', 'scripted')][string]$Controller = 'rules'
 )
 $ErrorActionPreference = 'Stop'
@@ -37,6 +40,7 @@ if ($RecordEpisodes -and $Mode -notin @('forage', 'observe')) { throw 'RecordEpi
 if ($RecordEpisodes -and $RecordEpisodes -notmatch '^[1-9][0-9]*(,[1-9][0-9]*)*$') { throw 'RecordEpisodes 須為逗號分隔的正整數。' }
 if (($ReplayFrom -or $SeekFrames) -and $Mode -ne 'replay') { throw 'ReplayFrom 與 SeekFrames 僅適用於 replay。' }
 if ($RulesSpecies -and ($Mode -ne 'forage' -or @($RulesSpecies.Split(',') | Where-Object { $_ -notin @('Flame', 'Frost', 'Moss') }).Count -gt 0)) { throw 'RulesSpecies 僅適用 forage 且須為逗號分隔的有效物種。' }
+if (($SingleEpisode -or $SummaryLog -or $MetricsLog) -and $Mode -ne 'forage') { throw 'SingleEpisode、SummaryLog 與 MetricsLog 僅適用於 forage。' }
 if ($Scenario -and $Mode -ne 'forage') { throw 'Scenario 僅適用於 forage。' }
 if ($Scenario) { $Scenario = (Resolve-Path -LiteralPath $Scenario).Path; if (-not $PSBoundParameters.ContainsKey('Controller')) { $Controller = 'scripted' } }
 $runId = '{0}-{1}-{2}' -f $Mode, (Get-Date -Format 'yyyyMMdd-HHmmss'), ([guid]::NewGuid().ToString('N').Substring(0, 8))
@@ -100,7 +104,11 @@ if ($Mode -eq 'replay') {
     if ($ReloadRun) {
         if ($WorldConfig -or $Scenario -or $RulesSpecies -or $PSBoundParameters.ContainsKey('Seed') -or $PSBoundParameters.ContainsKey('Controller')) { throw 'ReloadRun 不可同時指定 WorldConfig、Scenario、Seed 或 Controller。' }
         $record = Get-Content -LiteralPath $ReloadRun -TotalCount 1 | ConvertFrom-Json
-        if ($record.kind -ne 'run' -or $record.rules -ne 'survival-v14' -or -not $record.config.foraging) { throw '不是相容的執行紀錄（須為 survival-v14）。' }
+        if ($record.kind -ne 'run' -or $record.rules -ne 'survival-v15' -or $record.actionVersion -ne 2 -or -not $record.config.foraging) { throw '不是相容的執行紀錄（須為 survival-v15 / actionVersion 2）。' }
+        if (-not $PSBoundParameters.ContainsKey('SingleEpisode')) { $SingleEpisode = [bool]$record.singleEpisode }
+        if (-not $PSBoundParameters.ContainsKey('SummaryLog')) { $SummaryLog = [bool]$record.summaryLog }
+        if (-not $PSBoundParameters.ContainsKey('MetricsLog')) { $MetricsLog = [bool]$record.metricsLog }
+        if (-not $PSBoundParameters.ContainsKey('Steps') -and $record.worldSteps -gt 0) { $Steps = [int]$record.worldSteps; $PSBoundParameters['Steps'] = $Steps }
         $Seed = [int]$record.seed
         $Controller = $record.control
         $RulesSpecies = @($record.rulesSpecies | Where-Object { $_ }) -join ","
@@ -113,6 +121,9 @@ if ($Mode -eq 'replay') {
     }
     if (-not $PSBoundParameters.ContainsKey('Steps')) { $Steps = if ($Visible) { 0 } else { 12000 } }
     $arguments = @('--control', $Controller, '--world-seed', $Seed,  '--world-config', ('"{0}"' -f $config), '--world-log', ('"{0}"' -f (Join-Path $output 'world.jsonl')), '--world-steps' , $Steps)
+    if ($SingleEpisode) { $arguments += @('--single-episode', 'true') }
+    if ($SummaryLog) { $arguments += @('--summary-log', 'true') }
+    if ($MetricsLog) { $arguments += @('--metrics-log', 'true') }
     if ($RecordEpisodes) { $arguments += @('--record-episodes', $RecordEpisodes, '--record-log', ('"{0}"' -f (Join-Path $output 'record-source.jsonl')), '--summary-log', 'true') }
     if ($RulesSpecies) { $arguments += @('--rules-species', $RulesSpecies) }
     if ($Controller -eq 'scripted' -and -not $Scenario) { throw 'scripted 控制須提供 Scenario。' }
