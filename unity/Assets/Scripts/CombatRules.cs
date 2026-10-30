@@ -176,12 +176,16 @@ namespace Ecosystem
             bool running = action.run && action.movement.sqrMagnitude > 0 && individual.chargeRemaining <= 0 && individual.dashRemaining <= 0 && !individual.windupActiveThisStep && individual.stamina + 0.00001f >= config.runStaminaRate * config.stepSeconds;
             float speed = individual.species == "Frost" ? config.combat.frostSpeed : individual.species == "Moss" ? config.combat.mossSpeed : config.combat.flameSpeed;
             if (running) speed *= config.runMultiplier;
+            float load = FoodOperations.LoadMultiplier(state, individual);
+            speed *= load;
             bool charging = individual.chargeRemaining > 0;
             bool dashing = individual.dashRemaining > 0;
             if (!charging && state.time < individual.slowUntil) speed *= config.combat.slowMultiplier;
-            Vector2 delta = dashing ? new Vector2(individual.aimX, individual.aimY) * Mathf.Min(individual.dashRemaining, config.combat.dashSpeed * config.stepSeconds)
-                : charging ? new Vector2(individual.aimX, individual.aimY) *
-                Mathf.Min(individual.chargeRemaining, config.combat.chargeSpeed * config.stepSeconds)
+            // 保留原技能距離作時間預算；負重只縮放本步位移，不延長技能。
+            float dashBudget = Mathf.Min(individual.dashRemaining, config.combat.dashSpeed * config.stepSeconds);
+            float chargeBudget = Mathf.Min(individual.chargeRemaining, config.combat.chargeSpeed * config.stepSeconds);
+            Vector2 delta = dashing ? new Vector2(individual.aimX, individual.aimY) * (dashBudget * load)
+                : charging ? new Vector2(individual.aimX, individual.aimY) * (chargeBudget * load)
                 : individual.windupActiveThisStep ? Vector2.zero : Vector2.ClampMagnitude(action.movement + ControlEffects.MovementBias(config, state, individual), 1) * (speed * config.stepSeconds);
             Vector2 start = Position(individual);
             Vector2 end = start + delta;
@@ -193,7 +197,7 @@ namespace Ecosystem
                 individual.stamina -= cost; individual.activityStaminaSpent += cost;
                 individual.running = true; individual.lastStrenuousAt = state.time + config.stepSeconds;
             }
-            if (dashing) individual.dashRemaining = individual.boundary ? 0 : Mathf.Max(0, individual.dashRemaining - delta.magnitude);
+            if (dashing) individual.dashRemaining = individual.boundary ? 0 : Mathf.Max(0, individual.dashRemaining - dashBudget);
             if (charging)
             {
                 var target = FirstHit(state, individual.species, start, end, config.combat.hitRadius, out float fraction);
@@ -203,7 +207,7 @@ namespace Ecosystem
                     Damage(config, state, individual, target, config.combat.chargeDamage * individual.chargeGrowth, "charge_hit", state.time + config.stepSeconds);
                     individual.chargeRemaining = 0;
                 }
-                else individual.chargeRemaining = individual.boundary ? 0 : Mathf.Max(0, individual.chargeRemaining - delta.magnitude);
+                else individual.chargeRemaining = individual.boundary ? 0 : Mathf.Max(0, individual.chargeRemaining - chargeBudget);
             }
             return end;
         }
