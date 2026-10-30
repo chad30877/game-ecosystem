@@ -21,7 +21,7 @@ def smoke_contract(args, config):
     log = args.output / "world.jsonl"
     env = UnityEnvironment(file_name=str(args.env.resolve()), seed=args.seed, no_graphics=True,
         side_channels=[channel], log_folder=str(args.output.resolve()), additional_args=[
-            "--world-log", str(log.resolve()), "--world-config", str(args.config.resolve()),
+            "--diagnostic-log", "true", "--world-log", str(log.resolve()), "--world-config", str(args.config.resolve()),
             "--world-scenario", str(args.smoke_scenario.resolve()), "--control", "python"])
     compared = 0
     try:
@@ -71,6 +71,7 @@ def main():
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--visible", action="store_true")
     parser.add_argument("--smoke-scenario", type=Path)
+    parser.add_argument("--diagnostic-log", action="store_true")
     args = parser.parse_args()
     config = json.loads(args.config.read_text(encoding="utf-8-sig"))
     if args.smoke_scenario:
@@ -86,12 +87,14 @@ def main():
         additional_args=["--world-log", str((args.output / "world.jsonl").resolve()),
                          "--world-config", str(args.config.resolve()),
                          "--world-steps", str(args.steps),
-                         "--world-seed", str(args.seed), "--control", "python"],
+                         "--world-seed", str(args.seed), "--control", "python"] + (["--diagnostic-log", "true"] if args.diagnostic_log else []),
     )
     seen: dict[int, str] = {}
     retired: set[int] = set()
     populations: dict[str, set[int]] = {species: set() for species in SPECIES}
     observations = 0
+    origins = {}
+    moved = {species: False for species in SPECIES}
     try:
         env.reset()
         if {name.split("?")[0] for name in env.behavior_specs} != SPECIES or len(env.behavior_specs) != 3:
@@ -125,6 +128,10 @@ def main():
                     entities = observations_by_rank[3]
                     if observation.shape != (expected, 19) or entities.shape[2] != 10 or not all(np.isfinite(obs).all() for obs in decisions.obs):
                         raise RuntimeError("局部觀察格式不符")
+                    for index, agent_id in enumerate(decisions.agent_id):
+                        position = observation[index, :4].copy()
+                        origins.setdefault(int(agent_id), position)
+                        if np.max(np.abs(position - origins[int(agent_id)])) > .001: moved[species] = True
                     observations += len(decisions)
                     connection.write(json.dumps({"step": step, "behavior": behavior,
                                                  "decisions": sorted(decision_ids),
@@ -142,24 +149,15 @@ def main():
     finally:
         env.close()
     records = [json.loads(line) for line in (args.output / "world.jsonl").read_text().splitlines()]
-    states = [record for record in records if record["kind"] == "step"]
-    if len(states) != args.steps or observations == 0:
-        raise RuntimeError(f"世界步數不符：{len(states)} != {args.steps}")
-    joined = [record for record in records if record["kind"] == "agent_joined"]
-    initial = {record["individual"]["individual"]: record["individual"] for record in joined}
-    if len(initial) != len(joined):
-        raise RuntimeError("世界個體識別被重用")
-    moved = {species: False for species in SPECIES}
-    for record in states:
-        for individual in record["state"]["individuals"]:
-            origin = initial[individual["individual"]]
-            if abs(individual["x"] - origin["x"]) + abs(individual["y"] - origin["y"]) > 0.01:
-                moved[individual["species"]] = True
+    summary = json.loads((args.output / "summary.json").read_text(encoding="utf-8-sig"))
+    world_steps = sum(episode["end"]["step"] for episode in summary["episodes"])
+    if summary["status"] != "complete" or world_steps != args.steps or observations == 0:
+        raise RuntimeError("世界步數或資料完整性不符")
     if not all(moved.values()) or not retired:
         raise RuntimeError("未驗證三物種移動與 terminal")
     report = {"seed": args.seed, "visible": args.visible, "requested_steps": args.steps,
-              "world_steps": len(states), "observations": observations,
-              "seconds": elapsed, "steps_per_second": len(states) / elapsed,
+              "world_steps": world_steps, "observations": observations,
+              "seconds": elapsed, "steps_per_second": world_steps / elapsed,
               "moved": moved, "behaviors": sorted(env.behavior_specs),
               "unique_agents": len(seen), "terminal_agents": len(retired),
               "device": records[0]["device"]}

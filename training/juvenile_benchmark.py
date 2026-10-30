@@ -15,9 +15,9 @@ for seed in (101,102,103):
  for disabled in (False,True):
   name=f'{seed}-'+('off' if disabled else 'on'); folder=out/name; folder.mkdir(); cfg={**config,'disableMemoryPrediction':disabled}
   (folder/'config.json').write_text(json.dumps(cfg,indent=2),encoding='utf-8')
-  cmd=['pwsh','-NoProfile','-File',str(root/'scripts/world.ps1'),'-Mode','forage','-Controller','rules','-WorldConfig',str(folder/'config.json'),'-Scenario',str(scenario),'-Seed',str(seed),'-Steps',str(config['episodeSteps']),'-RecordEpisodes','1','-OutputRoot',str(folder),'-Python',sys.executable]
+  cmd=['pwsh','-NoProfile','-File',str(root/'scripts/world.ps1'),'-Mode','forage','-Controller','rules','-WorldConfig',str(folder/'config.json'),'-Scenario',str(scenario),'-Seed',str(seed),'-Steps',str(config['episodeSteps']),'-Record','-DiagnosticLog','-OutputRoot',str(folder),'-Python',sys.executable]
   start=time.perf_counter(); subprocess.run(cmd,check=True,stdout=subprocess.DEVNULL); elapsed=time.perf_counter()-start
-  log=next(folder.glob('forage-*/record-source.jsonl')); max_ind=max_food=max_family=max_area=0; steps=0; lasttime=0
+  log=next(folder.glob('forage-*/world.jsonl')); max_ind=max_food=max_family=max_area=0; steps=0; lasttime=0
   with log.open(encoding='utf-8-sig') as source:
    for line in source:
     r=json.loads(line); state=r.get('state')

@@ -140,8 +140,8 @@ def observe_fixed(player, output, trainer, world_config, seed, args):
                   "--world-config", str(output / "world-config.json"), "--control", "python", "--policy-mode", "fixed"]
     if args.world_steps:
         additional += ["--world-steps", str(args.world_steps)]
-    if args.record_episodes:
-        additional += ["--record-episodes", args.record_episodes, "--record-log", str(output / "record-source.jsonl")]
+    if args.record or args.record_episodes:
+        additional += ["--record", "true"]
     env = UnityEnvironment(file_name=str(player), seed=seed, no_graphics=not args.visible,
                            side_channels=[channel], log_folder=str(output), additional_args=additional)
     started = time.perf_counter()
@@ -178,7 +178,8 @@ def observe_fixed(player, output, trainer, world_config, seed, args):
     world_steps = 0
     with (output / "world.jsonl").open(encoding="utf-8-sig") as log:
         for line in log:
-            world_steps = max(world_steps, json.loads(line).get("totalSteps", 0))
+            row = json.loads(line)
+            if row.get("kind") == "episode_end": world_steps += row["step"]
     if args.world_steps and world_steps != args.world_steps:
         raise ValueError(f"固定觀察在 {world_steps} 步停止，預期 {args.world_steps} 步。")
     return {"wallSeconds": time.perf_counter() - started,
@@ -197,11 +198,6 @@ def train(args):
         world_config = previous["worldConfig"]
     if world_config is None:
         world_config = read_json(ROOT / "training/foraging.json")
-    if args.observe and args.record_episodes:
-        last_episode = max(map(int, args.record_episodes.split(",")))
-        required_steps = last_episode * world_config["episodeSteps"]
-        if args.world_steps < required_steps:
-            raise ValueError(f"錄製第 {last_episode} 輪須設定 --world-steps 至少 {required_steps}，才能封裝完整回放。")
     seed = args.seed if args.seed is not None else previous["seed"] if previous else 1
     run_id = f"{'observe' if args.observe else 'train'}-{datetime.now().strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:8]}"
     output = args.output.resolve() / run_id
@@ -245,10 +241,8 @@ def train(args):
             manifest["checkpointBytes"] = sum(record["bytes"] for record in manifest["checkpoints"].values())
             manifest["status"] = "completed"
             manifest["finishedAt"] = datetime.now(timezone.utc).isoformat()
-            if args.record_episodes:
-                manifest["recordings"] = [pack(output / "record-source.jsonl", output / f"episode-{episode}.replay.jsonl", episode,
-                                               {"experimentId": manifest["experimentId"], "checkpoints": manifest["checkpoints"], "compatibility": signature})
-                                          for episode in sorted(set(map(int, args.record_episodes.split(","))))]
+            if args.record or args.record_episodes:
+                manifest["recordings"] = [pack(output / "record-source.jsonl", path, int(path.name.split("-")[1].split(".")[0])) for path in sorted(output.glob("episode-*.replay.jsonl"))]
             write_json(output / "training.json", manifest)
             write_json(output / "training-summary.json", summarize(output / "world.jsonl"))
             print(json.dumps({"output": str(output), "status": manifest["status"], "checkpoints": manifest["checkpoints"]}, ensure_ascii=False), flush=True)
@@ -275,8 +269,8 @@ def train(args):
                 "--policy-mode", "fixed" if args.observe else "training"]
     if args.observe:
         command += ["--world-steps", str(args.world_steps)]
-    if args.record_episodes:
-        command += ["--record-episodes", args.record_episodes, "--record-log", str(output / "record-source.jsonl"), "--summary-log", "true"]
+    if args.record or args.record_episodes:
+        command += ["--record", "true"]
     print(f"{'固定模型觀察' if args.observe else '續訓' if previous else '全新實驗'}：{manifest['experimentId']}\n輸出：{output}", flush=True)
     wall_started = time.perf_counter()
     trainer_peak = [0]
@@ -335,11 +329,9 @@ def train(args):
         write_json(output / "training-summary.json", summarize(output / "world.jsonl"))
     if exit_code:
         raise ValueError(f"訓練失敗（{exit_code}），請查看 {output / 'trainer.log'}。已保留可讀取的 checkpoint。")
-    if args.record_episodes:
+    if args.record or args.record_episodes:
         manifest["recordings"] = []
-        for episode in sorted(set(map(int, args.record_episodes.split(",")))):
-            manifest["recordings"].append(pack(output / "record-source.jsonl", output / f"episode-{episode}.replay.jsonl", episode,
-                                                {"experimentId": manifest["experimentId"], "checkpoints": manifest["checkpoints"], "compatibility": signature}))
+        manifest["recordings"] = [pack(output / "record-source.jsonl", path, int(path.name.split("-")[1].split(".")[0])) for path in sorted(output.glob("episode-*.replay.jsonl"))]
         write_json(output / "training.json", manifest)
     copies = {}
     for label, destination in (("backup", args.backup), ("history", args.history)):
@@ -360,6 +352,7 @@ def main():
     parser.add_argument("--config", type=Path)
     parser.add_argument("--seed", type=int)
     parser.add_argument("--steps", type=int, default=2048)
+    parser.add_argument("--record", action="store_true")
     parser.add_argument("--record-episodes", default="")
     parser.add_argument("--observe", action="store_true")
     parser.add_argument("--world-steps", type=int, default=512)

@@ -1,4 +1,4 @@
-"""將指定輪次封裝為獨立、可驗證的歷史回放。"""
+"""將指定輪次封裝為獨立、可驗證的同建置回放。"""
 
 import argparse
 import hashlib
@@ -6,17 +6,23 @@ import json
 from pathlib import Path
 
 
-LEGACY_RULES = tuple(f"survival-v{version}" for version in range(9, 15))
+ROOT = Path(__file__).resolve().parent.parent
+
+def current_build():
+    return json.loads((ROOT / "unity/Builds/build.json").read_text(encoding="utf-8-sig"))["build"]
 CURRENT_RULES = "survival-v15"
 
 def compatible(rules, schema):
-    return (rules == CURRENT_RULES and schema == 2) or (rules in LEGACY_RULES and schema == 1)
+    return rules == CURRENT_RULES and schema == 2
 
 def encode(value):
     return (json.dumps(value, ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8")
 
 
-def pack(source: Path, destination: Path, episode: int, model=None):
+def pack(source: Path, destination: Path, episode: int, model=None, expected_build=None):
+    if destination.exists() and not source.exists():
+        result = validate(destination, expected_build)
+        return {"path": str(destination.resolve()), "episode": result["episode"], "frames": result["frames"], "bytes": result["bytes"]}
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = destination.with_suffix(".partial")
     count = 0
@@ -24,11 +30,13 @@ def pack(source: Path, destination: Path, episode: int, model=None):
     complete = False
     with source.open(encoding="utf-8-sig") as log, temporary.open("xb") as output:
         run = json.loads(next(log))
-        if run.get("kind") != "run" or run.get("rules") not in (*LEGACY_RULES, CURRENT_RULES) or not run["config"]["foraging"]:
+        if run.get("kind") != "run" or run.get("rules") != CURRENT_RULES or not run["config"]["foraging"]:
             raise ValueError("記錄缺少相容的世界設定。")
-        if run["rules"] == CURRENT_RULES and run.get("actionVersion") != 2:
+        if not run.get("build") or run["build"] != (expected_build or current_build()):
+            raise ValueError("來源建置未知或與目前播放器不同。")
+        if run.get("actionVersion") != 2:
             raise ValueError("新規則須提供 actionVersion=2，舊動作格式不能直接使用。")
-        header = {"kind": "replay", "schemaVersion": 2 if run["rules"] == CURRENT_RULES else 1, "rules": run["rules"],
+        header = {"kind": "replay", "schemaVersion": 2, "build": run["build"], "rules": run["rules"],
                   "actionVersion": run.get("actionVersion", 1), "diagnostic": run.get("diagnostic", False),
                   "singleEpisode": run.get("singleEpisode", False), "worldSteps": run.get("worldSteps", 0),
                   "summaryLog": run.get("summaryLog", False), "metricsLog": run.get("metricsLog", False),
@@ -54,9 +62,9 @@ def pack(source: Path, destination: Path, episode: int, model=None):
                     raise ValueError("指定場次影格缺漏或重複。")
                 write({"kind": "frame", "state": state})
                 count += 1
-            if row["kind"] == "episode_end":
+            if row["kind"] in ("episode_end", "observation_end"):
                 complete = True
-        if not complete or count < 2:
+        if not complete or count < 1:
             raise ValueError("指定場次尚未完整結束，不能封裝回放。")
         output.write(encode({"kind": "complete", "frames": count, "sha256": digest.hexdigest()}))
     if destination.exists():
@@ -73,7 +81,7 @@ def pack(source: Path, destination: Path, episode: int, model=None):
     return result
 
 
-def validate(path: Path):
+def validate(path: Path, expected_build=None):
     count = 0
     digest = hashlib.sha256()
     with path.open("rb") as source:
@@ -83,11 +91,13 @@ def validate(path: Path):
             raise ValueError("不相容的回放版本。")
         if header["rules"] == CURRENT_RULES and header.get("actionVersion") != 2:
             raise ValueError("新規則動作版本不相容。")
+        if not header.get("build") or header["build"] != (expected_build or current_build()):
+            raise ValueError("回放建置未知或與目前播放器不同。")
         digest.update(raw)
         for raw in source:
             row = json.loads(raw)
             if row.get("kind") == "complete":
-                if count < 2 or row["frames"] != count or row["sha256"] != digest.hexdigest() or source.read(1):
+                if count < 1 or row["frames"] != count or row["sha256"] != digest.hexdigest() or source.read(1):
                     raise ValueError("回放容量、影格或完整性驗證失敗。")
                 return {**header, "frames": count, "bytes": path.stat().st_size}
             state = row.get("state", {})

@@ -196,7 +196,7 @@ def rollout(args, output, seed, modes, weights, network, initial, capture):
     channel.set_configuration_parameters(time_scale=100, width=1280, height=720)
     additional = ["--control", "python", "--policy-mode", "fixed", "--world-seed", str(seed),
                   "--world-config", str(args.config), "--world-log", str(log), "--summary-log", "true",
-                  "--metrics-log", "true",
+                  "--metrics-log", "true", "--diagnostic-log", "true",
                   "--rules-species", rules, "--single-episode", "true"]
     if capture:
         additional += ["--record-log", str(output / "record-source.jsonl"), "--record-episodes", "1"]
@@ -399,8 +399,11 @@ def main():
     parser.add_argument("--player", type=Path, required=True)
     parser.add_argument("--trained", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--diagnostics", action="store_true", help="明確同意輸出評估所需逐步診斷")
     parser.add_argument("--workers", type=int, choices=(1, 2, 3), default=3)
     args = parser.parse_args()
+    if not args.diagnostics:
+        parser.error("此詳細評估須明確加上 --diagnostics；一般觀察請使用 observe。")
     torch.set_num_threads(1)
     args.player = args.player.resolve(strict=True)
     template = yaml.safe_load((ROOT / "training/toolchain.yaml").read_text(encoding="utf-8"))

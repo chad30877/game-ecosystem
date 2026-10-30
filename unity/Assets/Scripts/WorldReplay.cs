@@ -16,6 +16,7 @@ namespace Ecosystem
             public int schemaVersion;
             public int actionVersion;
             public string rules;
+            public string build, stopReason;
             public WorldConfig config;
             public int seed;
             public int episode;
@@ -25,25 +26,36 @@ namespace Ecosystem
         }
 
         private readonly FileStream source;
+        private ArtifactStore.RunLease lease;
         private readonly List<long> offsets = new List<long>();
         public Record Header { get; }
         public int Count => offsets.Count;
         public long Bytes => source.Length;
         public int Index { get; private set; }
 
-        public WorldReplay(string path)
+        public WorldReplay(string path, string expectedBuild = null)
         {
-            source = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            expectedBuild ??= ArtifactStore.Identity.build;
+            string directory = Path.GetDirectoryName(Path.GetFullPath(path));
+            string runPath = Path.Combine(directory, "run.json");
+            if (File.Exists(runPath) && !path.EndsWith(".partial", StringComparison.Ordinal))
+            {
+                var info = JsonUtility.FromJson<ArtifactStore.RunInfo>(File.ReadAllText(runPath));
+                lease = new ArtifactStore.RunLease(directory, info, false);
+                if (info.status != "complete" || !info.recordingComplete) { lease.Dispose(); throw new InvalidDataException("整次錄製尚未成功完成。"); }
+            }
+            try { source = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read); }
+            catch { lease?.Dispose(); throw; }
             try
             {
                 using var reader = new StreamReader(source, new UTF8Encoding(false, true), false, 65536, true);
                 using var hash = SHA256.Create();
                 string line = reader.ReadLine() ?? throw new InvalidDataException("回放是空檔案。");
                 Header = JsonUtility.FromJson<Record>(line);
-                if (Header.kind != "replay" || !Compatible(Header.rules, Header.schemaVersion) || (Header.rules == WorldRules.Current && Header.actionVersion != WorldRules.ActionVersion) || Header.config == null || !Header.config.foraging)
+                if (string.IsNullOrEmpty(Header.build) || Header.build != expectedBuild)
+                    throw new InvalidDataException("回放建置來源未知或與播放器不同。");
+                if (Header.kind != "replay" || !Compatible(Header.rules, Header.schemaVersion) || Header.actionVersion != WorldRules.ActionVersion || Header.config == null)
                     throw new InvalidDataException("回放版本或世界設定不相容。");
-                // 舊規則的幼體能力與成體相同，回放檢視不得套用新的成長上限。
-                if (Header.rules == "survival-v9") Header.config.newbornGrowth = 1f;
                 Header.config.Validate();
                 long position = 0;
                 bool complete = false;
@@ -55,7 +67,7 @@ namespace Ecosystem
                     {
                         hash.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
                         string checksum = BitConverter.ToString(hash.Hash).Replace("-", "").ToLowerInvariant();
-                        if (record.frames != Count || Count < 2 || record.sha256 != checksum || reader.ReadLine() != null || position + bytes.Length != source.Length)
+                        if (record.frames != Count || Count < 1 || record.sha256 != checksum || reader.ReadLine() != null || position + bytes.Length != source.Length)
                             throw new InvalidDataException("回放完整性驗證失敗。");
                         complete = true;
                         break;
@@ -65,7 +77,7 @@ namespace Ecosystem
                         var state = record.state;
                         if (state == null || state.episode != Header.episode || state.step != Count || !float.IsFinite(state.time))
                             throw new InvalidDataException("回放影格缺漏或順序錯誤。");
-                        if (Header.rules == WorldRules.Current && !state.fruitInformationAvailable)
+                        if (Header.config.foraging && !state.fruitInformationAvailable)
                             throw new InvalidDataException("新規則快照缺少果實資訊。");
                         offsets.Add(position);
                     }
@@ -76,7 +88,7 @@ namespace Ecosystem
                 }
                 if (!complete) throw new InvalidDataException("回放缺少完整結尾。");
             }
-            catch { source.Dispose(); throw; }
+            catch { source.Dispose(); lease?.Dispose(); throw; }
         }
 
         public WorldState Read(int index)
@@ -86,30 +98,11 @@ namespace Ecosystem
             source.Seek(offsets[index], SeekOrigin.Begin);
             using var reader = new StreamReader(source, Encoding.UTF8, false, 65536, true);
             var state = JsonUtility.FromJson<Record>(reader.ReadLine()).state;
-            if (Header.rules != WorldRules.Current) { state.fruitInformationAvailable = false; state.fruits.Clear(); }
-            foreach (var individual in state.individuals)
-            {
-                individual.smokeKnowledge ??= new List<SmokeSighting>();
-                if (Header.rules != WorldRules.Current)
-                {
-                    individual.fruitKnowledgeAvailable = false; individual.ownFruits.Clear(); individual.groundFruitMemory.Clear();
-                    individual.foodInteractions.Clear(); individual.fruitFreshnessMemory.Clear();
-                    foreach (var memory in individual.foodMemory) memory.fruits.Clear();
-                    foreach (var child in individual.children) child.food = null;
-                }
-                if (Header.rules != "survival-v14" && Header.rules != WorldRules.Current)
-                {
-                    individual.smokeKnowledgeAvailable = false;
-                    individual.smokeKnowledge.Clear();
-                }
-            }
             return state;
         }
 
-        public static bool Compatible(string rules, int schema) => rules == WorldRules.Current ? schema == WorldRules.ReplaySchema :
-            schema == 1 && (rules == "survival-v9" || rules == "survival-v10" || rules == "survival-v11" ||
-            rules == "survival-v12" || rules == "survival-v13" || rules == "survival-v14");
+        public static bool Compatible(string rules, int schema) => rules == WorldRules.Current && schema == WorldRules.ReplaySchema;
 
-        public void Dispose() => source.Dispose();
+        public void Dispose() { source.Dispose(); lease?.Dispose(); }
     }
 }

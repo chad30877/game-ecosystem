@@ -10,6 +10,8 @@
     [string]$ReplayFrom = '',
     [string]$SeekFrames = '',
     [string]$RecordEpisodes = '',
+    [switch]$Record,
+    [switch]$DiagnosticLog,
     [switch]$NewExperiment,
     [string]$BackupRoot = '',
     [string]$HistoryRoot = '',
@@ -27,7 +29,8 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 if (-not $Editor) { $Editor = Join-Path $root '.tools/unity/6000.0.85f1/Editor/Unity.exe' }
 if (-not $Python) { $Python = Join-Path $root '.venv/Scripts/python.exe' }
-if (-not $OutputRoot) { $OutputRoot = Join-Path $root 'artifacts/runs' }
+$managedDefault = -not $OutputRoot
+if (-not $OutputRoot) { $OutputRoot = Join-Path $root $(if ($Mode -in @('manual', 'forage', 'replay', 'bridge')) { '.simulation' } else { 'artifacts/runs' }) }
 $OutputRoot = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutputRoot)
 $project = Join-Path $root 'unity'
 $player = Join-Path $project 'Builds/World.exe'
@@ -44,6 +47,7 @@ if (($SingleEpisode -or $SummaryLog -or $MetricsLog) -and $Mode -ne 'forage') { 
 if ($Scenario -and $Mode -ne 'forage') { throw 'Scenario 僅適用於 forage。' }
 if ($Scenario) { $Scenario = (Resolve-Path -LiteralPath $Scenario).Path; if (-not $PSBoundParameters.ContainsKey('Controller')) { $Controller = 'scripted' } }
 $runId = '{0}-{1}-{2}' -f $Mode, (Get-Date -Format 'yyyyMMdd-HHmmss'), ([guid]::NewGuid().ToString('N').Substring(0, 8))
+if ($managedDefault -and $Mode -in @('manual', 'forage', 'replay', 'bridge')) { $runId = [guid]::NewGuid().ToString('N') }
 $output = Join-Path $OutputRoot $runId
 New-Item -ItemType Directory -Force $OutputRoot | Out-Null
 if ($ReloadRun -and $Mode -ne 'forage') { throw 'ReloadRun 僅適用於 forage。' }
@@ -72,12 +76,14 @@ if ($Mode -eq 'replay') {
     if ($process.ExitCode -ne 0) { throw '歷史回放失敗。' }
 } elseif ($Mode -eq 'evaluate') {
     if (-not $ResumeFrom) { throw 'evaluate 須以 ResumeFrom 指定已保存策略。' }
-    & $Python (Join-Path $root 'training/evaluate.py') --player $player --trained $ResumeFrom --output $OutputRoot
+    if (-not $DiagnosticLog) { throw '詳細評估須明確指定 DiagnosticLog。' }
+    & $Python (Join-Path $root 'training/evaluate.py') --player $player --trained $ResumeFrom --output $OutputRoot --diagnostics
     if ($LASTEXITCODE -ne 0) { throw '固定條件評估失敗，請查看輸出。' }
     exit 0
 } elseif ($Mode -eq 'bridge') {
     $arguments = @((Join-Path $root 'training/bridge.py'), '--env', $player, '--config', $config, '--output', $output, '--seed', $Seed, '--steps', $Steps)
     if ($Visible) { $arguments += '--visible' }
+    if ($DiagnosticLog -and $Mode -eq 'bridge') { $arguments += '--diagnostic-log' }
     & $Python @arguments
     if ($LASTEXITCODE -ne 0) { throw 'Python 往返驗證失敗。' }
 } elseif ($Mode -in @('train', 'observe')) {
@@ -90,12 +96,13 @@ if ($Mode -eq 'replay') {
     }
     if ($WorldConfig) { $arguments += @('--config', $config) }
     if ($PSBoundParameters.ContainsKey('Seed')) { $arguments += @('--seed', $Seed) }
-    if ($RecordEpisodes) { $arguments += @('--record-episodes', $RecordEpisodes) }
+    if ($Record -or $RecordEpisodes) { $arguments += '--record' }
     if ($ResumeFrom) { $arguments += @('--resume', $ResumeFrom) }
     if ($NewExperiment) { $arguments += '--new' }
     if ($BackupRoot) { $arguments += @('--backup', $BackupRoot) }
     if ($HistoryRoot) { $arguments += @('--history', $HistoryRoot) }
     if ($Visible) { $arguments += '--visible' }
+    if ($DiagnosticLog -and $Mode -eq 'bridge') { $arguments += '--diagnostic-log' }
     & $Python @arguments
     if ($LASTEXITCODE -ne 0) { throw '訓練或保存失敗，請查看上述錯誤。' }
     exit 0
@@ -103,7 +110,7 @@ if ($Mode -eq 'replay') {
     New-Item -ItemType Directory $output | Out-Null
     if ($ReloadRun) {
         if ($WorldConfig -or $Scenario -or $RulesSpecies -or $PSBoundParameters.ContainsKey('Seed') -or $PSBoundParameters.ContainsKey('Controller')) { throw 'ReloadRun 不可同時指定 WorldConfig、Scenario、Seed 或 Controller。' }
-        $record = Get-Content -LiteralPath $ReloadRun -TotalCount 1 | ConvertFrom-Json
+        $record = Get-Content -LiteralPath $ReloadRun -Raw | ConvertFrom-Json
         if ($record.kind -ne 'run' -or $record.rules -ne 'survival-v15' -or $record.actionVersion -ne 2 -or -not $record.config.foraging) { throw '不是相容的執行紀錄（須為 survival-v15 / actionVersion 2）。' }
         if (-not $PSBoundParameters.ContainsKey('SingleEpisode')) { $SingleEpisode = [bool]$record.singleEpisode }
         if (-not $PSBoundParameters.ContainsKey('SummaryLog')) { $SummaryLog = [bool]$record.summaryLog }
@@ -124,7 +131,8 @@ if ($Mode -eq 'replay') {
     if ($SingleEpisode) { $arguments += @('--single-episode', 'true') }
     if ($SummaryLog) { $arguments += @('--summary-log', 'true') }
     if ($MetricsLog) { $arguments += @('--metrics-log', 'true') }
-    if ($RecordEpisodes) { $arguments += @('--record-episodes', $RecordEpisodes, '--record-log', ('"{0}"' -f (Join-Path $output 'record-source.jsonl')), '--summary-log', 'true') }
+    if ($Record -or $RecordEpisodes) { $arguments += @('--record', 'true') }
+    if ($DiagnosticLog) { $arguments += @('--diagnostic-log', 'true') }
     if ($RulesSpecies) { $arguments += @('--rules-species', $RulesSpecies) }
     if ($Controller -eq 'scripted' -and -not $Scenario) { throw 'scripted 控制須提供 Scenario。' }
     if ($Scenario) { $arguments += @('--world-scenario', ('"{0}"' -f $Scenario)) }
@@ -136,14 +144,12 @@ if ($Mode -eq 'replay') {
     if (-not $Visible) { $launch.WindowStyle = 'Hidden' }
     $process = Start-Process @launch
     if ($process.ExitCode -ne 0) { throw '覓食世界執行失敗。' }
-    if ($RecordEpisodes) {
-        foreach ($episode in $RecordEpisodes.Split(',')) {
-            & $Python (Join-Path $root 'training/recording.py') (Join-Path $output 'record-source.jsonl') --output (Join-Path $output "episode-$episode.replay.jsonl") --episode $episode
-            if ($LASTEXITCODE -ne 0) { throw "第 $episode 輪回放封裝失敗，原始記錄已保留。" }
-        }
-    }
+
 } else {
     New-Item -ItemType Directory $output | Out-Null
-    & $player --control manual --world-seed $Seed --world-config $config --world-log (Join-Path $output 'world.jsonl')
+    $arguments = @('--control', 'manual', '--world-seed', $Seed, '--world-config', $config, '--world-log', (Join-Path $output 'world.jsonl'))
+    if ($Record) { $arguments += @('--record', 'true') }
+    if ($DiagnosticLog) { $arguments += @('--diagnostic-log', 'true') }
+    & $player @arguments
 }
 Write-Output $output

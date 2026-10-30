@@ -7,6 +7,13 @@ from metrics import accumulate
 
 
 def summarize(world_log: Path):
+    summary = world_log.parent / "summary.json"
+    with world_log.open(encoding="utf-8-sig") as source:
+        diagnostic = json.loads(next(source)).get("diagnostic", False)
+    if summary.exists() and not diagnostic:
+        result = json.loads(summary.read_text(encoding="utf-8-sig"))
+        if result.get("series") == world_log.name:
+            return result
     rounds = []
     configurations = {}
     individuals = {}
@@ -88,8 +95,7 @@ def main():
     args = parser.parse_args()
     report = summarize(args.world_log)
     args.output.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(json.dumps({"worldSteps": report["worldSteps"],
-                      "completedRounds": report["completedRounds"]}, ensure_ascii=False))
+    print(json.dumps({"output": str(args.output), "status": report.get("status", "legacy")}, ensure_ascii=False))
 
 
 if __name__ == "__main__":

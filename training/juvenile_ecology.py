@@ -24,9 +24,9 @@ for scene in ('abundant','limited','threat'):
       for disabled in (False,True):
         name=f'{scene}-{seed}-'+('no-care' if disabled else 'care'); folder=out/name; folder.mkdir()
         setting={**cfg,'disableCare':disabled}; (folder/'config.json').write_text(json.dumps(setting,ensure_ascii=False,indent=2),encoding='utf-8'); (folder/'scenario.json').write_text(json.dumps(scenario,ensure_ascii=False,indent=2),encoding='utf-8')
-        cmd=['pwsh','-NoProfile','-File',str(root/'scripts/world.ps1'),'-Mode','forage','-Controller','rules','-WorldConfig',str(folder/'config.json'),'-Scenario',str(folder/'scenario.json'),'-Seed',str(seed),'-Steps',str(cfg['episodeSteps']),'-RecordEpisodes','1','-OutputRoot',str(folder),' -Python'.strip(),str(python)]
+        cmd=['pwsh','-NoProfile','-File',str(root/'scripts/world.ps1'),'-Mode','forage','-Controller','rules','-WorldConfig',str(folder/'config.json'),'-Scenario',str(folder/'scenario.json'),'-Seed',str(seed),'-Steps',str(cfg['episodeSteps']),'-Record','-DiagnosticLog','-OutputRoot',str(folder),' -Python'.strip(),str(python)]
         start=time.perf_counter(); subprocess.run(cmd,check=True,stdout=subprocess.DEVNULL); seconds=time.perf_counter()-start
-        log=next(folder.glob('forage-*/record-source.jsonl')); events=Counter(); care=0.; seen={}; food=0.; reasons=Counter(); final=None; initial=None
+        log=next(folder.glob('forage-*/world.jsonl')); events=Counter(); care=0.; seen={}; food=0.; reasons=Counter(); final=None; initial=None
         with log.open(encoding='utf-8-sig') as f:
           for line in f:
             rec=json.loads(line); state=rec.get('state');

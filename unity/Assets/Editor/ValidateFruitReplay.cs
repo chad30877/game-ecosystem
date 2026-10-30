@@ -80,21 +80,6 @@ namespace Ecosystem.Editor
             Require(rejected,"指定場景不得繞過來源生長圓合法性");
             Debug.Log("來源場景合法空間通過");
         }
-        public static void RunLegacy()
-        {
-            var args=Environment.GetCommandLineArgs();int option=Array.IndexOf(args,"--legacy-list");
-            if(option<0) throw new Exception("請以 --legacy-list 提供歷史回放清單。");
-            foreach(string path in File.ReadAllLines(args[option+1]))
-            {
-                using var replay=new WorldReplay(path);
-                var raw=JsonUtility.FromJson<WorldReplay.Record>(File.ReadLines(path).Skip(1).First()).state;
-                var first=replay.Read(0);string saved=JsonUtility.ToJson(first);
-                Require(!first.fruitInformationAvailable && first.fruits.Count==0 && first.individuals.All(a=>!a.fruitKnowledgeAvailable),"歷史回放不得補造果實資訊");
-                Require(first.foods.Count==raw.foods.Count && first.foods.Zip(raw.foods,(a,b)=>a.food==b.food && a.amount==b.amount && a.phase==b.phase && a.x==b.x && a.y==b.y).All(v=>v),"歷史來源存量、階段及位置保留");
-                replay.Read(replay.Count-1);Require(JsonUtility.ToJson(replay.Read(0))==saved,"歷史回放雙向跳轉穩定");
-                Debug.Log("歷史回放通過："+replay.Header.rules+"，影格 "+replay.Count);
-            }
-        }
         public static void RunInputBoundaries()
         {
             var world=new World(new WorldConfig {foraging=true,halfExtent=20,naturalFoodLimit=0},101);world.Reset();
@@ -112,8 +97,8 @@ namespace Ecosystem.Editor
         }
         public static void BuildAndValidate()
         {
-            RunContracts();RunScenarioGeometry();RunInputBoundaries();RunLegacy();ValidateProductionAI.RunAll();BuildWorld.Build();
-            Debug.Log("果實資料契約、歷史回放、01至09回歸與建置通過");
+            RunContracts();RunScenarioGeometry();RunInputBoundaries();ValidateProductionAI.RunAll();BuildWorld.Build();
+            Debug.Log("果實資料契約、同建置回放、01至09回歸與建置通過");
         }
         public static void Run()
         {
@@ -126,14 +111,14 @@ namespace Ecosystem.Editor
             world.RefreshPerception();
             string first=JsonUtility.ToJson(world.State);
             string path=Path.Combine(folder,"contract.replay.jsonl");
-            var header=new WorldReplay.Record {kind="replay",schemaVersion=2,actionVersion=2,rules="survival-v15",config=config,episode=world.State.episode,seed=101};
+            var header=new WorldReplay.Record {kind="replay",build="fixture",schemaVersion=2,actionVersion=2,rules="survival-v15",config=config,episode=world.State.episode,seed=101};
             string body=JsonUtility.ToJson(header)+"\n"+JsonUtility.ToJson(new WorldReplay.Record {kind="frame",state=world.State})+"\n";
             world.State.step=1;world.State.time=.02f;actor.operationProgress=.02f;
             string second=JsonUtility.ToJson(world.State);
             body+=JsonUtility.ToJson(new WorldReplay.Record {kind="frame",state=world.State})+"\n";
             string hash=BitConverter.ToString(SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(body))).Replace("-","").ToLowerInvariant();
             File.WriteAllText(path,body+JsonUtility.ToJson(new WorldReplay.Record {kind="complete",frames=2,sha256=hash})+"\n",new UTF8Encoding(false));
-            using(var replay=new WorldReplay(path)) {
+            using(var replay=new WorldReplay(path, "fixture")) {
                 Require(JsonUtility.ToJson(replay.Read(1))==second,"新回放保留完整第二張快照");
                 Require(JsonUtility.ToJson(replay.Read(0))==first,"向後跳轉不重算感知或改變果實");
                 Require(JsonUtility.ToJson(replay.Read(1))==second,"重複向前跳轉一致");

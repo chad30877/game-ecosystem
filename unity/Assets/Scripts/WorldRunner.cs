@@ -17,15 +17,17 @@ namespace Ecosystem
         private float replayClock;
         private string replaySeek;
         private readonly Dictionary<int, WorldIndividualView> views = new Dictionary<int, WorldIndividualView>();
-        private StreamWriter recording;
-        private HashSet<int> recordEpisodes;
+        private RunJournal journal;
+        private ArtifactStore store;
+        private string stopReason = "user_stop";
+        private bool detailedLog;
         private bool summaryLog;
         private bool metricsLog;
         private HashSet<string> rulesSpecies;
         private bool singleEpisode;
         private readonly System.Diagnostics.Stopwatch elapsed = System.Diagnostics.Stopwatch.StartNew();
         private readonly Dictionary<int, WorldAgent> agents = new Dictionary<int, WorldAgent>();
-        private StreamWriter output;
+        
         private long totalSteps;
         private int stepLimit;
         private string runId;
@@ -98,30 +100,23 @@ namespace Ecosystem
             }
             Time.fixedDeltaTime = config.stepSeconds;
             stepLimit = int.Parse(Argument("--world-steps", "0"));
-            runId = Guid.NewGuid().ToString("N");
-            string logPath = Argument("--world-log", Path.Combine(Application.persistentDataPath, runId + ".jsonl"));
-            Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(logPath)));
-            output = new StreamWriter(new FileStream(logPath, FileMode.CreateNew, FileAccess.Write, FileShare.Read));
-            output.AutoFlush = true;
-            string recordingPath = Argument("--record-log", "");
-            if (recordingPath != "")
-            {
-                recordEpisodes = new HashSet<int>(Argument("--record-episodes", "1").Split(',').Select(int.Parse));
-                if (recordEpisodes.Any(value => value <= 0)) throw new ArgumentException("記錄輪次須為正數。");
-                recording = new StreamWriter(new FileStream(recordingPath, FileMode.CreateNew, FileAccess.Write, FileShare.Read));
-                recording.AutoFlush = true;
-            }
+            store = ArtifactStore.Current;
+            string requestedLog = Argument("--world-log", "");
+            var lease = store.Begin(requestedLog == "" ? null : Path.GetDirectoryName(Path.GetFullPath(requestedLog)));
+            runId = lease.Info.run;
+            string logPath = requestedLog == "" ? Path.Combine(lease.DirectoryPath, "world.jsonl") : requestedLog;
+            detailedLog = Argument("--diagnostic-log", "false") == "true";
+            bool fullRecording = Argument("--record", "false") == "true" || Argument("--record-log", "") != "";
             string runRecord = JsonUtility.ToJson(new RunRecord
             {
-                run = runId, seed = seed, unity = Application.unityVersion,
+                run = runId, build = lease.Info.build, startedAt = lease.Info.startedAt, recordingMode = fullRecording ? "full" : "lightweight", diagnostic = detailedLog, seed = seed, unity = Application.unityVersion,
                 rules = replay == null ? WorldRules.Current : replay.Header.rules,
                 actionVersion = replay == null ? WorldRules.ActionVersion : replay.Header.actionVersion,
                 replayRules = replay?.Header.rules, replaySchemaVersion = replay?.Header.schemaVersion ?? 0,
                 replayActionVersion = replay?.Header.actionVersion ?? 0,
                 device = SystemInfo.graphicsDeviceName, config = config, control = control, policyMode = policyMode, scenario = scenario, rulesSpecies = rulesSpecies.ToArray(), singleEpisode = singleEpisode, summaryLog = summaryLog, metricsLog = metricsLog, worldSteps = stepLimit
             });
-            output.WriteLine(runRecord);
-            recording?.WriteLine(runRecord);
+            journal = new RunJournal(lease, runRecord, logPath, fullRecording, Argument("--record-log", "") == "" ? null : Argument("--record-log", ""));
             var camera = new GameObject("Camera").AddComponent<Camera>();
             camera.orthographic = true;
             camera.orthographicSize = config.halfExtent + 1f;
@@ -295,14 +290,17 @@ namespace Ecosystem
                 Record("episode_end");
                 if (singleEpisode)
                 {
-                    output.WriteLine("{\"kind\":\"episode_complete\"}");
+                    stopReason = "world_end";
                     Application.Quit();
                     return;
                 }
                 if ((control == "python" || !world.Config.foraging || Application.isBatchMode || stepLimit > 0) && (stepLimit <= 0 || totalSteps < stepLimit)) ResetWorld();
             }
             if ((control != "python" || policyMode == "fixed") && stepLimit > 0 && totalSteps >= stepLimit)
+            {
+                stopReason = "step_limit";
                 Application.Quit();
+            }
         }
 
         private void UpdateFoodViews()
@@ -493,24 +491,11 @@ namespace Ecosystem
 
         private void Record(string kind, IndividualState individual = null, int unityObject = 0)
         {
-            string line = null;
-            if (!summaryLog || kind != "step" || (recording != null && recordEpisodes.Contains(world.State.episode)))
-                line = JsonUtility.ToJson(new StepRecord
-                { run = runId, kind = kind, totalSteps = totalSteps, state = world.State, individual = individual, unityObject = unityObject });
-            if (summaryLog && kind == "step")
-            {
-                if (world.State.events.Count > 0 || world.State.step % 50 == 0 || world.State.endReason != "")
-                    output.WriteLine(JsonUtility.ToJson(new SampleRecord { kind = "sample", totalSteps = totalSteps,
-                        step = world.State.step, time = world.State.time, events = world.State.events,
-                        rewards = world.State.rewards, statistics = world.State.statistics,
-                        foodAmount = world.State.foods.Sum(value => value.amount), fruitLedger = world.State.fruitLedger,
-                        sourceFruits = world.State.fruits.Count(f => f.source != 0), carriedFruits = world.State.fruits.Count(f => f.holder != 0),
-                        groundFruits = world.State.fruits.Count(f => f.source == 0 && f.holder == 0), sources = world.State.foods.Count,
-                        population = world.State.individuals.Count, lowSatiety = world.State.individuals.Count(a => a.satiety <= 45) }));
-            }
-            else output.WriteLine(line);
+            journal?.Observe(kind, world.State);
+            if (detailedLog || kind == "snapshot") journal?.WriteDiagnostic(JsonUtility.ToJson(new StepRecord
+                { run = runId, kind = kind, totalSteps = totalSteps, state = world.State, individual = individual, unityObject = unityObject }));
             if (metricsLog && kind == "step")
-                output.WriteLine(JsonUtility.ToJson(new MetricRecord { step = world.State.step, time = world.State.time,
+                journal?.WriteDiagnostic(JsonUtility.ToJson(new MetricRecord { step = world.State.step, time = world.State.time,
                     individuals = world.State.individuals.Select(value => new IndividualMetricRecord
                     {
                         individual = value.individual, species = value.species, x = value.x, y = value.y,
@@ -520,18 +505,20 @@ namespace Ecosystem
                         cultivatingFood = value.cultivatingFood, cultivateStartedAt = value.cultivateStartedAt,
                         carriedCount = value.ownFruits.Count, foodOperation = value.foodOperation, skillManaSpent = value.skillManaSpent
                     }).ToList() }));
-            if (recording != null && recordEpisodes.Contains(world.State.episode)) recording.WriteLine(line);
+
         }
 
         private void OnApplicationQuit()
         {
-            if (output != null && world != null && world.State != null) Record("observation_end");
-            if (output != null)
-                output.WriteLine(JsonUtility.ToJson(new ResourceRecord { elapsedSeconds = elapsed.Elapsed.TotalSeconds,
-                    peakWorkingSetBytes = System.Diagnostics.Process.GetCurrentProcess().PeakWorkingSet64 }));
-            output?.Dispose();
-            recording?.Dispose();
+            journal?.Finish(world.State, stopReason);
             replay?.Dispose();
+            try { store?.Cleanup(); } catch (Exception error) { Debug.LogError("產物清理失敗：" + error.Message); }
+            if (journal?.Failed == true) { Environment.ExitCode = 2; Application.Quit(2); }
+        }
+
+        private void OnGUI()
+        {
+            if (journal?.Failed == true) GUI.Label(new Rect(20, Screen.height - 40, 600, 30), "資料記錄失敗（不完整）");
         }
 
         [Serializable]
@@ -585,7 +572,7 @@ namespace Ecosystem
         private sealed class RunRecord
         {
             public string kind = "run";
-            public string run;
+            public string run, build, startedAt, recordingMode;
             public int seed;
             public string unity;
             public string device;
@@ -597,7 +584,7 @@ namespace Ecosystem
             public string replayRules;
             public int replaySchemaVersion, replayActionVersion;
             public int actionVersion = WorldRules.ActionVersion;
-            public bool singleEpisode, summaryLog, metricsLog;
+            public bool diagnostic, singleEpisode, summaryLog, metricsLog;
             public int worldSteps;
             public string[] rulesSpecies;
             public WorldConfig config;

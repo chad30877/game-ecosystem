@@ -96,11 +96,11 @@ def run_case(output, name, config, scenario, seed, rules_species=None):
                "-Mode", "forage", "-Controller", "scripted" if rules_species else "rules",
                "-WorldConfig", str(folder / "config.json"), "-Scenario", str(folder / "layout.json"),
                "-Seed", str(seed), "-Steps", str(config["episodeSteps"]),
-               "-RecordEpisodes", "1", "-OutputRoot", str(folder)]
+               "-Record", "-DiagnosticLog", "-OutputRoot", str(folder)]
     if rules_species:
         command.extend(["-RulesSpecies", rules_species])
     subprocess.run(command, check=True)
-    log = next(folder.glob("forage-*/record-source.jsonl"))
+    log = next(folder.glob("forage-*/world.jsonl"))
     summary, observation = episode_report(log)
     result = {"name": name, "seed": seed, "log": str(log), "config": config,
               "summary": summary, "observation": observation}

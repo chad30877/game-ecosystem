@@ -7,20 +7,20 @@ import recording
 
 
 def run():
-    with tempfile.TemporaryDirectory() as folder:
+    with tempfile.TemporaryDirectory(dir=Path(__file__).resolve().parent.parent / "artifacts/recording-validation") as folder:
         root = Path(folder)
         state = {"episode": 1, "step": 0, "time": 0, "fruitInformationAvailable": True,
                  "fruits": [{"fruit": 1, "holder": 1, "source": 0, "expiresAt": 40}],
                  "fruitLedger": {"initial": 1}, "individuals": [{"individual": 1, "foodOperation": 2}]}
-        run = {"kind": "run", "rules": "survival-v15", "actionVersion": 2, "seed": 101,
+        run = {"kind": "run", "build": "fixture", "rules": "survival-v15", "actionVersion": 2, "seed": 101,
                "run": "fruit-contract", "control": "scripted", "config": {"foraging": True}}
         final = copy.deepcopy(state); final.update(step=1, time=.02)
         source = root / "source.jsonl"
         source.write_bytes(b"".join(recording.encode(row) for row in [run,
             {"kind": "reset", "state": state}, {"kind": "step", "state": final},
             {"kind": "episode_end", "state": final}]))
-        result = recording.pack(source, root / "replay.jsonl", 1)
-        header = recording.validate(root / "replay.jsonl")
+        result = recording.pack(source, root / "replay.jsonl", 1, expected_build="fixture")
+        header = recording.validate(root / "replay.jsonl", "fixture")
         assert header["rules"] == "survival-v15" and header["schemaVersion"] == 2 and header["actionVersion"] == 2
         frames = [json.loads(line)["state"] for line in (root / "replay.jsonl").read_text(encoding="utf-8").splitlines()[1:-1]]
         assert frames == [state, final], "回放必須原樣保存果實與當時操作"
@@ -28,7 +28,7 @@ def run():
         damaged = (root / "replay.jsonl").read_bytes().replace(b'"holder":1', b'"holder":2')
         (root / "damaged.jsonl").write_bytes(damaged)
         try:
-            recording.validate(root / "damaged.jsonl")
+            recording.validate(root / "damaged.jsonl", "fixture")
         except ValueError:
             pass
         else:
@@ -36,7 +36,7 @@ def run():
         old_schema = (root / "replay.jsonl").read_bytes().replace(b'"schemaVersion":2', b'"schemaVersion":1')
         (root / "wrong-schema.jsonl").write_bytes(old_schema)
         try:
-            recording.validate(root / "wrong-schema.jsonl")
+            recording.validate(root / "wrong-schema.jsonl", "fixture")
         except ValueError:
             pass
         else:
